@@ -113,37 +113,37 @@ export const SONGS: Song[] = [
     difficulty: 'medium',
     tempo: 110,
     sequence: [
-      { word: 'Joy', note: 64 },
-      { word: 'ful', note: 64 },
-      { word: 'joy', note: 65 },
-      { word: 'ful', note: 67 },
-      { word: 'we', note: 67 },
-      { word: 'a-', note: 65 },
-      { word: '-dore', note: 64 },
-      { word: 'thee', note: 62 },
-      { word: 'God', note: 60 },
-      { word: 'of', note: 60 },
-      { word: 'glo-', note: 62 },
-      { word: '-ry', note: 64 },
-      { word: 'Lord', note: 64 },
-      { word: 'of', note: 62 },
-      { word: 'love', note: 62 },
-      { word: 'Hearts', note: 64 },
-      { word: 'un-', note: 64 },
-      { word: '-fold', note: 65 },
-      { word: 'like', note: 67 },
-      { word: 'flow-', note: 67 },
-      { word: '-ers', note: 65 },
-      { word: 'be-', note: 64 },
-      { word: '-fore', note: 62 },
-      { word: 'thee', note: 60 },
-      { word: 'o-', note: 60 },
-      { word: '-pening', note: 62 },
-      { word: 'to', note: 64 },
-      { word: 'the', note: 62 },
-      { word: 'sun', note: 60 },
-      { word: 'a-', note: 60 },
-      { word: '-bove', note: 60 },
+      { word: 'Joy-', note: 64, duration: 1, phraseStart: true },
+      { word: '-ful,', note: 64, duration: 1 },
+      { word: 'joy-', note: 65, duration: 1 },
+      { word: '-ful,', note: 67, duration: 1 },
+      { word: 'we', note: 67, duration: 1 },
+      { word: 'a-', note: 65, duration: 1 },
+      { word: '-dore', note: 64, duration: 1 },
+      { word: 'thee,', note: 62, duration: 1 },
+      { word: 'God', note: 60, duration: 1, phraseStart: true },
+      { word: 'of', note: 60, duration: 1 },
+      { word: 'glo-', note: 62, duration: 1 },
+      { word: '-ry,', note: 64, duration: 1 },
+      { word: 'Lord', note: 64, duration: 1.5 },
+      { word: 'of', note: 62, duration: 0.5 },
+      { word: 'love;', note: 62, duration: 2 },
+      { word: 'Hearts', note: 64, duration: 1, phraseStart: true },
+      { word: 'un-', note: 64, duration: 1 },
+      { word: '-fold', note: 65, duration: 1 },
+      { word: 'like', note: 67, duration: 1 },
+      { word: 'flow-', note: 67, duration: 1 },
+      { word: '-ers', note: 65, duration: 1 },
+      { word: 'be-', note: 64, duration: 1 },
+      { word: '-fore', note: 62, duration: 1 },
+      { word: 'thee,', note: 60, duration: 1, phraseStart: true },
+      { word: 'o-', note: 60, duration: 1 },
+      { word: '-pening', note: 62, duration: 1 },
+      { word: 'to', note: 64, duration: 1 },
+      { word: 'the', note: 62, duration: 1.5 },
+      { word: 'sun', note: 60, duration: 0.5 },
+      { word: 'a-', note: 60, duration: 1 },
+      { word: '-bove.', note: 60, duration: 2 },
     ]
   },
   {
@@ -154,31 +154,31 @@ export const SONGS: Song[] = [
     difficulty: 'medium',
     tempo: 120,
     sequence: [
-      { word: 'Hap-', note: 60 }, // C4
-      { word: '-py', note: 60 },
-      { word: 'birth-', note: 62 }, // D4
-      { word: '-day', note: 60 }, // C4
-      { word: 'to', note: 65 }, // F4
-      { word: 'you', note: 64 }, // E4
-      { word: 'Hap-', note: 60 }, // C4
-      { word: '-py', note: 60 },
-      { word: 'birth-', note: 62 }, // D4
-      { word: '-day', note: 60 }, // C4
-      { word: 'to', note: 67 }, // G4
-      { word: 'you', note: 65 }, // F4
-      { word: 'Hap-', note: 60 }, // C4
-      { word: '-py', note: 60 },
-      { word: 'birth-', note: 72 }, // C5
-      { word: '-day', note: 69 }, // A4
-      { word: 'dear', note: 65 }, // F4
-      { word: 'play-', note: 64 }, // E4
-      { word: '-er', note: 62 }, // D4
-      { word: 'Hap-', note: 70 }, // Bb4
-      { word: '-py', note: 70 },
-      { word: 'birth-', note: 69 }, // A4
-      { word: '-day', note: 65 }, // F4
-      { word: 'to', note: 67 }, // G4
-      { word: 'you', note: 65 }, // F4
+      { word: 'Hap-', note: 60, duration: 0.5, phraseStart: true }, // C4
+      { word: '-py', note: 60, duration: 0.5 },
+      { word: 'birth-', note: 62, duration: 1 }, // D4
+      { word: '-day', note: 60, duration: 1 }, // C4
+      { word: 'to', note: 65, duration: 1 }, // F4
+      { word: 'you,', note: 64, duration: 2 }, // E4
+      { word: 'Hap-', note: 60, duration: 0.5, phraseStart: true }, // C4
+      { word: '-py', note: 60, duration: 0.5 },
+      { word: 'birth-', note: 62, duration: 1 }, // D4
+      { word: '-day', note: 60, duration: 1 }, // C4
+      { word: 'to', note: 67, duration: 1 }, // G4
+      { word: 'you,', note: 65, duration: 2 }, // F4
+      { word: 'Hap-', note: 60, duration: 0.5, phraseStart: true }, // C4
+      { word: '-py', note: 60, duration: 0.5 },
+      { word: 'birth-', note: 72, duration: 1 }, // C5
+      { word: '-day', note: 69, duration: 1 }, // A4
+      { word: 'dear', note: 65, duration: 1 }, // F4
+      { word: 'play-', note: 64, duration: 1 }, // E4
+      { word: '-er,', note: 62, duration: 2 }, // D4
+      { word: 'Hap-', note: 70, duration: 0.5, phraseStart: true }, // Bb4
+      { word: '-py', note: 70, duration: 0.5 },
+      { word: 'birth-', note: 69, duration: 1 }, // A4
+      { word: '-day', note: 65, duration: 1 }, // F4
+      { word: 'to', note: 67, duration: 1 }, // G4
+      { word: 'you!', note: 65, duration: 2 }, // F4
     ]
   },
   {
