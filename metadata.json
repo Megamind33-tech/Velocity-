@@ -1,0 +1,7 @@
+{
+  "name": "Velocity ",
+  "description": "Vocal Coach Engine \u0026 Melody Trail",
+  "requestFramePermissions": [
+    "microphone"
+  ]
+}
