@@ -1,13 +1,49 @@
-@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Inter:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Inter:wght@400;500;600;700;800;900&display=swap');
 @import "tailwindcss";
+@import "./styles/tokens.css";
+@import "./styles/game-theme.css";
 
 @theme {
   --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
   --font-display: "Space Grotesk", ui-sans-serif, system-ui, sans-serif;
+
+  /* Expose design tokens to Tailwind arbitrary value system */
+  --color-bg-primary:  #07090E;
+  --color-bg-surface:  #111624;
+  --color-bg-elevated: #181F31;
+  --color-accent-cyan:   #43E7FF;
+  --color-accent-violet: #7D5CFF;
+  --color-accent-pink:   #FF4FC3;
+  --color-success:  #B9FF66;
+  --color-amber:    #FFC94A;
+  --color-fail:     #FF6B6B;
+  --color-text-primary:   #F5F7FC;
+  --color-text-secondary: #A7B0C6;
+  --color-text-muted:     #4A5068;
 }
 
 @layer base {
+  *, *::before, *::after {
+    box-sizing: border-box;
+  }
+
+  html {
+    -webkit-tap-highlight-color: transparent;
+    -webkit-font-smoothing: antialiased;
+  }
+
   body {
-    @apply bg-[#050505] text-[#E0E0E0];
+    @apply bg-[#07090E] text-[#F5F7FC];
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+    height: 100dvh;
+    width: 100vw;
+  }
+
+  #root {
+    height: 100dvh;
+    width: 100vw;
+    overflow: hidden;
   }
 }
