@@ -98,7 +98,7 @@ export function ResultsScreen({
 
           {/* Final Score Display */}
           <div className="text-center mb-6">
-            <div className="text-label text-text-tertiary mb-2">Final Score</div>
+            <div className="text-label text-tertiary mb-2">Final Score</div>
             <div
               className="font-display text-7xl font-black text-center leading-none score-display"
               style={{
@@ -123,7 +123,7 @@ export function ResultsScreen({
           <div className="grid grid-cols-2 gap-3 pt-6 border-t border-[var(--border-subtle)]">
             {/* Status */}
             <div className="text-center">
-              <div className="text-label text-text-tertiary mb-2">Status</div>
+              <div className="text-label text-tertiary mb-2">Status</div>
               <div
                 className="text-headline font-black uppercase"
                 style={{ color: isWin ? 'var(--color-success)' : 'var(--color-danger)' }}
@@ -134,7 +134,7 @@ export function ResultsScreen({
 
             {/* Difficulty */}
             <div className="text-center">
-              <div className="text-label text-text-tertiary mb-2">Difficulty</div>
+              <div className="text-label text-tertiary mb-2">Difficulty</div>
               <div className="text-headline font-black uppercase" style={{ color: dc.text }}>
                 {difficulty}
               </div>
@@ -143,7 +143,7 @@ export function ResultsScreen({
             {/* Perfect Gates */}
             {lastGameStats && lastGameStats.perfectGates > 0 && (
               <div className="text-center">
-                <div className="text-label text-text-tertiary mb-2">Perfect Notes</div>
+                <div className="text-label text-tertiary mb-2">Perfect Notes</div>
                 <div className="text-headline font-black text-[var(--color-primary)]">
                   {lastGameStats.perfectGates}
                 </div>
@@ -153,7 +153,7 @@ export function ResultsScreen({
             {/* Best Combo */}
             {lastGameStats && lastGameStats.maxCombo > 0 && (
               <div className="text-center">
-                <div className="text-label text-text-tertiary mb-2">Max Combo</div>
+                <div className="text-label text-tertiary mb-2">Max Combo</div>
                 <div className="text-headline font-black text-[var(--color-secondary)]">
                   x{lastGameStats.maxCombo}
                 </div>
@@ -163,8 +163,8 @@ export function ResultsScreen({
             {/* Personal Best */}
             {previousBest > 0 && (
               <div className="text-center col-span-2">
-                <div className="text-label text-text-tertiary mb-2">Personal Best</div>
-                <div className="text-headline font-black text-text-secondary score-display">
+                <div className="text-label text-tertiary mb-2">Personal Best</div>
+                <div className="text-headline font-black text-secondary score-display">
                   {previousBest.toLocaleString()}
                 </div>
               </div>

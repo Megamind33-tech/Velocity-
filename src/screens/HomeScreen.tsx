@@ -62,10 +62,10 @@ export function HomeScreen({
               </div>
             </div>
             <div className="min-w-0 flex-1">
-              <div className="text-title font-black truncate text-text-primary">
+              <div className="text-title font-black truncate text-primary">
                 {profile?.username ?? 'Performer'}
               </div>
-              <div className="text-caption text-text-tertiary">Level {profile?.level ?? 1}</div>
+              <div className="text-caption text-tertiary">Level {profile?.level ?? 1}</div>
               <div className="progress-bar mt-2 h-1" style={{ width: '100px' }}>
                 <div className="progress-bar-fill" style={{ width: `${xpPct}%` }} />
               </div>
@@ -87,7 +87,7 @@ export function HomeScreen({
         <div className="mx-4 mt-3 mb-3 px-4 py-3 rounded-lg surface-danger flex items-center gap-3 animate-slide-down">
           <Zap className="w-4 h-4 text-[var(--color-danger)] shrink-0" />
           <p className="text-xs text-[var(--color-danger)] flex-1 leading-snug">{error}</p>
-          <button onClick={onClearError} className="text-text-tertiary hover:text-text-secondary p-1 transition-colors">
+          <button onClick={onClearError} className="text-tertiary hover:text-secondary p-1 transition-colors">
             ✕
           </button>
         </div>
@@ -97,13 +97,13 @@ export function HomeScreen({
       <div className="game-screen-scroll px-4 pb-6">
         {/* Brand / Title */}
         <div className="pt-4 pb-6">
-          <h1 className="text-display-lg font-black uppercase italic tracking-tighter text-text-primary leading-tight">
+          <h1 className="text-display-lg font-black uppercase italic tracking-tighter text-primary leading-tight">
             VELOCITY
             <span className="ml-2 text-[var(--color-primary)]" style={{ textShadow: '0 0 18px rgba(67,231,255,0.6)' }}>
               //
             </span>
           </h1>
-          <p className="text-label text-text-tertiary mt-2">Vocal Performance Challenge</p>
+          <p className="text-label text-tertiary mt-2">Vocal Performance Challenge</p>
         </div>
 
         {/* ── SELECTED SONG CARD (Professional Music App Style) ── */}
@@ -121,9 +121,9 @@ export function HomeScreen({
           <div className="card-accent-primary p-4 mb-5 rounded-lg">
             <div className="flex items-center justify-between gap-3">
               <div className="min-w-0">
-                <div className="text-label text-text-tertiary mb-1">Now Selected</div>
-                <h2 className="text-headline font-black text-text-primary">Endless Run</h2>
-                <p className="text-caption text-text-secondary mt-1">Procedural · No lyrics</p>
+                <div className="text-label text-tertiary mb-1">Now Selected</div>
+                <h2 className="text-headline font-black text-primary">Endless Run</h2>
+                <p className="text-caption text-secondary mt-1">Procedural · No lyrics</p>
               </div>
               <button
                 onClick={() => onNavigate('song-select')}
@@ -194,8 +194,8 @@ export function HomeScreen({
               )}
             </div>
             <div className="mb-3">
-              <h3 className="text-title font-black text-text-primary mb-1">{profile.dailyChallenge.title}</h3>
-              <p className="text-caption text-text-secondary">{profile.dailyChallenge.description}</p>
+              <h3 className="text-title font-black text-primary mb-1">{profile.dailyChallenge.title}</h3>
+              <p className="text-caption text-secondary">{profile.dailyChallenge.description}</p>
             </div>
             <StatBar
               label="Progress"
@@ -206,7 +206,7 @@ export function HomeScreen({
               compact={false}
             />
             <div className="flex items-center justify-between mt-3 pt-3 border-t border-[var(--border-subtle)]">
-              <span className="text-caption text-text-tertiary">
+              <span className="text-caption text-tertiary">
                 {profile.dailyChallenge.progress} / {profile.dailyChallenge.target}
               </span>
               <span className="badge-warning text-[10px]">+{profile.dailyChallenge.reward} XP</span>
@@ -218,7 +218,7 @@ export function HomeScreen({
         {selectedMusic && (
           <div className="card-elevated rounded-lg p-3 flex items-center gap-2 mb-6">
             <Music className="w-4 h-4 text-[var(--color-secondary)]" />
-            <span className="text-label text-text-secondary">Ambient: {selectedMusic.title}</span>
+            <span className="text-label text-secondary">Ambient: {selectedMusic.title}</span>
           </div>
         )}
       </div>

@@ -69,7 +69,7 @@ export function GameScreen({
             >
               <Mic className="w-3.5 h-3.5 text-[var(--color-primary)] shrink-0 animate-pulse" />
               <div className="min-w-0">
-                <div className="text-[11px] font-black text-text-primary truncate max-w-[140px] leading-tight">
+                <div className="text-[11px] font-black text-primary truncate max-w-[140px] leading-tight">
                   {song?.title ?? 'Endless Run'}
                 </div>
                 <div
@@ -88,7 +88,7 @@ export function GameScreen({
             >
               {isPaused
                 ? <Play className="w-5 h-5 text-[var(--color-primary)]" />
-                : <Pause className="w-5 h-5 text-text-secondary" />
+                : <Pause className="w-5 h-5 text-secondary" />
               }
             </button>
           </div>
@@ -109,7 +109,7 @@ export function GameScreen({
             </div>
 
             {/* Performance Hint */}
-            <div className="text-[9px] text-text-tertiary font-bold uppercase tracking-wider">
+            <div className="text-[9px] text-tertiary font-bold uppercase tracking-wider">
               {isPaused ? 'Resume to continue' : 'Hit perfect notes for bonus points'}
             </div>
           </div>
@@ -134,11 +134,11 @@ export function GameScreen({
               {/* Header */}
               <div className="text-center space-y-2">
                 <Pause className="w-8 h-8 mx-auto text-[var(--color-secondary)]" />
-                <h3 className="font-display text-headline font-black uppercase tracking-tight text-text-primary">
+                <h3 className="font-display text-headline font-black uppercase tracking-tight text-primary">
                   Paused
                 </h3>
                 {song && (
-                  <p className="text-caption text-text-secondary">{song.title}</p>
+                  <p className="text-caption text-secondary">{song.title}</p>
                 )}
               </div>
 
@@ -168,7 +168,7 @@ export function GameScreen({
               </SecondaryButton>
 
               {/* Footer text */}
-              <div className="text-center text-label text-text-tertiary">
+              <div className="text-center text-label text-tertiary">
                 Progress Saved
               </div>
             </div>
