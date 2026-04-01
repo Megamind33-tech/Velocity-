@@ -53,19 +53,22 @@ const TRAINING_MODES = [
 
 export function TrainingScreen({ onBack, onStartTraining }: TrainingScreenProps) {
   return (
-    <div className="game-screen stage-bg-violet flex flex-col">
-      {/* Header */}
-      <header className="flex items-center gap-3 px-4 pt-4 pb-3 shrink-0 border-b border-[rgba(255,255,255,0.06)]">
+    <div className="game-screen mg-stage mg-stage-violet flex flex-col">
+      <div className="mg-vignette" aria-hidden />
+      <div className="mg-scanlines" aria-hidden />
+      <header className="mg-topbar shrink-0">
         <IconButton label="Back" variant="surface" onClick={onBack}>
           <ArrowLeft className="w-5 h-5" />
         </IconButton>
-        <div className="flex-1">
-          <h2 className="font-display text-lg font-black uppercase tracking-tight text-[#F5F7FC]">Training</h2>
-          <p className="text-[10px] text-[#4A5068] font-bold uppercase tracking-widest">Skill Modes</p>
+        <div className="flex-1 min-w-0">
+          <h2 className="mg-topbar-title !text-sm">Training bay</h2>
+          <p className="mg-topbar-sub !normal-case !tracking-normal !text-[11px] !font-medium text-[#A7B0C6]">
+            Skill drills (coming soon)
+          </p>
         </div>
       </header>
 
-      <div className="game-screen-scroll px-4 pb-6">
+      <div className="mg-scroll">
         {/* Intro */}
         <div className="pt-5 pb-4 text-center">
           <div

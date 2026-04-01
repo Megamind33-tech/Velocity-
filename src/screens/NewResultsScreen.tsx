@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { Trophy, Star, TrendingUp, Home, RefreshCw } from 'lucide-react';
 import { Song } from '../lib/songs-extended';
 import { getLevelInfo } from '../lib/progression';
-import { PrimaryButton } from '../components/ui/PrimaryButton';
 import { SecondaryButton } from '../components/ui/SecondaryButton';
 
 interface NewResultsScreenProps {
@@ -55,128 +54,113 @@ export function NewResultsScreen({
 
   const levelInfo = getLevelInfo(level);
 
-  return (
-    <div className="game-screen stage-bg flex flex-col">
-      {/* Result Header */}
-      <div className="px-4 py-8 text-center border-b border-[var(--border-subtle)]">
-        {score >= 750 ? (
-          <Trophy className="w-12 h-12 text-[#FFC94A] mx-auto mb-4 animate-bounce" />
-        ) : (
-          <Star className="w-12 h-12 text-[var(--color-primary)] mx-auto mb-4" />
-        )}
+  const headlineColor =
+    score >= 750 ? '#FFC94A' : accuracy >= 90 ? '#B9FF66' : accuracy >= 75 ? '#FFC94A' : '#FF6B6B';
 
+  return (
+    <div className="game-screen mg-stage flex flex-col">
+      <div className="mg-vignette" aria-hidden />
+      <div className="mg-scanlines" aria-hidden />
+
+      <header className="mg-topbar shrink-0 flex-col items-center text-center !py-6">
+        {score >= 750 ? (
+          <Trophy className="w-14 h-14 text-[#FFC94A] mb-3" style={{ filter: 'drop-shadow(0 0 12px rgba(255,201,74,0.6))' }} />
+        ) : (
+          <Star className="w-14 h-14 text-[#43E7FF] mb-3" style={{ filter: 'drop-shadow(0 0 12px rgba(67,231,255,0.5))' }} />
+        )}
         <h1
-          className="text-display-lg font-black mb-2"
+          className="text-2xl sm:text-3xl font-black tracking-tight mb-1"
           style={{
-            color:
-              score >= 750 ? '#FFC94A' : accuracy >= 90 ? '#B9FF66' : accuracy >= 75 ? '#FFC94A' : '#FF6B6B',
+            fontFamily: 'var(--font-game, Orbitron, sans-serif)',
+            color: headlineColor,
+            textShadow: `0 0 24px ${headlineColor}55`,
           }}
         >
-          {score >= 750 ? 'PERFECT!' : accuracy >= 90 ? 'EXCELLENT!' : accuracy >= 75 ? 'GOOD!' : 'TRY AGAIN'}
+          {score >= 750 ? 'PERFECT' : accuracy >= 90 ? 'EXCELLENT' : accuracy >= 75 ? 'GOOD RUN' : 'TRY AGAIN'}
         </h1>
+        <p className="text-xs text-[#A7B0C6] font-medium">
+          {song.title} · {levelInfo?.name}
+        </p>
+      </header>
 
-        <p className="text-secondary">{song.title} - {levelInfo?.name}</p>
-      </div>
-
-      {/* Score Display */}
-      <div className="flex-1 overflow-y-auto px-4 py-6 space-y-4">
-        {/* Main Score */}
-        <div className="card bg-gradient-to-br from-[#43E7FF]/10 to-[#7D5CFF]/10 border-[var(--border-primary)]">
-          <div className="text-center">
-            <p className="text-label text-secondary mb-2">FINAL SCORE</p>
-            <p className="text-display-xl font-black text-primary">{score}</p>
-            {isNewRecord && (
-              <p className="text-caption text-success font-bold mt-2">NEW RECORD! 🎉</p>
-            )}
-          </div>
+      <div className="mg-scroll space-y-4">
+        <div className="mg-panel !text-center !animate-none">
+          <div className="mg-panel-header justify-center">Final score</div>
+          <p className="score-display text-4xl font-black text-[#F5F7FC] tabular-nums">{score.toLocaleString()}</p>
+          {isNewRecord && (
+            <p className="text-[11px] font-black uppercase tracking-widest text-[#B9FF66] mt-2">New record</p>
+          )}
         </div>
 
-        {/* Star Rating */}
-        <div className="card text-center">
-          <p className="text-label text-secondary mb-3">RATING</p>
-          <div className="flex justify-center gap-3 mb-2">
+        <div className="mg-panel !text-center !animate-none">
+          <div className="mg-panel-header justify-center">Rating</div>
+          <div className="flex justify-center gap-4 mb-2 py-1">
             {[1, 2, 3].map((star) => (
               <Star
                 key={star}
-                className={`w-8 h-8 ${
+                className={`w-9 h-9 ${
                   star <= stars ? 'fill-[#FFC94A] text-[#FFC94A]' : 'text-[var(--border-default)]'
                 }`}
               />
             ))}
           </div>
-          <p className="text-caption text-secondary">
-            {stars === 3 ? 'Perfect Performance!' : stars === 2 ? 'Great Job!' : stars === 1 ? 'Good Effort!' : 'Keep Practicing!'}
+          <p className="text-xs text-[#A7B0C6]">
+            {stars === 3 ? 'Flawless vocal line.' : stars === 2 ? 'Strong performance.' : stars === 1 ? 'Solid effort.' : 'Practice the chart.'}
           </p>
         </div>
 
-        {/* Statistics Grid */}
         <div className="grid grid-cols-2 gap-3">
-          <div className="card bg-[rgba(67,231,255,0.08)]">
-            <p className="text-caption text-tertiary mb-1">ACCURACY</p>
-            <p className="text-headline font-black text-primary">{accuracy.toFixed(1)}%</p>
+          <div className="mg-panel !p-3 !animate-none">
+            <p className="text-[9px] font-black uppercase tracking-wider text-[#7A8399] mb-1">Accuracy</p>
+            <p className="text-xl font-black text-[#43E7FF] tabular-nums">{accuracy.toFixed(1)}%</p>
           </div>
-
-          <div className="card bg-[rgba(185,255,102,0.08)]">
-            <p className="text-caption text-tertiary mb-1">MAX COMBO</p>
-            <p className="text-headline font-black text-success">{maxCombo}</p>
+          <div className="mg-panel !p-3 !animate-none">
+            <p className="text-[9px] font-black uppercase tracking-wider text-[#7A8399] mb-1">Max combo</p>
+            <p className="text-xl font-black text-[#B9FF66] tabular-nums">{maxCombo}</p>
           </div>
-
-          <div className="card bg-[rgba(125,92,255,0.08)]">
-            <p className="text-caption text-tertiary mb-1">NOTES HIT</p>
-            <p className="text-headline font-black text-secondary">
+          <div className="mg-panel !p-3 !animate-none">
+            <p className="text-[9px] font-black uppercase tracking-wider text-[#7A8399] mb-1">Notes</p>
+            <p className="text-xl font-black text-[#7D5CFF] tabular-nums">
               {notesHit}/{notesHit + notesMissed}
             </p>
           </div>
-
-          <div className="card bg-[rgba(255,107,107,0.08)]">
-            <p className="text-caption text-tertiary mb-1">MISSED</p>
-            <p className="text-headline font-black text-danger">{notesMissed}</p>
+          <div className="mg-panel !p-3 !animate-none">
+            <p className="text-[9px] font-black uppercase tracking-wider text-[#7A8399] mb-1">Missed</p>
+            <p className="text-xl font-black text-[#FF6B6B] tabular-nums">{notesMissed}</p>
           </div>
         </div>
 
-        {/* Comparison with Previous Best */}
         {previousBestScore > 0 && (
-          <div className="card border-[var(--border-secondary)]">
-            <div className="flex items-center justify-between">
+          <div className="mg-panel !animate-none">
+            <div className="flex items-center justify-between gap-3">
               <div>
-                <p className="text-label text-secondary mb-1">PREVIOUS BEST</p>
-                <p className="text-title font-black text-primary">{previousBestScore}</p>
+                <p className="text-[9px] font-black uppercase tracking-wider text-[#7A8399] mb-1">Previous best</p>
+                <p className="text-lg font-black text-[#F5F7FC] tabular-nums">{previousBestScore.toLocaleString()}</p>
               </div>
               {score > previousBestScore ? (
-                <div className="flex items-center gap-2">
-                  <TrendingUp className="w-5 h-5 text-success" />
-                  <p className="text-success font-bold">+{score - previousBestScore}</p>
+                <div className="flex items-center gap-2 text-[#B9FF66]">
+                  <TrendingUp className="w-5 h-5" />
+                  <span className="font-black tabular-nums">+{(score - previousBestScore).toLocaleString()}</span>
                 </div>
               ) : (
-                <p className="text-tertiary text-caption">Need {previousBestScore - score} more points</p>
+                <p className="text-[11px] text-[#7A8399] text-right">
+                  {(previousBestScore - score).toLocaleString()} pts to beat best
+                </p>
               )}
             </div>
           </div>
         )}
       </div>
 
-      {/* Action Buttons */}
-      <div className="px-4 py-4 border-t border-[var(--border-subtle)] space-y-2">
-        <PrimaryButton
-          variant="cyan"
-          size="md"
-          fullWidth
-          icon={<RefreshCw className="w-4 h-4" />}
-          onClick={onRetry}
-        >
-          Try Again
-        </PrimaryButton>
-
-        <SecondaryButton
-          variant="default"
-          size="md"
-          fullWidth
-          icon={<Home className="w-4 h-4" />}
-          onClick={onHome}
-        >
-          Back to Home
+      <footer className="mg-footer-bar shrink-0 space-y-2">
+        <button type="button" className="mg-cta" onClick={onRetry}>
+          <RefreshCw className="w-5 h-5" />
+          Retry
+        </button>
+        <SecondaryButton variant="default" size="md" fullWidth icon={<Home className="w-4 h-4" />} onClick={onHome}>
+          Home
         </SecondaryButton>
-      </div>
+      </footer>
     </div>
   );
 }
