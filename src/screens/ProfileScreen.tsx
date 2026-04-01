@@ -71,6 +71,7 @@ export function ProfileScreen({ profile, onBack, onProfileUpdate }: ProfileScree
 
   return (
     <div className="game-screen mg-stage mg-stage-violet flex flex-col">
+      <div className="mg-kit-layer mg-kit-layer--account" aria-hidden />
       <div className="mg-vignette" aria-hidden />
       <div className="mg-scanlines" aria-hidden />
       <header className="mg-topbar shrink-0">

@@ -24,6 +24,7 @@ export function SongSelectScreen({
 
   return (
     <div className="game-screen mg-stage flex flex-col">
+      <div className="mg-kit-layer mg-kit-layer--battle" aria-hidden />
       <div className="mg-vignette" aria-hidden />
       <div className="mg-scanlines" aria-hidden />
       <header className="mg-topbar shrink-0 flex-col items-stretch !gap-1">

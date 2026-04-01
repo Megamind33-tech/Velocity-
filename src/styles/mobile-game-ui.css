@@ -45,6 +45,41 @@
     linear-gradient(180deg, #0c0a18 0%, #05060c 50%, #0a0816 100%);
 }
 
+/* --- Purchased kit backdrops (PNG composites from PSD) --- */
+.mg-kit-layer {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  background-repeat: no-repeat;
+  background-size: cover;
+  background-position: center 20%;
+  opacity: 0.22;
+  filter: saturate(1.05) contrast(1.05);
+  mix-blend-mode: lighten;
+}
+
+.mg-kit-layer--battle {
+  background-image: url('/ui-kit/battle-game.png');
+}
+
+.mg-kit-layer--account {
+  background-image: url('/ui-kit/my-account.png');
+  opacity: 0.2;
+  background-position: center top;
+}
+
+.mg-kit-layer--tournament {
+  background-image: url('/ui-kit/tournament.png');
+  opacity: 0.2;
+}
+
+/* In-game: keep HUD readable */
+.mg-kit-layer--subtle {
+  opacity: 0.12;
+  mix-blend-mode: screen;
+}
+
 .mg-vignette {
   position: absolute;
   inset: 0;

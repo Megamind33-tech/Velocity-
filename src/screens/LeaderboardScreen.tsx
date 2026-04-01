@@ -66,6 +66,7 @@ export function LeaderboardScreen({ profile, onBack }: LeaderboardScreenProps) {
 
   return (
     <div className="game-screen mg-stage flex flex-col">
+      <div className="mg-kit-layer mg-kit-layer--tournament" aria-hidden />
       <div className="mg-vignette" aria-hidden />
       <div className="mg-scanlines" aria-hidden />
       <header className="mg-topbar shrink-0">
