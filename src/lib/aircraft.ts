@@ -4,6 +4,7 @@ export interface AircraftModel {
   manufacturer: string;
   role: string;
   description: string;
+  frameStyle: 'scout' | 'attack' | 'rescue' | 'heavy' | 'sport';
   palette: {
     body: string;
     secondary: string;
@@ -22,6 +23,7 @@ export const AIRCRAFT_MODELS: AircraftModel[] = [
     manufacturer: 'Falcon Aero',
     role: 'Utility',
     description: 'Balanced utility helicopter with stable handling.',
+    frameStyle: 'rescue',
     palette: {
       body: '#DCE3ED',
       secondary: '#9FB1C8',
@@ -38,6 +40,7 @@ export const AIRCRAFT_MODELS: AircraftModel[] = [
     manufacturer: 'Northwind Dynamics',
     role: 'Recon',
     description: 'Fast recon frame with sharp profile and agile feel.',
+    frameStyle: 'scout',
     palette: {
       body: '#B4BECD',
       secondary: '#7B889D',
@@ -54,6 +57,7 @@ export const AIRCRAFT_MODELS: AircraftModel[] = [
     manufacturer: 'Apex Rotorworks',
     role: 'Rescue',
     description: 'Search-and-rescue helicopter tuned for rough weather.',
+    frameStyle: 'rescue',
     palette: {
       body: '#E2D6BE',
       secondary: '#BDAA84',
@@ -70,6 +74,7 @@ export const AIRCRAFT_MODELS: AircraftModel[] = [
     manufacturer: 'Arc Sentinel',
     role: 'Stealth',
     description: 'Low-signature midnight platform with a tight silhouette.',
+    frameStyle: 'attack',
     palette: {
       body: '#8893A8',
       secondary: '#5F6A82',
@@ -86,6 +91,7 @@ export const AIRCRAFT_MODELS: AircraftModel[] = [
     manufacturer: 'Bluewater Systems',
     role: 'Patrol',
     description: 'Maritime patrol variant with broad visibility cockpit.',
+    frameStyle: 'rescue',
     palette: {
       body: '#D6E3EE',
       secondary: '#92ACC2',
@@ -102,6 +108,7 @@ export const AIRCRAFT_MODELS: AircraftModel[] = [
     manufacturer: 'Vector Flight Labs',
     role: 'Attack',
     description: 'Armored tactical helicopter with high-contrast paint.',
+    frameStyle: 'attack',
     palette: {
       body: '#B9B6B9',
       secondary: '#7E7885',
@@ -118,6 +125,7 @@ export const AIRCRAFT_MODELS: AircraftModel[] = [
     manufacturer: 'Stratos Heavy',
     role: 'Heavy Lift',
     description: 'Heavy-lift platform with reinforced skids and long tail.',
+    frameStyle: 'heavy',
     palette: {
       body: '#CDD4DF',
       secondary: '#9BA8B8',
@@ -134,6 +142,7 @@ export const AIRCRAFT_MODELS: AircraftModel[] = [
     manufacturer: 'Ionline Aviation',
     role: 'Sport',
     description: 'Sport helicopter with lightweight frame and vivid trim.',
+    frameStyle: 'sport',
     palette: {
       body: '#D7D3E3',
       secondary: '#A39BB8',
