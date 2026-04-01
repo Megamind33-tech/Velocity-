@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Trophy, Star, TrendingUp, Home, RefreshCw } from 'lucide-react';
+import { Trophy, Star, TrendingUp, Home, RefreshCw, ChevronRight, Zap, Award } from 'lucide-react';
 import { Song } from '../lib/songs-extended';
 import { getLevelInfo } from '../lib/progression';
 import { SecondaryButton } from '../components/ui/SecondaryButton';
@@ -14,45 +14,47 @@ interface NewResultsScreenProps {
   notesHit: number;
   notesMissed: number;
   previousBestScore: number;
+  xpEarned?: number;
   onHome: () => void;
   onRetry: () => void;
+  onNextLevel?: () => void;
 }
 
 export function NewResultsScreen({
-  song,
-  level,
-  mode,
-  score,
-  accuracy,
-  maxCombo,
-  notesHit,
-  notesMissed,
-  previousBestScore,
-  onHome,
-  onRetry,
+  song, level, mode, score, accuracy, maxCombo,
+  notesHit, notesMissed, previousBestScore,
+  xpEarned, onHome, onRetry, onNextLevel,
 }: NewResultsScreenProps) {
   const [stars, setStars] = useState(0);
   const [isNewRecord, setIsNewRecord] = useState(false);
+  const [animatedScore, setAnimatedScore] = useState(0);
 
   useEffect(() => {
-    // Calculate stars
-    if (accuracy >= 90) {
-      setStars(3);
-    } else if (accuracy >= 75) {
-      setStars(2);
-    } else if (accuracy >= 60) {
-      setStars(1);
-    } else {
-      setStars(0);
-    }
-
-    // Check if new record
-    if (score > previousBestScore) {
-      setIsNewRecord(true);
-    }
+    setStars(accuracy >= 90 ? 3 : accuracy >= 75 ? 2 : accuracy >= 60 ? 1 : 0);
+    setIsNewRecord(score > previousBestScore && previousBestScore > 0);
   }, [accuracy, score, previousBestScore]);
 
+  useEffect(() => {
+    let frame: number;
+    const duration = 1200;
+    const start = Date.now();
+    const animate = () => {
+      const elapsed = Date.now() - start;
+      const pct = Math.min(1, elapsed / duration);
+      const eased = 1 - Math.pow(1 - pct, 3);
+      setAnimatedScore(Math.floor(score * eased));
+      if (pct < 1) frame = requestAnimationFrame(animate);
+    };
+    frame = requestAnimationFrame(animate);
+    return () => cancelAnimationFrame(frame);
+  }, [score]);
+
   const levelInfo = getLevelInfo(level);
+  const passed = accuracy >= 60;
+  const xp = xpEarned || Math.floor(score / 10) + stars * 50;
+
+  const gradeColor = score >= 750 ? '#FFC94A' : accuracy >= 90 ? '#B9FF66' : accuracy >= 75 ? '#FFC94A' : '#FF6B6B';
+  const gradeText = score >= 750 ? 'PERFECT FLIGHT!' : accuracy >= 90 ? 'EXCELLENT!' : accuracy >= 75 ? 'GOOD RUN!' : accuracy >= 60 ? 'CLEARED!' : 'TURBULENCE!';
 
   const headlineColor =
     score >= 750 ? '#FFC94A' : accuracy >= 90 ? '#B9FF66' : accuracy >= 75 ? '#FFC94A' : '#FF6B6B';

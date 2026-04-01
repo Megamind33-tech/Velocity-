@@ -3,21 +3,19 @@ import { Play, Star } from 'lucide-react';
 import { getLevelInfo } from '../lib/progression';
 import { Song } from '../lib/songs-extended';
 import { PrimaryButton } from '../components/ui/PrimaryButton';
+import { SecondaryButton } from '../components/ui/SecondaryButton';
 
 interface LevelSelectScreenProps {
   song: Song;
   worldId: number;
   levelProgress: { [key: number]: { stars: number; score: number } };
   onSelectLevel: (level: number, mode: 'A' | 'C') => void;
+  onDemoLevel?: (level: number, mode: 'A' | 'C') => void;
   onBack: () => void;
 }
 
 export function LevelSelectScreen({
-  song,
-  worldId,
-  levelProgress,
-  onSelectLevel,
-  onBack,
+  song, worldId, levelProgress, onSelectLevel, onDemoLevel, onBack,
 }: LevelSelectScreenProps) {
   const maxLevelsInWorld = [10, 15, 15, 18, 20][worldId - 1];
 
@@ -62,32 +60,19 @@ export function LevelSelectScreen({
                     <div className="flex gap-2 ml-[52px]">
                       {stars > 0 && (
                         <div className="flex gap-1">
-                          {[1, 2, 3].map((star) => (
-                            <Star
-                              key={star}
-                              className={`w-3 h-3 ${
-                                star <= stars
-                                  ? 'fill-[#FFC94A] text-[#FFC94A]'
-                                  : 'text-[var(--border-default)]'
-                              }`}
-                            />
+                          {[1, 2, 3].map((s) => (
+                            <Star key={s} className={`w-3 h-3 ${s <= stars ? 'fill-[#FFC94A] text-[#FFC94A]' : 'text-[var(--border-default)]'}`} />
                           ))}
                         </div>
                       )}
-                      {progress?.score && (
-                        <span className="text-caption text-success font-bold">{progress.score} pts</span>
-                      )}
+                      {progress?.score ? <span className="text-caption text-success font-bold">{progress.score} pts</span> : null}
                     </div>
                   </div>
-
-                  {/* Difficulty Indicator */}
                   <div
                     className="w-10 h-10 rounded-lg flex items-center justify-center text-white font-bold text-xs ml-3"
                     style={{
                       background: challenge?.difficultyStars
-                        ? ['#B9FF66', '#FFC94A', '#FF6B6B', '#7D5CFF', '#43E7FF', '#FF4FC3'][
-                            Math.min(challenge.difficultyStars - 1, 5)
-                          ]
+                        ? ['#B9FF66', '#FFC94A', '#FF6B6B', '#7D5CFF', '#43E7FF', '#FF4FC3'][Math.min(challenge.difficultyStars - 1, 5)]
                         : '#666',
                     }}
                   >
@@ -95,29 +80,21 @@ export function LevelSelectScreen({
                   </div>
                 </div>
 
-                {/* Mode Selection */}
                 <div className="flex gap-2 mt-3">
                   {(level <= 10 || worldId === 1) && (
-                    <PrimaryButton
-                      variant="cyan"
-                      size="sm"
-                      fullWidth
-                      icon={<Play className="w-3 h-3" />}
-                      onClick={() => onSelectLevel(level, 'A')}
-                    >
+                    <PrimaryButton variant="cyan" size="sm" fullWidth icon={<Play className="w-3 h-3" />} onClick={() => onSelectLevel(level, 'A')}>
                       Mode A
                     </PrimaryButton>
                   )}
                   {level > 10 && worldId > 1 && (
-                    <PrimaryButton
-                      variant="violet"
-                      size="sm"
-                      fullWidth
-                      icon={<Play className="w-3 h-3" />}
-                      onClick={() => onSelectLevel(level, 'C')}
-                    >
+                    <PrimaryButton variant="violet" size="sm" fullWidth icon={<Play className="w-3 h-3" />} onClick={() => onSelectLevel(level, 'C')}>
                       Mode C
                     </PrimaryButton>
+                  )}
+                  {onDemoLevel && (
+                    <SecondaryButton variant="default" size="sm" fullWidth icon={<Eye className="w-3 h-3" />} onClick={() => onDemoLevel(level, level > 10 && worldId > 1 ? 'C' : 'A')}>
+                      Demo
+                    </SecondaryButton>
                   )}
                 </div>
               </div>

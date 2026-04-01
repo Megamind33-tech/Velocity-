@@ -2,7 +2,6 @@ import React from 'react';
 import { Pause, Play, Home, Mic } from 'lucide-react';
 import { GameEngine, GameStats } from '../components/GameEngine';
 import { AudioController } from '../lib/audio';
-import { SONGS } from '../lib/songs-extended';
 import { Song } from '../lib/songs-extended';
 import { PlayerProfile } from '../lib/profile';
 import { PrimaryButton } from '../components/ui/PrimaryButton';
@@ -16,6 +15,7 @@ interface GameScreenProps {
   difficulty: 'novice' | 'intermediate' | 'advanced' | 'master' | 'legend';
   isPaused: boolean;
   profile: PlayerProfile | null;
+  demoMode?: boolean;
   onPauseToggle: () => void;
   onGameOver: (score: number, win: boolean, stats?: GameStats) => void;
   onAbort: () => void;
@@ -29,24 +29,26 @@ export function GameScreen({
   difficulty,
   isPaused,
   profile,
+  demoMode,
   onPauseToggle,
   onGameOver,
   onAbort,
 }: GameScreenProps) {
 
-  const DIFF_COLORS = {
-    easy:   { text: '#B9FF66', glow: 'rgba(185,255,102,0.4)' },
-    medium: { text: '#FFC94A', glow: 'rgba(255,201,74,0.4)' },
-    hard:   { text: '#FF6B6B', glow: 'rgba(255,107,107,0.4)' },
+  const DIFF_COLORS: Record<string, { text: string; glow: string }> = {
+    novice:       { text: '#B9FF66', glow: 'rgba(185,255,102,0.4)' },
+    intermediate: { text: '#FFC94A', glow: 'rgba(255,201,74,0.4)' },
+    advanced:     { text: '#FF6B6B', glow: 'rgba(255,107,107,0.4)' },
+    master:       { text: '#7D5CFF', glow: 'rgba(125,92,255,0.4)' },
+    legend:       { text: '#43E7FF', glow: 'rgba(67,231,255,0.4)' },
   };
-  const dc = DIFF_COLORS[difficulty];
+  const dc = DIFF_COLORS[difficulty] || DIFF_COLORS.novice;
 
   return (
     <div
       className="fixed inset-0 mg-stage flex flex-col overflow-hidden"
       style={{ paddingTop: 'var(--safe-top)', paddingBottom: 'var(--safe-bottom)' }}
     >
-      {/* ── Game Engine ── fills all remaining space */}
       <div className="flex-1 relative overflow-hidden">
         <GameEngine
           audioController={audioController}
@@ -55,6 +57,7 @@ export function GameScreen({
           mode={mode}
           difficulty={difficulty}
           isPaused={isPaused}
+          demoMode={demoMode}
           onGameOver={onGameOver}
         />
 
@@ -108,7 +111,7 @@ export function GameScreen({
           </div>
         </div>
 
-        {/* ── PROFESSIONAL PAUSE OVERLAY ── */}
+        {/* PAUSE OVERLAY */}
         {isPaused && (
           <div
             className="absolute inset-0 flex items-center justify-center z-40 animate-fade-in"
@@ -120,47 +123,24 @@ export function GameScreen({
                 className="absolute -top-12 left-1/2 -translate-x-1/2 w-24 h-24 rounded-full pointer-events-none"
                 style={{ background: 'radial-gradient(circle, rgba(125,92,255,0.4), transparent 70%)' }}
               />
-
-              {/* Header */}
               <div className="text-center space-y-2">
                 <Pause className="w-8 h-8 mx-auto text-[var(--color-secondary)]" />
                 <h3 className="font-display text-headline font-black uppercase tracking-tight text-primary">
                   Paused
                 </h3>
-                {song && (
-                  <p className="text-caption text-secondary">{song.title}</p>
-                )}
+                {song && <p className="text-caption text-secondary">{song.title}</p>}
               </div>
-
-              {/* Resume Button */}
-              <PrimaryButton
-                variant="violet"
-                size="md"
-                fullWidth
-                onClick={onPauseToggle}
-                icon={<Play className="w-4 h-4" />}
-              >
+              <PrimaryButton variant="violet" size="md" fullWidth onClick={onPauseToggle} icon={<Play className="w-4 h-4" />}>
                 Resume
               </PrimaryButton>
-
-              {/* Exit Button */}
               <SecondaryButton
-                variant="default"
-                size="md"
-                fullWidth
-                onClick={() => {
-                  onPauseToggle();
-                  onAbort();
-                }}
+                variant="default" size="md" fullWidth
+                onClick={() => { onPauseToggle(); onAbort(); }}
                 icon={<Home className="w-4 h-4" />}
               >
                 Exit to Home
               </SecondaryButton>
-
-              {/* Footer text */}
-              <div className="text-center text-label text-tertiary">
-                Progress Saved
-              </div>
+              <div className="text-center text-label text-tertiary">Progress Saved</div>
             </div>
           </div>
         )}
