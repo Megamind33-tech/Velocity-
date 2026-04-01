@@ -6,7 +6,7 @@ import { PrimaryButton } from '../components/ui/PrimaryButton';
 
 interface SongSelectScreenProps {
   worldId: number;
-  completedSongs: { [key: string]: { bestScore: number; stars: number } };
+  completedSongs: { [key: string]: { score: number; stars: number } };
   onSelectSong: (songId: string) => void;
   onBack: () => void;
 }
@@ -36,7 +36,7 @@ export function SongSelectScreen({
           {worldSongs.map((song) => {
             const completion = completedSongs[song.id];
             const stars = completion?.stars || 0;
-            const bestScore = completion?.bestScore || 0;
+            const bestScore = completion?.score || 0;
 
             return (
               <div

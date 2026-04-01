@@ -1,15 +1,16 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useCallback } from 'react';
 import { AudioController } from '../lib/audio';
-import { Song, SONGS } from '../lib/songs-extended';
-import { LEVEL_CHALLENGES, getLevelInfo } from '../lib/progression';
+import { Song } from '../lib/songs-extended';
+import { getLevelInfo } from '../lib/progression';
 
 interface GameEngineProps {
   audioController: AudioController;
   song: Song | null;
-  level: number; // 1-20
-  mode: 'A' | 'C'; // Mode A = waypoints, Mode C = contour
+  level: number;
+  mode: 'A' | 'C';
   difficulty: 'novice' | 'intermediate' | 'advanced' | 'master' | 'legend';
   isPaused: boolean;
+  demoMode?: boolean;
   onGameOver: (score: number, win: boolean, stats: GameStats) => void;
 }
 
@@ -21,447 +22,588 @@ export interface GameStats {
   smoothnessScore: number;
   vibratoQuality: number;
   playtime: number;
+  xpEarned: number;
 }
-
-// ============================================================
-// REALISTIC PLANE GRAPHICS & FLIGHT MECHANICS
-// ============================================================
-
-const PlaneGraphics = {
-  // Cessna-172 style aircraft
-  drawPlane: (
-    ctx: CanvasRenderingContext2D,
-    x: number,
-    y: number,
-    altitude: number,
-    pitchAngle: number,
-    isAccurate: boolean
-  ) => {
-    ctx.save();
-    ctx.translate(x, y);
-
-    // Plane body color (glow on correct hits)
-    const glowColor = isAccurate
-      ? 'rgba(67, 231, 255, 0.8)'  // Cyan glow
-      : 'rgba(200, 200, 200, 0.6)'; // Gray
-
-    // Fuselage (body)
-    ctx.fillStyle = '#C0C0C0';
-    ctx.beginPath();
-    ctx.ellipse(0, 0, 40, 8, pitchAngle * (Math.PI / 180), 0, Math.PI * 2);
-    ctx.fill();
-
-    // Wings
-    ctx.fillStyle = '#E8E8E8';
-    ctx.beginPath();
-    ctx.ellipse(0, 0, 70, 4, pitchAngle * (Math.PI / 180), 0, Math.PI * 2);
-    ctx.fill();
-
-    // Cockpit window
-    ctx.fillStyle = '#0047AB';
-    ctx.beginPath();
-    ctx.arc(8, -4, 3, 0, Math.PI * 2);
-    ctx.fill();
-
-    // Glow effect
-    ctx.strokeStyle = glowColor;
-    ctx.lineWidth = 3;
-    ctx.beginPath();
-    ctx.ellipse(0, 0, 45, 12, pitchAngle * (Math.PI / 180), 0, Math.PI * 2);
-    ctx.stroke();
-
-    // Tail rudder
-    ctx.fillStyle = '#C0C0C0';
-    ctx.beginPath();
-    ctx.moveTo(-35, 0);
-    ctx.lineTo(-40, -8);
-    ctx.lineTo(-40, 8);
-    ctx.closePath();
-    ctx.fill();
-
-    ctx.restore();
-  },
-
-  // Flight HUD overlay
-  drawHUD: (
-    ctx: CanvasRenderingContext2D,
-    width: number,
-    height: number,
-    altitude: number,
-    pitch: number,
-    accuracy: number,
-    score: number,
-    elapsedTime: number,
-    totalTime: number
-  ) => {
-    const padding = 15;
-    const hudColor = '#43E7FF';
-    const textColor = '#F5F7FC';
-
-    // Top-left: Altitude/Pitch display
-    ctx.fillStyle = textColor;
-    ctx.font = 'bold 14px "Space Grotesk"';
-    ctx.textAlign = 'left';
-
-    const noteNum = 12 * Math.log2(pitch / 440) + 69;
-    const noteNames = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
-    const noteName = noteNames[Math.round(noteNum) % 12];
-    const octave = Math.floor(Math.round(noteNum) / 12);
-
-    // Altitude indicator
-    ctx.fillText(`ALT: ${noteName}${octave}`, padding, padding + 20);
-    ctx.fillText(`PITCH: ${pitch.toFixed(1)} Hz`, padding, padding + 40);
-
-    // Top-right: Accuracy display
-    ctx.textAlign = 'right';
-    ctx.fillText(`ACCURACY: ${accuracy.toFixed(1)}%`, width - padding, padding + 20);
-    ctx.fillText(`SCORE: ${score}`, width - padding, padding + 40);
-
-    // Bottom-left: Time display
-    ctx.textAlign = 'left';
-    const timeRemaining = Math.max(0, totalTime - elapsedTime);
-    ctx.fillText(`TIME: ${elapsedTime.toFixed(1)}s / ${totalTime.toFixed(1)}s`, padding, height - padding);
-
-    // Bottom-right: Status indicator
-    ctx.textAlign = 'right';
-    ctx.fillStyle = accuracy > 85 ? '#B9FF66' : accuracy > 60 ? '#FFC94A' : '#FF6B6B';
-    ctx.fillText(accuracy > 85 ? 'ON COURSE' : accuracy > 60 ? 'ADJUSTING' : 'OFF COURSE', width - padding, height - padding);
-  },
-
-  // Altitude reference grid
-  drawAltitudeGrid: (
-    ctx: CanvasRenderingContext2D,
-    width: number,
-    height: number,
-    minNote: number,
-    maxNote: number
-  ) => {
-    const noteRange = maxNote - minNote;
-
-    ctx.strokeStyle = 'rgba(67, 231, 255, 0.15)';
-    ctx.lineWidth = 1;
-    ctx.font = '10px "Inter"';
-    ctx.fillStyle = 'rgba(184, 191, 212, 0.3)';
-    ctx.textAlign = 'right';
-
-    // Draw horizontal grid lines for each semitone
-    for (let i = 0; i <= noteRange; i += 2) { // Every 2 semitones
-      const y = height - ((i / noteRange) * height);
-      ctx.beginPath();
-      ctx.moveTo(0, y);
-      ctx.lineTo(width, y);
-      ctx.stroke();
-
-      const noteNum = minNote + i;
-      const noteNames = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
-      const noteName = noteNames[noteNum % 12];
-      const octave = Math.floor(noteNum / 12);
-
-      ctx.fillText(`${noteName}${octave}`, width - 5, y + 3);
-    }
-  },
-};
-
-// ============================================================
-// MODE A: WAYPOINT FLYING ENGINE
-// ============================================================
 
 interface WaypointData {
   noteNum: number;
   time: number;
   duration: number;
-  x: number; // Screen position
+  x: number;
   y: number;
-  visible: boolean;
-  hitAccuracy?: number;
+  hitAccuracy: number;
   passed: boolean;
+  hit: boolean;
 }
 
-const ModeAEngine = {
-  generateWaypoints: (
-    song: Song,
-    noteSequence: number[],
-    level: number,
-    canvasWidth: number,
-    canvasHeight: number
-  ): WaypointData[] => {
-    const levelInfo = getLevelInfo(level);
-    const tempo = levelInfo?.tempo || 100;
-    const songDuration = song.duration;
-    const minNote = song.minNote;
-    const maxNote = song.maxNote;
-    const noteRange = maxNote - minNote;
-
-    const waypoints: WaypointData[] = noteSequence.map((noteNum, index) => {
-      const timeFraction = index / noteSequence.length;
-      const time = timeFraction * songDuration;
-      const duration = (songDuration / noteSequence.length) * (tempo / 100);
-      const x = (timeFraction) * canvasWidth;
-      const y = canvasHeight - ((noteNum - minNote) / noteRange) * canvasHeight;
-
-      return {
-        noteNum,
-        time,
-        duration,
-        x,
-        y,
-        visible: false,
-        passed: false,
-      };
-    });
-
-    return waypoints;
-  },
-
-  updateWaypoints: (
-    waypoints: WaypointData[],
-    elapsedTime: number,
-    lookAheadTime: number = 2 // seconds
-  ) => {
-    waypoints.forEach(wp => {
-      wp.visible = elapsedTime >= wp.time - lookAheadTime && elapsedTime <= wp.time + wp.duration;
-    });
-  },
-
-  checkWaypointHit: (
-    currentPitch: number,
-    targetNote: number,
-    hitZones: number
-  ): { hit: boolean; accuracy: number } => {
-    const currentNote = 12 * Math.log2(currentPitch / 440) + 69;
-    const difference = Math.abs(currentNote - targetNote);
-    const hit = difference <= hitZones;
-    const accuracy = Math.max(0, 100 - (difference * 100 / hitZones));
-
-    return { hit, accuracy };
-  },
-};
-
-// ============================================================
-// MODE C: MELODIC CONTOUR ENGINE
-// ============================================================
-
-interface ContourData {
-  points: { x: number; y: number; noteNum: number }[];
-  smooth: boolean;
+interface ContourPoint {
+  x: number;
+  y: number;
+  noteNum: number;
+  time: number;
 }
 
-const ModeCEngine = {
-  generateContour: (
-    song: Song,
-    noteSequence: number[],
-    canvasWidth: number,
-    canvasHeight: number
-  ): ContourData => {
-    const minNote = song.minNote;
-    const maxNote = song.maxNote;
-    const noteRange = maxNote - minNote;
-    const songDuration = song.duration;
+interface Particle {
+  x: number;
+  y: number;
+  vx: number;
+  vy: number;
+  life: number;
+  maxLife: number;
+  color: string;
+  size: number;
+}
 
-    const points = noteSequence.map((noteNum, index) => {
-      const timeFraction = index / noteSequence.length;
-      const x = timeFraction * canvasWidth;
-      const y = canvasHeight - ((noteNum - minNote) / noteRange) * canvasHeight;
+interface BgStar {
+  x: number;
+  y: number;
+  size: number;
+  brightness: number;
+  speed: number;
+}
 
-      return { x, y, noteNum };
-    });
+function generateNoteSequence(song: Song, level: number): number[] {
+  const { minNote, maxNote, bpm, duration } = song;
+  const noteRange = maxNote - minNote;
+  const levelInfo = getLevelInfo(level);
+  const tempo = levelInfo?.tempo || 100;
+  const beatsPerSecond = (bpm * (tempo / 100)) / 60;
+  const noteCount = Math.max(8, Math.min(Math.floor(beatsPerSecond * duration), Math.floor(duration / 1.5)));
 
-    return { points, smooth: true };
-  },
-
-  drawContour: (
-    ctx: CanvasRenderingContext2D,
-    contour: ContourData,
-    color: string = '#7D5CFF'
-  ) => {
-    ctx.strokeStyle = color;
-    ctx.lineWidth = 3;
-    ctx.lineCap = 'round';
-    ctx.lineJoin = 'round';
-
-    if (contour.points.length > 1) {
-      ctx.beginPath();
-      ctx.moveTo(contour.points[0].x, contour.points[0].y);
-
-      for (let i = 1; i < contour.points.length; i++) {
-        ctx.lineTo(contour.points[i].x, contour.points[i].y);
-      }
-
-      ctx.stroke();
+  const keyNote = minNote + Math.floor(noteRange / 2);
+  const scaleSteps = [0, 2, 4, 5, 7, 9, 11];
+  const baseScaleNotes: number[] = [];
+  for (let oct = -1; oct <= 2; oct++) {
+    for (const step of scaleSteps) {
+      const note = keyNote + step + (oct * 12);
+      if (note >= minNote && note <= maxNote) baseScaleNotes.push(note);
     }
-  },
+  }
+  if (baseScaleNotes.length === 0) {
+    for (let n = minNote; n <= maxNote; n++) baseScaleNotes.push(n);
+  }
 
-  calculateContourAccuracy: (
-    playerPitch: number,
-    targetContour: { points: { x: number; y: number; noteNum: number }[] },
-    elapsedTime: number,
-    totalTime: number,
-    hitZones: number
-  ): number => {
-    const currentX = (elapsedTime / totalTime) * (targetContour.points[targetContour.points.length - 1]?.x || 100);
+  let seed = song.id.split('').reduce((acc, ch) => acc + ch.charCodeAt(0), 0) + level * 137;
+  const rand = () => { seed = (seed * 1103515245 + 12345) & 0x7fffffff; return (seed % 1000) / 1000; };
 
-    // Find nearest point on contour
-    let nearestPoint = targetContour.points[0];
-    let minDistance = Infinity;
+  const notes: number[] = [];
+  let idx = Math.floor(baseScaleNotes.length / 2);
+  for (let i = 0; i < noteCount; i++) {
+    notes.push(baseScaleNotes[idx]);
+    idx = Math.max(0, Math.min(baseScaleNotes.length - 1, idx + Math.floor(rand() * 5) - 2));
+  }
+  return notes;
+}
 
-    targetContour.points.forEach(point => {
-      const distance = Math.abs(point.x - currentX);
-      if (distance < minDistance) {
-        minDistance = distance;
-        nearestPoint = point;
-      }
+function makeWaypoints(song: Song, seq: number[], level: number, w: number, h: number): WaypointData[] {
+  const nr = (song.maxNote - song.minNote) || 1;
+  return seq.map((noteNum, i) => {
+    const tf = (i + 0.5) / seq.length;
+    return {
+      noteNum, time: tf * song.duration,
+      duration: (song.duration / seq.length) * 0.8,
+      x: tf * w,
+      y: h - ((noteNum - song.minNote) / nr) * (h * 0.8) - h * 0.1,
+      hitAccuracy: 0, passed: false, hit: false,
+    };
+  });
+}
+
+function makeContour(song: Song, seq: number[], w: number, h: number): ContourPoint[] {
+  const nr = (song.maxNote - song.minNote) || 1;
+  return seq.map((noteNum, i) => {
+    const tf = (i + 0.5) / seq.length;
+    return { x: tf * w, y: h - ((noteNum - song.minNote) / nr) * (h * 0.8) - h * 0.1, noteNum, time: tf * song.duration };
+  });
+}
+
+function createStars(w: number, h: number): BgStar[] {
+  const stars: BgStar[] = [];
+  for (let i = 0; i < 120; i++) {
+    stars.push({
+      x: Math.random() * w, y: Math.random() * h,
+      size: Math.random() * 1.5 + 0.5,
+      brightness: Math.random() * 0.5 + 0.3,
+      speed: Math.random() * 0.3 + 0.1,
     });
+  }
+  return stars;
+}
 
-    const currentNote = 12 * Math.log2(playerPitch / 440) + 69;
-    const difference = Math.abs(currentNote - nearestPoint.noteNum);
-    const accuracy = Math.max(0, 100 - (difference * 100 / hitZones));
-
-    return accuracy;
-  },
+const DIFF_GLOW: Record<string, string> = {
+  novice: '185,255,102', intermediate: '255,201,74',
+  advanced: '255,107,107', master: '125,92,255', legend: '67,231,255',
 };
-
-// ============================================================
-// MAIN GAME ENGINE COMPONENT
-// ============================================================
 
 export function GameEngine({
-  audioController,
-  song,
-  level,
-  mode,
-  difficulty,
-  isPaused,
-  onGameOver,
+  audioController, song, level, mode, difficulty, isPaused, demoMode, onGameOver,
 }: GameEngineProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const [gameStats, setGameStats] = useState<GameStats>({
-    accuracy: 0,
-    maxCombo: 0,
-    notesHit: 0,
-    notesMissed: 0,
-    smoothnessScore: 100,
-    vibratoQuality: 0,
-    playtime: 0,
-  });
+  const stateRef = useRef<{
+    phase: 'countdown' | 'playing' | 'ended';
+    countdownLeft: number;
+    elapsed: number;
+    score: number; combo: number; maxCombo: number;
+    accSum: number; hitCount: number; missCount: number; totalChecked: number;
+    lastPitch: number; pitchHistory: number[];
+    waypoints: WaypointData[]; contour: ContourPoint[]; seq: number[];
+    trail: { x: number; y: number; a: number }[];
+    particles: Particle[]; stars: BgStar[];
+    lastFrame: number;
+    demoAngle: number; demoNoteIdx: number;
+  } | null>(null);
+  const overRef = useRef(onGameOver);
+  overRef.current = onGameOver;
 
-  const gameStateRef = useRef({
-    elapsedTime: 0,
-    started: false,
-    ended: false,
-    score: 0,
-    combo: 0,
-    maxCombo: 0,
-    accuracySum: 0,
-    hitCount: 0,
-    totalCount: 0,
-    waypoints: [] as WaypointData[],
-    lastPitch: 440,
-    pitchHistory: [] as number[],
-  });
+  const resetState = useCallback(() => {
+    if (!canvasRef.current || !song) return;
+    const c = canvasRef.current;
+    const seq = generateNoteSequence(song, level);
+    stateRef.current = {
+      phase: 'countdown', countdownLeft: 3,
+      elapsed: 0, score: 0, combo: 0, maxCombo: 0,
+      accSum: 0, hitCount: 0, missCount: 0, totalChecked: 0,
+      lastPitch: 0, pitchHistory: [],
+      waypoints: mode === 'A' ? makeWaypoints(song, seq, level, c.width, c.height) : [],
+      contour: mode === 'C' ? makeContour(song, seq, c.width, c.height) : [],
+      seq, trail: [], particles: [], stars: createStars(c.width, c.height),
+      lastFrame: 0, demoAngle: 0, demoNoteIdx: 0,
+    };
+  }, [song, level, mode]);
+
+  useEffect(() => { resetState(); }, [resetState]);
 
   useEffect(() => {
-    if (!canvasRef.current || !song || !audioController.isSinging) return;
-
+    if (!canvasRef.current || !song) return;
     const canvas = canvasRef.current;
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
-    const animationFrameRef = { id: 0 };
-    let lastFrameTime = Date.now();
+    if (!stateRef.current) resetState();
+    const S = () => stateRef.current!;
 
-    const animate = () => {
-      if (isPaused) {
-        animationFrameRef.id = requestAnimationFrame(animate);
+    let raf = 0;
+
+    const tick = () => {
+      const s = S();
+      if (!s) { raf = requestAnimationFrame(tick); return; }
+      const now = Date.now();
+      if (s.lastFrame === 0) s.lastFrame = now;
+      const dt = Math.min((now - s.lastFrame) / 1000, 0.1);
+      s.lastFrame = now;
+
+      const W = canvas.width, H = canvas.height;
+      const nr = (song.maxNote - song.minNote) || 1;
+      const levelInfo = getLevelInfo(level);
+      const hz = levelInfo?.hitZones ?? 2;
+
+      // --- Background ---
+      ctx.fillStyle = '#07090E';
+      ctx.fillRect(0, 0, W, H);
+
+      // Stars
+      for (const st of s.stars) {
+        st.x -= st.speed;
+        if (st.x < 0) { st.x = W; st.y = Math.random() * H; }
+        const flicker = st.brightness + Math.sin(now * 0.003 + st.x) * 0.15;
+        ctx.fillStyle = `rgba(200,220,255,${Math.max(0, flicker)})`;
+        ctx.beginPath();
+        ctx.arc(st.x, st.y, st.size, 0, Math.PI * 2);
+        ctx.fill();
+      }
+
+      // Altitude grid
+      const noteNames = ['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
+      ctx.strokeStyle = 'rgba(67,231,255,0.08)';
+      ctx.lineWidth = 1;
+      ctx.font = '10px "Inter",sans-serif';
+      ctx.fillStyle = 'rgba(184,191,212,0.2)';
+      ctx.textAlign = 'right';
+      for (let i = 0; i <= nr; i += 2) {
+        const y = H - (i / nr) * (H * 0.8) - H * 0.1;
+        ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke();
+        const nn = song.minNote + i;
+        ctx.fillText(`${noteNames[nn % 12]}${Math.floor(nn / 12)}`, W - 5, y + 3);
+      }
+
+      // --- Countdown ---
+      if (s.phase === 'countdown') {
+        s.countdownLeft -= dt;
+        if (s.countdownLeft <= 0) {
+          s.phase = 'playing';
+        } else {
+          const num = Math.ceil(s.countdownLeft);
+          const scale = 1 + (s.countdownLeft % 1) * 0.3;
+          ctx.save();
+          ctx.translate(W / 2, H / 2);
+          ctx.scale(scale, scale);
+          ctx.fillStyle = '#43E7FF';
+          ctx.font = 'bold 72px "Space Grotesk",sans-serif';
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'middle';
+          ctx.fillText(String(num), 0, 0);
+          ctx.font = 'bold 16px "Space Grotesk",sans-serif';
+          ctx.fillStyle = '#A7B0C6';
+          ctx.fillText('GET READY', 0, 50);
+          ctx.restore();
+          if (demoMode) {
+            ctx.fillStyle = 'rgba(125,92,255,0.6)';
+            ctx.font = 'bold 14px "Space Grotesk",sans-serif';
+            ctx.textAlign = 'center';
+            ctx.fillText('DEMO MODE — auto-pilot playing', W / 2, H / 2 + 90);
+          }
+        }
+        raf = requestAnimationFrame(tick);
         return;
       }
 
-      const now = Date.now();
-      const deltaTime = (now - lastFrameTime) / 1000;
-      lastFrameTime = now;
+      // --- Playing ---
+      if (!isPaused && s.phase === 'playing') s.elapsed += dt;
 
-      const state = gameStateRef.current;
-      if (!state.ended) {
-        state.elapsedTime += deltaTime;
-      }
-
-      // Get current pitch from audio controller
-      const currentPitch = audioController.pitch > 0 ? audioController.pitch : 440;
-      state.lastPitch = currentPitch;
-      state.pitchHistory.push(currentPitch);
-
-      // Clear canvas
-      ctx.fillStyle = '#07090E';
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-      // Draw altitude grid
-      PlaneGraphics.drawAltitudeGrid(ctx, canvas.width, canvas.height, song.minNote, song.maxNote);
-
-      // Render based on mode
-      if (mode === 'A') {
-        // MODE A: Draw waypoints
-        if (state.waypoints.length === 0) {
-          // TODO: Generate waypoints from song
+      // Audio / demo pitch
+      let pitch = 0;
+      let singing = false;
+      if (demoMode) {
+        const target = mode === 'A' ? s.waypoints : s.contour.map(c => ({ noteNum: c.noteNum, time: c.time, duration: 1 }));
+        let tgt: number | null = null;
+        for (const wp of target) {
+          const t = 'time' in wp ? wp.time : 0;
+          const d = 'duration' in wp ? wp.duration : 1;
+          if (s.elapsed >= t - 0.5 && s.elapsed <= t + d + 0.5) { tgt = wp.noteNum; break; }
         }
-      } else if (mode === 'C') {
-        // MODE C: Draw contour
-        const levelInfo = getLevelInfo(level);
-        const contour = ModeCEngine.generateContour(song, [], canvas.width, canvas.height);
-        ModeCEngine.drawContour(ctx, contour, '#7D5CFF');
+        if (tgt !== null) {
+          const wobble = Math.sin(s.demoAngle) * 0.15;
+          s.demoAngle += dt * 8;
+          pitch = 440 * Math.pow(2, (tgt + wobble - 69) / 12);
+          singing = true;
+        }
+      } else {
+        audioController.update();
+        pitch = audioController.pitch;
+        singing = audioController.isSinging;
       }
 
-      // Draw plane
-      const noteNum = 12 * Math.log2(currentPitch / 440) + 69;
-      const normalizedY = (noteNum - song.minNote) / (song.maxNote - song.minNote);
-      const planeY = canvas.height - normalizedY * canvas.height;
-      const isAccurate = Math.abs(normalizedY * 100 - 50) < 20; // Simple accuracy check
+      if (singing && pitch > 0) {
+        s.lastPitch = pitch;
+        s.pitchHistory.push(pitch);
+        if (s.pitchHistory.length > 100) s.pitchHistory.shift();
+      }
 
-      PlaneGraphics.drawPlane(ctx, 60, planeY, normalizedY * 100, 0, isAccurate);
+      let planeY = H / 2;
+      let accurate = false;
+      let pAngle = 0;
+      const curNote = (singing && pitch > 0) ? 12 * Math.log2(pitch / 440) + 69 : -1;
 
-      // Draw HUD
-      PlaneGraphics.drawHUD(
-        ctx,
-        canvas.width,
-        canvas.height,
-        noteNum,
-        currentPitch,
-        gameStats.accuracy,
-        state.score,
-        state.elapsedTime,
-        song.duration
-      );
+      if (curNote > 0) {
+        planeY = H - ((curNote - song.minNote) / nr) * (H * 0.8) - H * 0.1;
+        planeY = Math.max(20, Math.min(H - 20, planeY));
+        if (s.pitchHistory.length >= 2) {
+          const prev = s.pitchHistory[s.pitchHistory.length - 2];
+          pAngle = Math.max(-15, Math.min(15, (pitch - prev) * 0.3));
+        }
 
-      // Check for game end
-      if (state.elapsedTime >= song.duration) {
-        state.ended = true;
-        const finalAccuracy = state.hitCount > 0 ? (state.accuracySum / state.hitCount) : 0;
-        onGameOver(state.score, finalAccuracy > 75, {
-          accuracy: finalAccuracy,
-          maxCombo: state.maxCombo,
-          notesHit: state.hitCount,
-          notesMissed: state.totalCount - state.hitCount,
-          smoothnessScore: 85,
-          vibratoQuality: 0,
-          playtime: state.elapsedTime,
+        if (mode === 'A' && !isPaused) {
+          for (const wp of s.waypoints) {
+            if (wp.passed || wp.hit) continue;
+            if (s.elapsed >= wp.time && s.elapsed <= wp.time + wp.duration) {
+              const d = Math.abs(curNote - wp.noteNum);
+              if (d <= hz) {
+                const a = Math.max(0, 100 - (d * 100 / hz));
+                wp.hit = true; wp.hitAccuracy = a;
+                s.hitCount++; s.accSum += a; s.combo++;
+                s.maxCombo = Math.max(s.maxCombo, s.combo);
+                const cm = 1 + Math.floor(s.combo / 5) * 0.25;
+                s.score += Math.floor(a * 10 * cm);
+                accurate = true;
+                spawnParticles(s.particles, wp.x, wp.y, a >= 90);
+              }
+            }
+          }
+          for (const wp of s.waypoints) {
+            if (!wp.passed && !wp.hit && s.elapsed > wp.time + wp.duration) {
+              wp.passed = true; s.missCount++; s.combo = 0;
+            }
+          }
+        }
+
+        if (mode === 'C' && !isPaused && s.contour.length > 0) {
+          let near = s.contour[0];
+          let md = Infinity;
+          for (const pt of s.contour) {
+            const d = Math.abs(pt.time - s.elapsed);
+            if (d < md) { md = d; near = pt; }
+          }
+          const d = Math.abs(curNote - near.noteNum);
+          if (d <= hz) {
+            const a = Math.max(0, 100 - (d * 100 / hz));
+            s.hitCount++; s.accSum += a; s.combo++;
+            s.maxCombo = Math.max(s.maxCombo, s.combo);
+            s.score += Math.floor(a * 0.5 * (1 + Math.floor(s.combo / 5) * 0.25));
+            accurate = true;
+          } else if (d > hz * 2) { s.missCount++; s.combo = 0; }
+          s.totalChecked++;
+        }
+      } else if (!isPaused && s.phase === 'playing') {
+        if (mode === 'A') {
+          for (const wp of s.waypoints) {
+            if (!wp.passed && !wp.hit && s.elapsed > wp.time + wp.duration) {
+              wp.passed = true; s.missCount++; s.combo = 0;
+            }
+          }
+        }
+      }
+
+      // --- Draw waypoints/contour ---
+      const pps = W / song.duration;
+      const scrollX = s.elapsed * pps;
+
+      if (mode === 'A') {
+        for (const wp of s.waypoints) {
+          const sx = wp.x - scrollX + 100;
+          if (sx < -60 || sx > W + 60) continue;
+          if (s.elapsed < wp.time - 5 || s.elapsed > wp.time + wp.duration + 2) continue;
+
+          let col: string, r: number;
+          if (wp.hit) {
+            col = `rgba(185,255,102,${0.3 + wp.hitAccuracy / 300})`;
+            r = 12;
+          } else if (wp.passed) {
+            col = 'rgba(255,107,107,0.25)'; r = 8;
+          } else if (s.elapsed >= wp.time && s.elapsed <= wp.time + wp.duration) {
+            col = 'rgba(255,201,74,0.9)'; r = 20;
+            ctx.beginPath(); ctx.arc(sx, wp.y, r + 8, 0, Math.PI * 2);
+            ctx.strokeStyle = 'rgba(255,201,74,0.3)'; ctx.lineWidth = 2; ctx.stroke();
+          } else {
+            col = 'rgba(125,92,255,0.5)'; r = 14;
+          }
+
+          ctx.beginPath(); ctx.arc(sx, wp.y, r, 0, Math.PI * 2);
+          ctx.fillStyle = col; ctx.fill();
+
+          if (!wp.hit && !wp.passed) {
+            const hitR = hz * (H * 0.8 / nr);
+            ctx.beginPath(); ctx.arc(sx, wp.y, hitR, 0, Math.PI * 2);
+            ctx.strokeStyle = 'rgba(125,92,255,0.12)'; ctx.lineWidth = 1;
+            ctx.setLineDash([3, 3]); ctx.stroke(); ctx.setLineDash([]);
+          }
+        }
+
+        // connecting line between upcoming waypoints
+        ctx.strokeStyle = 'rgba(125,92,255,0.15)'; ctx.lineWidth = 1;
+        ctx.beginPath();
+        let first = true;
+        for (const wp of s.waypoints) {
+          const sx = wp.x - scrollX + 100;
+          if (sx < -60 || sx > W + 60) continue;
+          if (wp.hit || wp.passed) continue;
+          if (first) { ctx.moveTo(sx, wp.y); first = false; }
+          else ctx.lineTo(sx, wp.y);
+        }
+        ctx.stroke();
+      }
+
+      if (mode === 'C' && s.contour.length > 1) {
+        // hit zone band
+        ctx.strokeStyle = `rgba(${DIFF_GLOW[difficulty] || '125,92,255'},0.12)`;
+        ctx.lineWidth = hz * 2 * (H * 0.8 / nr);
+        ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+        ctx.beginPath(); let started = false;
+        for (const pt of s.contour) {
+          const sx = pt.x - scrollX + 100;
+          if (sx < -100 || sx > W + 100) continue;
+          if (!started) { ctx.moveTo(sx, pt.y); started = true; } else ctx.lineTo(sx, pt.y);
+        }
+        ctx.stroke();
+
+        // main contour line
+        ctx.strokeStyle = '#7D5CFF'; ctx.lineWidth = 3;
+        ctx.beginPath(); started = false;
+        for (const pt of s.contour) {
+          const sx = pt.x - scrollX + 100;
+          if (sx < -100 || sx > W + 100) continue;
+          if (!started) { ctx.moveTo(sx, pt.y); started = true; } else ctx.lineTo(sx, pt.y);
+        }
+        ctx.stroke(); ctx.lineWidth = 1;
+      }
+
+      // --- Particles ---
+      s.particles = s.particles.filter(p => {
+        p.x += p.vx; p.y += p.vy; p.vy += 0.1; p.life -= dt;
+        if (p.life <= 0) return false;
+        const a = p.life / p.maxLife;
+        ctx.fillStyle = p.color.replace('1)', `${a})`);
+        ctx.beginPath(); ctx.arc(p.x - scrollX + 100, p.y, p.size * a, 0, Math.PI * 2);
+        ctx.fill();
+        return true;
+      });
+
+      // --- Player trail ---
+      if (singing && pitch > 0) s.trail.push({ x: 100, y: planeY, a: 1 });
+      s.trail = s.trail.map(p => ({ ...p, x: p.x - 0.8, a: p.a - 0.015 })).filter(p => p.a > 0 && p.x > 0);
+      if (s.trail.length > 1) {
+        ctx.beginPath(); ctx.moveTo(s.trail[0].x, s.trail[0].y);
+        for (let i = 1; i < s.trail.length; i++) ctx.lineTo(s.trail[i].x, s.trail[i].y);
+        ctx.strokeStyle = accurate ? 'rgba(67,231,255,0.35)' : 'rgba(180,180,200,0.15)';
+        ctx.lineWidth = 2; ctx.stroke();
+      }
+
+      // --- Plane ---
+      drawPlane(ctx, 100, planeY, pAngle, accurate, difficulty);
+
+      // --- HUD ---
+      const acc = s.hitCount > 0 ? s.accSum / s.hitCount : 0;
+      drawHUD(ctx, W, H, singing ? pitch : 0, acc, s.score, s.combo, s.elapsed, song.duration, singing, demoMode);
+
+      if (!isPaused && !singing && !demoMode && s.phase === 'playing') {
+        ctx.fillStyle = 'rgba(255,107,107,0.7)';
+        ctx.font = 'bold 14px "Space Grotesk",sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText('Sing to fly the plane!', W / 2, H - 55);
+      }
+
+      // --- Game over ---
+      if (s.elapsed >= song.duration && s.phase === 'playing') {
+        s.phase = 'ended';
+        const fa = s.hitCount > 0 ? s.accSum / s.hitCount : 0;
+        const stars = fa >= 90 ? 3 : fa >= 75 ? 2 : fa >= 60 ? 1 : 0;
+        const xp = Math.floor(s.score / 10) + stars * 50;
+        overRef.current(s.score, fa >= 60, {
+          accuracy: fa, maxCombo: s.maxCombo,
+          notesHit: s.hitCount, notesMissed: s.missCount,
+          smoothnessScore: 85, vibratoQuality: 0,
+          playtime: s.elapsed, xpEarned: xp,
         });
         return;
       }
 
-      animationFrameRef.id = requestAnimationFrame(animate);
+      raf = requestAnimationFrame(tick);
     };
 
-    animationFrameRef.id = requestAnimationFrame(animate);
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+  }, [audioController, song, level, mode, difficulty, isPaused, demoMode, resetState]);
 
-    return () => cancelAnimationFrame(animationFrameRef.id);
-  }, [audioController, song, level, mode, isPaused, onGameOver, gameStats.accuracy]);
+  useEffect(() => {
+    const resize = () => {
+      if (!canvasRef.current) return;
+      canvasRef.current.width = window.innerWidth;
+      canvasRef.current.height = window.innerHeight;
+    };
+    window.addEventListener('resize', resize);
+    return () => window.removeEventListener('resize', resize);
+  }, []);
 
   return (
-    <canvas
-      ref={canvasRef}
-      width={window.innerWidth}
-      height={window.innerHeight}
-      style={{ display: 'block', background: '#07090E' }}
-    />
+    <canvas ref={canvasRef} width={window.innerWidth} height={window.innerHeight}
+      style={{ display: 'block', background: '#07090E' }} />
   );
+}
+
+function spawnParticles(arr: Particle[], x: number, y: number, perfect: boolean) {
+  const count = perfect ? 12 : 6;
+  const color = perfect ? 'rgba(255,201,74,1)' : 'rgba(185,255,102,1)';
+  for (let i = 0; i < count; i++) {
+    const angle = (Math.PI * 2 * i) / count + Math.random() * 0.3;
+    const speed = 1.5 + Math.random() * 3;
+    arr.push({
+      x, y, vx: Math.cos(angle) * speed, vy: Math.sin(angle) * speed - 1,
+      life: 0.6 + Math.random() * 0.4, maxLife: 1, color, size: 2 + Math.random() * 2,
+    });
+  }
+}
+
+function drawPlane(ctx: CanvasRenderingContext2D, x: number, y: number, angle: number, glow: boolean, diff: string) {
+  ctx.save(); ctx.translate(x, y);
+  const a = angle * Math.PI / 180;
+  // Glow
+  if (glow) {
+    const rgb = DIFF_GLOW[diff] || '67,231,255';
+    ctx.fillStyle = `rgba(${rgb},0.12)`;
+    ctx.beginPath(); ctx.arc(0, 0, 55, 0, Math.PI * 2); ctx.fill();
+  }
+  // Body
+  ctx.fillStyle = '#C0C0C0';
+  ctx.beginPath(); ctx.ellipse(0, 0, 40, 8, a, 0, Math.PI * 2); ctx.fill();
+  // Wings
+  ctx.fillStyle = '#E8E8E8';
+  ctx.beginPath(); ctx.ellipse(0, 0, 70, 4, a, 0, Math.PI * 2); ctx.fill();
+  // Cockpit
+  ctx.fillStyle = '#0047AB';
+  ctx.beginPath(); ctx.arc(8, -4, 3, 0, Math.PI * 2); ctx.fill();
+  // Outline glow
+  ctx.strokeStyle = glow ? `rgba(${DIFF_GLOW[diff] || '67,231,255'},0.7)` : 'rgba(200,200,200,0.4)';
+  ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.ellipse(0, 0, 45, 12, a, 0, Math.PI * 2); ctx.stroke();
+  // Tail
+  ctx.fillStyle = '#B0B0B0';
+  ctx.beginPath(); ctx.moveTo(-35, 0); ctx.lineTo(-42, -10); ctx.lineTo(-42, 10); ctx.closePath(); ctx.fill();
+  ctx.restore();
+}
+
+function drawHUD(
+  ctx: CanvasRenderingContext2D, W: number, H: number,
+  pitch: number, acc: number, score: number, combo: number,
+  elapsed: number, total: number, singing: boolean, demo?: boolean,
+) {
+  const p = 15;
+  const noteNames = ['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
+
+  // Top-left
+  ctx.font = 'bold 13px "Space Grotesk",sans-serif';
+  ctx.textAlign = 'left';
+  if (pitch > 0 && singing) {
+    const nn = 12 * Math.log2(pitch / 440) + 69;
+    ctx.fillStyle = '#F5F7FC';
+    ctx.fillText(`NOTE: ${noteNames[Math.round(nn) % 12]}${Math.floor(Math.round(nn) / 12)}`, p, p + 20);
+    ctx.fillText(`PITCH: ${pitch.toFixed(0)} Hz`, p, p + 38);
+  } else {
+    ctx.fillStyle = '#4A5068';
+    ctx.fillText('NOTE: --', p, p + 20);
+    ctx.fillText('PITCH: --', p, p + 38);
+  }
+
+  // Top-right
+  ctx.textAlign = 'right'; ctx.fillStyle = '#F5F7FC';
+  ctx.fillText(`ACCURACY: ${acc.toFixed(1)}%`, W - p, p + 20);
+  ctx.fillText(`SCORE: ${score.toLocaleString()}`, W - p, p + 38);
+
+  // Combo
+  if (combo > 1) {
+    ctx.fillStyle = combo >= 20 ? '#FF4FC3' : combo >= 10 ? '#FFC94A' : '#B9FF66';
+    ctx.font = `bold ${Math.min(20, 14 + combo * 0.3)}px "Space Grotesk",sans-serif`;
+    ctx.fillText(`${combo}x COMBO`, W - p, p + 58);
+  }
+
+  // Progress bar
+  const barW = W - p * 2, barY = H - p - 22;
+  ctx.fillStyle = 'rgba(255,255,255,0.08)';
+  ctx.fillRect(p, barY, barW, 4);
+  ctx.fillStyle = 'rgba(67,231,255,0.7)';
+  ctx.fillRect(p, barY, barW * Math.min(1, elapsed / total), 4);
+
+  // Bottom-left: time
+  ctx.font = 'bold 13px "Space Grotesk",sans-serif';
+  ctx.textAlign = 'left'; ctx.fillStyle = '#F5F7FC';
+  const rem = Math.max(0, total - elapsed);
+  ctx.fillText(`TIME: ${Math.floor(rem / 60)}:${Math.floor(rem % 60).toString().padStart(2, '0')}`, p, H - p);
+
+  // Bottom-right: status
+  ctx.textAlign = 'right';
+  ctx.fillStyle = acc > 85 ? '#B9FF66' : acc > 60 ? '#FFC94A' : '#FF6B6B';
+  ctx.fillText(acc > 85 ? 'ON COURSE' : acc > 60 ? 'ADJUSTING' : 'OFF COURSE', W - p, H - p);
+
+  // Demo badge
+  if (demo) {
+    ctx.fillStyle = 'rgba(125,92,255,0.15)';
+    const bw = 140, bh = 22, bx = W / 2 - bw / 2, by = p;
+    ctx.fillRect(bx, by, bw, bh);
+    ctx.strokeStyle = 'rgba(125,92,255,0.4)'; ctx.lineWidth = 1;
+    ctx.strokeRect(bx, by, bw, bh);
+    ctx.fillStyle = '#7D5CFF';
+    ctx.font = 'bold 10px "Space Grotesk",sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('DEMO MODE', W / 2, by + 15);
+  }
 }
 
 export default GameEngine;
