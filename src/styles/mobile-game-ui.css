@@ -1,6 +1,6 @@
 /* ============================================================
-   VELOCITY — Mobile game UI shell (CSS-only, no external assets)
-   Beveled panels, HUD chrome, rhythm-game style framing
+   VELOCITY — Space adventure game UI shell
+   Blue frosted-glass panels, gold arcade buttons, star elements
    ============================================================ */
 
 @keyframes mg-bg-shift {
@@ -14,14 +14,24 @@
 }
 
 @keyframes mg-pulse-border {
-  0%, 100% { box-shadow: 0 0 0 1px rgba(67, 231, 255, 0.25), 0 0 24px rgba(125, 92, 255, 0.15); }
-  50% { box-shadow: 0 0 0 1px rgba(67, 231, 255, 0.45), 0 0 36px rgba(125, 92, 255, 0.28); }
+  0%, 100% { box-shadow: 0 0 0 1px rgba(80, 160, 255, 0.25), 0 0 20px rgba(40, 100, 200, 0.15); }
+  50% { box-shadow: 0 0 0 1px rgba(80, 160, 255, 0.45), 0 0 30px rgba(40, 100, 200, 0.28); }
+}
+
+@keyframes mg-twinkle {
+  0%, 100% { opacity: 0.3; }
+  50% { opacity: 1; }
+}
+
+@keyframes mg-float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-8px); }
 }
 
 /* --- Full-screen stage backgrounds --- */
 .mg-stage {
   position: relative;
-  background: #05060c;
+  background: #080B28;
   overflow: hidden;
 }
 
@@ -31,10 +41,19 @@
   inset: -40%;
   z-index: 0;
   background:
-    radial-gradient(ellipse 90% 60% at 50% -20%, rgba(67, 231, 255, 0.2) 0%, transparent 55%),
-    radial-gradient(ellipse 70% 50% at 100% 80%, rgba(125, 92, 255, 0.16) 0%, transparent 50%),
-    radial-gradient(ellipse 50% 40% at 0% 60%, rgba(255, 79, 195, 0.1) 0%, transparent 45%),
-    linear-gradient(180deg, #0d1022 0%, #070914 45%, #0a0e1a 100%);
+    radial-gradient(ellipse 90% 60% at 50% -20%, rgba(30, 60, 160, 0.5) 0%, transparent 55%),
+    radial-gradient(ellipse 70% 50% at 100% 80%, rgba(20, 40, 120, 0.4) 0%, transparent 50%),
+    radial-gradient(ellipse 50% 40% at 0% 60%, rgba(60, 30, 120, 0.25) 0%, transparent 45%),
+    radial-gradient(2px 2px at 20% 30%, rgba(255, 255, 255, 0.8), transparent),
+    radial-gradient(2px 2px at 40% 70%, rgba(255, 255, 255, 0.6), transparent),
+    radial-gradient(1px 1px at 60% 20%, rgba(255, 255, 255, 0.9), transparent),
+    radial-gradient(1px 1px at 80% 50%, rgba(255, 255, 255, 0.5), transparent),
+    radial-gradient(2px 2px at 10% 80%, rgba(255, 255, 255, 0.7), transparent),
+    radial-gradient(1px 1px at 90% 10%, rgba(255, 255, 255, 0.6), transparent),
+    radial-gradient(1px 1px at 50% 90%, rgba(255, 255, 255, 0.4), transparent),
+    radial-gradient(2px 2px at 70% 40%, rgba(200, 220, 255, 0.5), transparent),
+    radial-gradient(1px 1px at 30% 55%, rgba(255, 255, 255, 0.7), transparent),
+    linear-gradient(180deg, #0a0e30 0%, #080B28 45%, #0c1035 100%);
   animation: mg-bg-shift 18s ease-in-out infinite;
   pointer-events: none;
 }
@@ -42,12 +61,16 @@
 .mg-stage-violet::before {
   z-index: 0;
   background:
-    radial-gradient(ellipse 90% 55% at 50% -15%, rgba(125, 92, 255, 0.22) 0%, transparent 55%),
-    radial-gradient(ellipse 60% 45% at 10% 100%, rgba(67, 231, 255, 0.12) 0%, transparent 50%),
-    linear-gradient(180deg, #100e22 0%, #070814 50%, #0c0a1c 100%);
+    radial-gradient(ellipse 90% 55% at 50% -15%, rgba(80, 50, 180, 0.45) 0%, transparent 55%),
+    radial-gradient(ellipse 60% 45% at 10% 100%, rgba(30, 60, 160, 0.3) 0%, transparent 50%),
+    radial-gradient(2px 2px at 20% 30%, rgba(255, 255, 255, 0.8), transparent),
+    radial-gradient(1px 1px at 60% 20%, rgba(255, 255, 255, 0.9), transparent),
+    radial-gradient(2px 2px at 80% 50%, rgba(255, 255, 255, 0.5), transparent),
+    radial-gradient(1px 1px at 40% 75%, rgba(255, 255, 255, 0.6), transparent),
+    linear-gradient(180deg, #12103a 0%, #0a0d30 50%, #0e0c38 100%);
 }
 
-/* --- Purchased kit backdrops (Background group only from PSD — no mock UI text) --- */
+/* --- Kit backdrops --- */
 .mg-kit-layer {
   position: absolute;
   inset: 0;
@@ -61,7 +84,6 @@
   mix-blend-mode: screen;
 }
 
-/* Primary kit art (was “Battle Game” PSD — art layer only, renamed in app) */
 .mg-kit-layer--stage {
   background-image: url('/ui-kit/stage-ambient.png');
 }
@@ -79,38 +101,38 @@
   filter: saturate(1.12) contrast(1.04) brightness(1.1);
 }
 
-/* In-game: brighter than before but keeps playfield readable */
 .mg-kit-layer--subtle {
   opacity: 0.3;
   mix-blend-mode: screen;
   filter: saturate(1.08) contrast(1.02) brightness(1.08);
 }
 
-/* Softer vignette so bright kit PNGs stay visible at edges */
+/* --- Vignette --- */
 .mg-vignette {
   position: absolute;
   inset: 0;
   pointer-events: none;
   z-index: 1;
-  background: radial-gradient(ellipse 82% 75% at 50% 42%, transparent 0%, rgba(0, 0, 0, 0.34) 100%);
+  background: radial-gradient(ellipse 82% 75% at 50% 42%, transparent 0%, rgba(0, 0, 0, 0.40) 100%);
 }
 
+/* --- Subtle scanlines --- */
 .mg-scanlines {
   position: absolute;
   inset: 0;
   pointer-events: none;
   z-index: 2;
-  opacity: 0.035;
+  opacity: 0.025;
   background: repeating-linear-gradient(
     0deg,
     transparent,
     transparent 2px,
-    rgba(255, 255, 255, 0.06) 2px,
-    rgba(255, 255, 255, 0.06) 3px
+    rgba(255, 255, 255, 0.04) 2px,
+    rgba(255, 255, 255, 0.04) 3px
   );
 }
 
-/* --- Top chrome bar --- */
+/* --- Top chrome bar (space nav style) --- */
 .mg-topbar {
   position: relative;
   z-index: 3;
@@ -119,8 +141,8 @@
   gap: 12px;
   padding: 12px 16px;
   padding-top: calc(12px + var(--safe-top));
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-  background: linear-gradient(180deg, rgba(8, 10, 22, 0.82) 0%, rgba(8, 10, 22, 0.52) 100%);
+  border-bottom: 1px solid rgba(80, 160, 255, 0.18);
+  background: linear-gradient(180deg, rgba(15, 25, 70, 0.85) 0%, rgba(10, 15, 50, 0.55) 100%);
   backdrop-filter: blur(18px);
   -webkit-backdrop-filter: blur(18px);
 }
@@ -128,11 +150,11 @@
 .mg-topbar-title {
   font-family: var(--font-game, "Orbitron", sans-serif);
   font-weight: 800;
-  font-size: 13px;
-  letter-spacing: 0.28em;
+  font-size: 14px;
+  letter-spacing: 0.22em;
   text-transform: uppercase;
-  color: #e8ecff;
-  text-shadow: 0 0 20px rgba(67, 231, 255, 0.35);
+  color: #ffffff;
+  text-shadow: 0 0 20px rgba(80, 160, 255, 0.45);
 }
 
 .mg-topbar-sub {
@@ -140,7 +162,7 @@
   font-weight: 700;
   letter-spacing: 0.12em;
   text-transform: uppercase;
-  color: var(--text-tertiary);
+  color: var(--text-muted);
   margin-top: 2px;
 }
 
@@ -150,13 +172,13 @@
   font-weight: 900;
   font-size: clamp(2.25rem, 10vw, 3.25rem);
   line-height: 0.95;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.06em;
   text-transform: uppercase;
-  background: linear-gradient(180deg, #ffffff 0%, #43e7ff 45%, #7d5cff 100%);
+  background: linear-gradient(180deg, #ffffff 0%, #70c8ff 40%, #3080ff 100%);
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
-  filter: drop-shadow(0 0 24px rgba(67, 231, 255, 0.45));
+  filter: drop-shadow(0 0 30px rgba(60, 140, 255, 0.55)) drop-shadow(0 2px 0 rgba(0,0,0,0.3));
 }
 
 .mg-logo-tag {
@@ -168,18 +190,21 @@
   text-shadow: 0 0 12px rgba(255, 201, 74, 0.4);
 }
 
-/* --- Framed game panels --- */
+/* --- Frosted glass game panels --- */
 .mg-panel {
   position: relative;
   z-index: 0;
   border-radius: 20px;
   padding: 18px 18px 20px;
-  background: linear-gradient(145deg, rgba(22, 28, 48, 0.82) 0%, rgba(12, 14, 26, 0.88) 100%);
-  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: linear-gradient(145deg, rgba(40, 100, 200, 0.32) 0%, rgba(20, 50, 120, 0.42) 100%);
+  border: 1.5px solid rgba(100, 180, 255, 0.30);
   box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.08),
-    0 12px 40px rgba(0, 0, 0, 0.45),
-    0 0 0 1px rgba(0, 0, 0, 0.35);
+    inset 0 1px 0 rgba(255, 255, 255, 0.12),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.2),
+    0 8px 32px rgba(0, 0, 0, 0.35),
+    0 0 0 1px rgba(0, 0, 0, 0.15);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
   animation: mg-pulse-border 4s ease-in-out infinite;
 }
 
@@ -188,8 +213,8 @@
   position: absolute;
   inset: 0;
   border-radius: inherit;
-  padding: 1px;
-  background: linear-gradient(135deg, rgba(67, 231, 255, 0.35), transparent 40%, rgba(125, 92, 255, 0.25));
+  padding: 1.5px;
+  background: linear-gradient(135deg, rgba(120, 200, 255, 0.45), transparent 40%, rgba(60, 120, 255, 0.3));
   -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
   mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
   -webkit-mask-composite: xor;
@@ -203,8 +228,10 @@
   font-weight: 800;
   letter-spacing: 0.2em;
   text-transform: uppercase;
-  color: #43e7ff;
+  color: #80c8ff;
   margin-bottom: 8px;
+  display: flex;
+  align-items: center;
 }
 
 .mg-panel-body {
@@ -224,9 +251,9 @@
   font-weight: 900;
   font-size: 14px;
   color: #07090e;
-  background: linear-gradient(145deg, #43e7ff, #2bb8d9);
+  background: linear-gradient(145deg, #FFE566, #FFBF00);
   clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%);
-  box-shadow: 0 0 20px rgba(67, 231, 255, 0.5);
+  box-shadow: 0 0 20px rgba(255, 191, 0, 0.5);
 }
 
 /* --- Quick action tiles --- */
@@ -247,9 +274,10 @@
   padding: 14px 8px;
   min-height: 88px;
   border-radius: 16px;
-  background: linear-gradient(180deg, rgba(30, 36, 58, 0.78) 0%, rgba(14, 16, 28, 0.88) 100%);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06);
+  background: linear-gradient(180deg, rgba(40, 80, 160, 0.35) 0%, rgba(20, 40, 100, 0.45) 100%);
+  border: 1.5px solid rgba(100, 180, 255, 0.22);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(8px);
   transition: transform 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
   -webkit-tap-highlight-color: transparent;
 }
@@ -259,8 +287,8 @@
 }
 
 .mg-action-tile:hover {
-  border-color: rgba(67, 231, 255, 0.35);
-  box-shadow: 0 0 20px rgba(67, 231, 255, 0.12);
+  border-color: rgba(100, 180, 255, 0.45);
+  box-shadow: 0 0 20px rgba(60, 140, 255, 0.18);
 }
 
 .mg-action-icon {
@@ -270,9 +298,9 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  background: rgba(67, 231, 255, 0.1);
-  border: 1px solid rgba(67, 231, 255, 0.22);
-  color: #43e7ff;
+  background: rgba(255, 255, 255, 0.12);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  color: #ffffff;
 }
 
 .mg-action-label {
@@ -284,7 +312,7 @@
   text-align: center;
 }
 
-/* --- Primary CTA (arcade) --- */
+/* --- Primary CTA (golden arcade capsule) --- */
 .mg-cta {
   position: relative;
   z-index: 0;
@@ -293,48 +321,54 @@
   align-items: center;
   justify-content: center;
   gap: 12px;
-  padding: 18px 24px;
+  padding: 16px 24px;
   border: none;
-  border-radius: 18px;
+  border-radius: 50px;
   cursor: pointer;
   font-family: var(--font-game, "Orbitron", sans-serif);
   font-weight: 900;
   font-size: 15px;
   letter-spacing: 0.18em;
   text-transform: uppercase;
-  color: #05060c;
-  background: linear-gradient(180deg, #5ff3ff 0%, #43e7ff 35%, #1bb8d4 100%);
+  color: #3D2000;
+  background: linear-gradient(180deg, #FFE566 0%, #FFBF00 40%, #D4950A 100%);
   box-shadow:
-    0 4px 0 #0d7a8f,
-    0 8px 32px rgba(67, 231, 255, 0.45),
-    inset 0 1px 0 rgba(255, 255, 255, 0.5);
+    0 4px 0 #8B6508,
+    0 6px 20px rgba(255, 191, 0, 0.45),
+    inset 0 2px 0 rgba(255, 255, 255, 0.45),
+    inset 0 -2px 4px rgba(0, 0, 0, 0.15);
   transition: transform 0.12s ease, box-shadow 0.12s ease;
   -webkit-tap-highlight-color: transparent;
   touch-action: manipulation;
+  text-shadow: 0 1px 0 rgba(255, 255, 200, 0.5);
 }
 
 .mg-cta:active {
   transform: translateY(3px);
   box-shadow:
-    0 1px 0 #0d7a8f,
-    0 4px 20px rgba(67, 231, 255, 0.35),
-    inset 0 1px 0 rgba(255, 255, 255, 0.4);
+    0 1px 0 #8B6508,
+    0 2px 10px rgba(255, 191, 0, 0.35),
+    inset 0 2px 0 rgba(255, 255, 255, 0.3),
+    inset 0 -2px 4px rgba(0, 0, 0, 0.15);
 }
 
 .mg-cta-secondary {
   background: linear-gradient(180deg, #9b7fff 0%, #7d5cff 40%, #5a3fd9 100%);
   box-shadow:
     0 4px 0 #3d2a8a,
-    0 8px 32px rgba(125, 92, 255, 0.45),
-    inset 0 1px 0 rgba(255, 255, 255, 0.35);
+    0 6px 20px rgba(125, 92, 255, 0.45),
+    inset 0 2px 0 rgba(255, 255, 255, 0.25),
+    inset 0 -2px 4px rgba(0, 0, 0, 0.15);
   color: #fff;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
 }
 
 .mg-cta-secondary:active {
   box-shadow:
     0 1px 0 #3d2a8a,
-    0 4px 20px rgba(125, 92, 255, 0.35),
-    inset 0 1px 0 rgba(255, 255, 255, 0.3);
+    0 2px 10px rgba(125, 92, 255, 0.35),
+    inset 0 2px 0 rgba(255, 255, 255, 0.2),
+    inset 0 -2px 4px rgba(0, 0, 0, 0.15);
 }
 
 /* --- Bottom bar / back --- */
@@ -343,8 +377,8 @@
   z-index: 3;
   padding: 14px 16px;
   padding-bottom: calc(14px + var(--safe-bottom));
-  border-top: 1px solid rgba(255, 255, 255, 0.1);
-  background: rgba(5, 6, 14, 0.76);
+  border-top: 1px solid rgba(80, 160, 255, 0.18);
+  background: rgba(8, 12, 40, 0.80);
   backdrop-filter: blur(14px);
   -webkit-backdrop-filter: blur(14px);
 }
@@ -352,21 +386,21 @@
 .mg-btn-back {
   width: 100%;
   padding: 14px;
-  border-radius: 14px;
+  border-radius: 50px;
   font-family: var(--font-game, "Orbitron", sans-serif);
   font-weight: 700;
   font-size: 11px;
   letter-spacing: 0.2em;
   text-transform: uppercase;
   color: var(--text-secondary);
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(40, 80, 160, 0.25);
+  border: 1.5px solid rgba(100, 180, 255, 0.22);
   transition: background 0.15s ease, color 0.15s ease;
   touch-action: manipulation;
 }
 
 .mg-btn-back:hover {
-  background: rgba(255, 255, 255, 0.08);
+  background: rgba(40, 80, 160, 0.40);
   color: var(--text-primary);
 }
 
@@ -377,9 +411,9 @@
   gap: 8px;
   padding: 8px 14px;
   border-radius: 12px;
-  background: rgba(5, 8, 18, 0.82);
-  border: 1px solid rgba(67, 231, 255, 0.2);
-  box-shadow: 0 0 20px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.06);
+  background: rgba(15, 25, 70, 0.85);
+  border: 1px solid rgba(80, 160, 255, 0.25);
+  box-shadow: 0 0 20px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.08);
   backdrop-filter: blur(10px);
 }
 
@@ -388,7 +422,7 @@
   font-size: 9px;
   font-weight: 800;
   letter-spacing: 0.15em;
-  color: #43e7ff;
+  color: #80c8ff;
 }
 
 /* --- Scroll region above footer --- */
@@ -401,6 +435,99 @@
   -webkit-overflow-scrolling: touch;
   padding: 16px;
   padding-bottom: 24px;
+}
+
+/* --- Space icon button (white rounded square) --- */
+.mg-icon-btn {
+  width: 48px;
+  height: 48px;
+  border-radius: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.9);
+  border: none;
+  color: #2A3080;
+  box-shadow:
+    0 3px 0 rgba(0, 0, 0, 0.15),
+    0 4px 12px rgba(0, 0, 0, 0.2);
+  transition: transform 0.12s ease, box-shadow 0.12s ease;
+  cursor: pointer;
+}
+
+.mg-icon-btn:active {
+  transform: translateY(2px);
+  box-shadow:
+    0 1px 0 rgba(0, 0, 0, 0.15),
+    0 2px 6px rgba(0, 0, 0, 0.2);
+}
+
+.mg-icon-btn--small {
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+}
+
+.mg-icon-btn--ghost {
+  background: rgba(255, 255, 255, 0.12);
+  color: #ffffff;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  box-shadow: none;
+}
+
+.mg-icon-btn--ghost:hover {
+  background: rgba(255, 255, 255, 0.20);
+}
+
+/* --- Space gold star --- */
+.mg-star {
+  filter: drop-shadow(0 0 6px rgba(255, 201, 74, 0.5));
+}
+
+.mg-star--empty {
+  filter: none;
+  opacity: 0.3;
+}
+
+/* --- Space coin/currency display --- */
+.mg-currency {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  border-radius: 50px;
+  background: linear-gradient(180deg, rgba(40, 80, 160, 0.4) 0%, rgba(20, 40, 100, 0.5) 100%);
+  border: 1px solid rgba(100, 180, 255, 0.25);
+}
+
+.mg-currency-value {
+  font-family: var(--font-game, "Orbitron", sans-serif);
+  font-weight: 800;
+  font-size: 13px;
+  color: #ffffff;
+}
+
+/* --- Space progress bar (teal/cyan) --- */
+.mg-progress-track {
+  height: 12px;
+  border-radius: 50px;
+  background: rgba(0, 0, 0, 0.4);
+  border: 1px solid rgba(80, 160, 255, 0.18);
+  overflow: hidden;
+  padding: 2px;
+}
+
+.mg-progress-fill {
+  height: 100%;
+  border-radius: 50px;
+  background: linear-gradient(90deg, #20C0A0, #30E0C0);
+  box-shadow: 0 0 10px rgba(48, 224, 192, 0.5);
+  transition: width 0.8s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.mg-progress-fill--gold {
+  background: linear-gradient(90deg, #D4950A, #FFBF00, #FFE566);
+  box-shadow: 0 0 10px rgba(255, 191, 0, 0.5);
 }
 
 @media (prefers-reduced-motion: reduce) {

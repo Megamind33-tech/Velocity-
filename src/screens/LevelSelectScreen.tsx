@@ -1,9 +1,10 @@
 import React from 'react';
-import { Play, Star, Eye } from 'lucide-react';
+import { Play, Star, Eye, ChevronLeft } from 'lucide-react';
 import { getLevelInfo } from '../lib/progression';
 import { Song } from '../lib/songs-extended';
 import { PrimaryButton } from '../components/ui/PrimaryButton';
 import { SecondaryButton } from '../components/ui/SecondaryButton';
+import { IconButton } from '../components/ui/IconButton';
 
 interface LevelSelectScreenProps {
   song: Song;
@@ -24,17 +25,23 @@ export function LevelSelectScreen({
       <div className="mg-kit-layer mg-kit-layer--stage" aria-hidden />
       <div className="mg-vignette" aria-hidden />
       <div className="mg-scanlines" aria-hidden />
-      <header className="mg-topbar shrink-0 flex-col items-stretch !gap-1">
-        <h1 className="mg-topbar-title !normal-case !tracking-tight !text-base text-[#F5F7FC] line-clamp-2">
-          {song.title}
-        </h1>
-        <p className="mg-topbar-sub !normal-case !tracking-normal !text-xs !font-medium text-[#A7B0C6]">
-          {song.artist}
-        </p>
+
+      <header className="mg-topbar shrink-0">
+        <IconButton label="Back" variant="white" size="sm" onClick={onBack}>
+          <ChevronLeft className="w-5 h-5" />
+        </IconButton>
+        <div className="flex-1 min-w-0">
+          <h1 className="mg-topbar-title !normal-case !tracking-tight !text-base text-white line-clamp-2">
+            {song.title}
+          </h1>
+          <p className="mg-topbar-sub !normal-case !tracking-normal !text-xs !font-medium text-[#8BA0C8]">
+            {song.artist}
+          </p>
+        </div>
       </header>
 
       <div className="mg-scroll space-y-3">
-        <p className="text-[10px] font-black uppercase tracking-[0.2em] text-[#43E7FF] mb-1">Stage select</p>
+        <p className="text-[10px] font-black uppercase tracking-[0.2em] text-[#80c8ff] mb-1">Stage select</p>
         {Array.from({ length: maxLevelsInWorld }).map((_, index) => {
             const level = index + 1;
             const challenge = getLevelInfo(level);
@@ -44,17 +51,23 @@ export function LevelSelectScreen({
             return (
               <div
                 key={level}
-                className="mg-panel !p-3 !animate-none hover:border-[rgba(125,92,255,0.4)] transition-colors"
+                className="mg-panel !p-3 !animate-none hover:border-[rgba(100,180,255,0.45)] transition-colors"
               >
                 <div className="flex items-center justify-between">
                   <div className="flex-1">
                     <div className="flex items-center gap-3 mb-1">
-                      <div className="w-10 h-10 bg-gradient-to-br from-[#7D5CFF] to-[#5B4CB8] rounded-lg flex items-center justify-center font-black text-white">
+                      <div
+                        className="w-10 h-10 rounded-lg flex items-center justify-center font-black text-white"
+                        style={{
+                          background: 'linear-gradient(135deg, rgba(80,120,200,0.6), rgba(40,60,140,0.7))',
+                          border: '1px solid rgba(100,180,255,0.3)',
+                        }}
+                      >
                         {level}
                       </div>
                       <div>
-                        <h3 className="text-label font-black text-secondary">{challenge?.name}</h3>
-                        <p className="text-caption text-tertiary">{challenge?.description}</p>
+                        <h3 className="text-label font-black text-white">{challenge?.name}</h3>
+                        <p className="text-caption text-[#6B85B0]">{challenge?.description}</p>
                       </div>
                     </div>
 
@@ -62,11 +75,11 @@ export function LevelSelectScreen({
                       {stars > 0 && (
                         <div className="flex gap-1">
                           {[1, 2, 3].map((s) => (
-                            <Star key={s} className={`w-3 h-3 ${s <= stars ? 'fill-[#FFC94A] text-[#FFC94A]' : 'text-[var(--border-default)]'}`} />
+                            <Star key={s} className={`w-3.5 h-3.5 ${s <= stars ? 'fill-[#FFC94A] text-[#FFC94A] mg-star' : 'text-[rgba(100,180,255,0.25)]'}`} />
                           ))}
                         </div>
                       )}
-                      {progress?.score ? <span className="text-caption text-success font-bold">{progress.score} pts</span> : null}
+                      {progress?.score ? <span className="text-caption text-[#B9FF66] font-bold">{progress.score} pts</span> : null}
                     </div>
                   </div>
                   <div
@@ -75,6 +88,7 @@ export function LevelSelectScreen({
                       background: challenge?.difficultyStars
                         ? ['#B9FF66', '#FFC94A', '#FF6B6B', '#7D5CFF', '#43E7FF', '#FF4FC3'][Math.min(challenge.difficultyStars - 1, 5)]
                         : '#666',
+                      boxShadow: '0 2px 8px rgba(0,0,0,0.3)',
                     }}
                   >
                     {challenge?.difficultyStars}★

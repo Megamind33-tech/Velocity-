@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ArrowLeft, Edit2, Check, Target, Star, Zap, Music, Shield } from 'lucide-react';
+import { ChevronLeft, Edit2, Check, Target, Star, Zap, Music, Shield } from 'lucide-react';
 import { PlayerProfile, saveProfile, Challenge } from '../lib/profile';
 import { IconButton } from '../components/ui/IconButton';
 
@@ -13,12 +13,12 @@ function ChallengeCard({ c, isDaily }: { c: Challenge; isDaily?: boolean; key?: 
   const pct = Math.min(100, (c.progress / c.target) * 100);
   return (
     <div
-      className="p-4 rounded-2xl border"
+      className="p-4 rounded-2xl backdrop-blur-sm"
       style={c.completed
-        ? { background: 'rgba(185,255,102,0.05)', borderColor: 'rgba(185,255,102,0.18)' }
+        ? { background: 'rgba(185,255,102,0.08)', border: '1.5px solid rgba(185,255,102,0.22)' }
         : isDaily
-          ? { background: 'rgba(255,79,195,0.05)', borderColor: 'rgba(255,79,195,0.18)' }
-          : { background: 'var(--bg-surface)', borderColor: 'var(--border-subtle)' }
+          ? { background: 'rgba(255,79,195,0.08)', border: '1.5px solid rgba(255,79,195,0.22)' }
+          : { background: 'rgba(30,60,140,0.25)', border: '1.5px solid rgba(100,180,255,0.18)' }
       }
     >
       <div className="flex items-start justify-between gap-2 mb-2">
@@ -26,27 +26,33 @@ function ChallengeCard({ c, isDaily }: { c: Challenge; isDaily?: boolean; key?: 
           {isDaily && (
             <div className="text-[9px] font-black uppercase tracking-[0.2em] text-[#FF4FC3] mb-1">Daily</div>
           )}
-          <div className={`text-sm font-black uppercase leading-tight ${c.completed ? 'text-[#B9FF66]' : 'text-[#F5F7FC]'}`}>
+          <div className={`text-sm font-black uppercase leading-tight ${c.completed ? 'text-[#B9FF66]' : 'text-white'}`}>
             {c.title}
           </div>
-          <div className="text-xs text-[#4A5068] mt-0.5 leading-snug">{c.description}</div>
+          <div className="text-xs text-[#6B85B0] mt-0.5 leading-snug">{c.description}</div>
         </div>
         <div
           className="shrink-0 text-[10px] font-black px-2.5 py-1 rounded-lg"
-          style={{ background: 'rgba(255,201,74,0.10)', color: '#FFC94A', border: '1px solid rgba(255,201,74,0.20)' }}
+          style={{ background: 'rgba(255,201,74,0.12)', color: '#FFC94A', border: '1px solid rgba(255,201,74,0.25)' }}
         >
           +{c.reward} XP
         </div>
       </div>
-      <div className="progress-bar-track mt-2">
+      <div className="mg-progress-track mt-2 !h-2">
         <div
-          className={c.completed ? 'progress-bar-fill-success' : 'progress-bar-fill-violet'}
-          style={{ width: `${pct}%` }}
+          className={c.completed ? 'mg-progress-fill h-full rounded-full' : 'h-full rounded-full'}
+          style={{
+            width: `${pct}%`,
+            background: c.completed
+              ? 'linear-gradient(90deg, #8FCC40, #B9FF66)'
+              : 'linear-gradient(90deg, #5A3FD9, #7D5CFF)',
+            boxShadow: c.completed ? '0 0 8px rgba(185,255,102,0.5)' : undefined,
+          }}
         />
       </div>
-      <div className="flex justify-between text-[10px] font-bold text-[#4A5068] mt-1.5">
+      <div className="flex justify-between text-[10px] font-bold text-[#6B85B0] mt-1.5">
         <span>Progress</span>
-        <span className={c.completed ? 'text-[#B9FF66]' : 'text-[#A7B0C6]'}>{c.progress} / {c.target}</span>
+        <span className={c.completed ? 'text-[#B9FF66]' : 'text-[#B8CCE8]'}>{c.progress} / {c.target}</span>
       </div>
     </div>
   );
@@ -74,52 +80,46 @@ export function ProfileScreen({ profile, onBack, onProfileUpdate }: ProfileScree
       <div className="mg-kit-layer mg-kit-layer--account" aria-hidden />
       <div className="mg-vignette" aria-hidden />
       <div className="mg-scanlines" aria-hidden />
+
       <header className="mg-topbar shrink-0">
-        <IconButton label="Back" variant="surface" onClick={onBack}>
-          <ArrowLeft className="w-5 h-5" />
+        <IconButton label="Back" variant="white" size="sm" onClick={onBack}>
+          <ChevronLeft className="w-5 h-5" />
         </IconButton>
         <div className="flex-1 min-w-0">
           <h2 className="mg-topbar-title !text-sm">Pilot card</h2>
-          <p className="mg-topbar-sub !normal-case !tracking-normal !text-[11px] !font-medium text-[#A7B0C6]">
+          <p className="mg-topbar-sub !normal-case !tracking-normal !text-[11px] !font-medium text-[#8BA0C8]">
             Progress & challenges
           </p>
         </div>
       </header>
 
       <div className="mg-scroll space-y-4">
-
-        {/* ── Identity card ── */}
-        <div
-          className="mt-4 rounded-3xl p-5 relative overflow-hidden"
-          style={{ background: 'var(--bg-surface)', border: '1px solid rgba(125,92,255,0.20)' }}
-        >
-          {/* BG glow */}
+        {/* Identity card */}
+        <div className="mt-4 mg-panel !rounded-3xl !p-5">
           <div
             className="absolute -top-12 -right-12 w-40 h-40 rounded-full pointer-events-none"
-            style={{ background: 'radial-gradient(circle, rgba(125,92,255,0.18), transparent 70%)' }}
+            style={{ background: 'radial-gradient(circle, rgba(60,120,255,0.2), transparent 70%)' }}
           />
 
           <div className="flex items-center gap-5 relative">
-            {/* Avatar */}
             <div className="relative shrink-0">
               <div
-                className="w-20 h-20 rounded-2xl flex items-center justify-center text-4xl font-black text-[#07090E]"
+                className="w-20 h-20 rounded-2xl flex items-center justify-center text-4xl font-black text-[#0B0E2A]"
                 style={{
-                  background: 'linear-gradient(135deg, #7D5CFF, #43E7FF)',
-                  boxShadow: '0 0 30px rgba(125,92,255,0.4)',
+                  background: 'linear-gradient(135deg, #FFE566, #FFBF00)',
+                  boxShadow: '0 0 30px rgba(255,191,0,0.4)',
                 }}
               >
                 {profile.username[0]?.toUpperCase()}
               </div>
               <div
                 className="absolute -bottom-1.5 -right-1.5 text-[10px] font-black px-2 py-0.5 rounded-full"
-                style={{ background: '#FFC94A', color: '#07090E' }}
+                style={{ background: '#43E7FF', color: '#0B0E2A' }}
               >
                 Lv{profile.level}
               </div>
             </div>
 
-            {/* Name + XP */}
             <div className="flex-1 min-w-0">
               {isEditing ? (
                 <div className="flex items-center gap-2 mb-2">
@@ -130,65 +130,62 @@ export function ProfileScreen({ profile, onBack, onProfileUpdate }: ProfileScree
                     autoFocus
                     maxLength={15}
                     onKeyDown={e => { if (e.key === 'Enter') saveUsername(); }}
-                    className="flex-1 bg-[#07090E] text-[#F5F7FC] px-3 py-2 rounded-xl border border-[rgba(125,92,255,0.4)] outline-none focus:border-[#7D5CFF] text-sm font-bold"
+                    className="flex-1 bg-[rgba(0,0,0,0.3)] text-white px-3 py-2 rounded-xl border border-[rgba(100,180,255,0.35)] outline-none focus:border-[#80c8ff] text-sm font-bold"
                   />
                   <button
                     onClick={saveUsername}
                     className="w-9 h-9 rounded-xl flex items-center justify-center"
-                    style={{ background: '#7D5CFF', boxShadow: '0 0 12px rgba(125,92,255,0.5)' }}
+                    style={{ background: 'linear-gradient(135deg, #FFE566, #FFBF00)', boxShadow: '0 0 12px rgba(255,191,0,0.4)' }}
                   >
-                    <Check className="w-4 h-4 text-white" />
+                    <Check className="w-4 h-4 text-[#3D2000]" />
                   </button>
                 </div>
               ) : (
                 <div className="flex items-center gap-2 mb-1 group">
-                  <h3 className="font-display text-xl font-black text-[#F5F7FC] truncate">{profile.username}</h3>
+                  <h3 className="font-display text-xl font-black text-white truncate">{profile.username}</h3>
                   <button
                     onClick={() => { setTempName(profile.username); setIsEditing(true); }}
-                    className="text-[#4A5068] hover:text-[#7D5CFF] transition-colors opacity-0 group-hover:opacity-100 focus:opacity-100"
+                    className="text-[#6B85B0] hover:text-[#80c8ff] transition-colors opacity-0 group-hover:opacity-100 focus:opacity-100"
                   >
                     <Edit2 className="w-3.5 h-3.5" />
                   </button>
                 </div>
               )}
-              <div className="text-[10px] font-bold uppercase tracking-[0.2em] text-[#4A5068] mb-2">
+              <div className="text-[10px] font-bold uppercase tracking-[0.2em] text-[#6B85B0] mb-2">
                 Vocal Performer
               </div>
-              {/* XP bar */}
-              <div className="xp-bar-track w-full mb-1.5" />
-              <div className="xp-bar-track w-full">
-                <div className="xp-bar-fill" style={{ width: `${xpPct}%` }} />
+              <div className="mg-progress-track w-full !h-2.5 mb-1.5">
+                <div className="mg-progress-fill--gold h-full rounded-full" style={{ width: `${xpPct}%` }} />
               </div>
-              <div className="flex justify-between text-[10px] font-bold text-[#4A5068] mt-1">
-                <span style={{ color: '#7D5CFF' }}>XP</span>
+              <div className="flex justify-between text-[10px] font-bold text-[#6B85B0] mt-1">
+                <span style={{ color: '#FFBF00' }}>XP</span>
                 <span>{profile.xp.toLocaleString()} / {(profile.level * 1000).toLocaleString()}</span>
               </div>
             </div>
           </div>
         </div>
 
-        {/* ── Stats row ── */}
+        {/* Stats row */}
         <div className="grid grid-cols-3 gap-3">
           {[
             { label: 'Runs',    value: profile.songsPlayed,  icon: <Music className="w-4 h-4" />,  color: '#43E7FF' },
             { label: 'Perfects', value: profile.perfectGates, icon: <Star className="w-4 h-4" />,   color: '#FFC94A' },
-            { label: 'Score',   value: profile.totalScore,   icon: <Zap className="w-4 h-4" />,    color: '#7D5CFF' },
+            { label: 'Score',   value: profile.totalScore,   icon: <Zap className="w-4 h-4" />,    color: '#FFBF00' },
           ].map(item => (
             <div
               key={item.label}
-              className="flex flex-col items-center gap-1.5 py-4 rounded-2xl"
-              style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-subtle)' }}
+              className="flex flex-col items-center gap-1.5 py-4 rounded-2xl backdrop-blur-sm"
+              style={{ background: 'rgba(30,60,140,0.25)', border: '1.5px solid rgba(100,180,255,0.18)' }}
             >
               <span style={{ color: item.color }}>{item.icon}</span>
-              <span className="text-lg font-black text-[#F5F7FC] score-display">
+              <span className="text-lg font-black text-white score-display">
                 {item.value > 999 ? `${(item.value / 1000).toFixed(1)}k` : item.value}
               </span>
-              <span className="text-[9px] font-bold uppercase tracking-widest text-[#4A5068]">{item.label}</span>
+              <span className="text-[9px] font-bold uppercase tracking-widest text-[#6B85B0]">{item.label}</span>
             </div>
           ))}
         </div>
 
-        {/* ── Daily challenge ── */}
         {profile.dailyChallenge && (
           <div>
             <SectionHeader icon={<Target className="w-4 h-4 text-[#FF4FC3]" />} label="Daily Mission" />
@@ -196,7 +193,6 @@ export function ProfileScreen({ profile, onBack, onProfileUpdate }: ProfileScree
           </div>
         )}
 
-        {/* ── Active challenges ── */}
         {activeChallenges.length > 0 && (
           <div>
             <SectionHeader icon={<Shield className="w-4 h-4 text-[#7D5CFF]" />} label="Active Challenges" />
@@ -206,7 +202,6 @@ export function ProfileScreen({ profile, onBack, onProfileUpdate }: ProfileScree
           </div>
         )}
 
-        {/* ── Completed highlights ── */}
         {completedChallenges.length > 0 && (
           <div>
             <SectionHeader icon={<Check className="w-4 h-4 text-[#B9FF66]" />} label={`Completed (${completedChallenges.length})`} />
@@ -224,8 +219,8 @@ function SectionHeader({ icon, label }: { icon: React.ReactNode; label: string }
   return (
     <div className="flex items-center gap-2 mb-3">
       {icon}
-      <span className="text-xs font-black uppercase tracking-[0.18em] text-[#A7B0C6]">{label}</span>
-      <div className="flex-1 h-px bg-[rgba(255,255,255,0.05)]" />
+      <span className="text-xs font-black uppercase tracking-[0.18em] text-[#B8CCE8]">{label}</span>
+      <div className="flex-1 h-px bg-[rgba(100,180,255,0.1)]" />
     </div>
   );
 }

@@ -1,5 +1,5 @@
 import React from 'react';
-import { ArrowLeft, Mic, Eye, Timer, Waves, ChevronRight } from 'lucide-react';
+import { ChevronLeft, Mic, Eye, Timer, Waves, ChevronRight } from 'lucide-react';
 import { IconButton } from '../components/ui/IconButton';
 import { PrimaryButton } from '../components/ui/PrimaryButton';
 
@@ -13,43 +13,41 @@ const TRAINING_MODES = [
     id: 'pitch',
     icon: <Mic className="w-6 h-6" />,
     title: 'Pitch Control',
-    description: 'Practice hitting and holding target notes with precision. Builds muscle memory for vocal accuracy.',
+    description: 'Practice hitting and holding target notes with precision.',
     color: '#43E7FF',
-    bg: 'rgba(67,231,255,0.07)',
-    border: 'rgba(67,231,255,0.20)',
     available: false,
   },
   {
     id: 'timing',
     icon: <Timer className="w-6 h-6" />,
     title: 'Timing Practice',
-    description: 'Lock in your rhythm and phrasing against a fixed beat grid. Improve gate timing precision.',
+    description: 'Lock in your rhythm and phrasing against a fixed beat grid.',
     color: '#7D5CFF',
-    bg: 'rgba(125,92,255,0.07)',
-    border: 'rgba(125,92,255,0.20)',
     available: false,
   },
   {
     id: 'silent',
     icon: <Eye className="w-6 h-6" />,
     title: 'Silent Visual',
-    description: 'Play through a song pattern visually, without microphone input. Study gate sequences.',
+    description: 'Play through a song pattern visually, without mic input.',
     color: '#FF4FC3',
-    bg: 'rgba(255,79,195,0.07)',
-    border: 'rgba(255,79,195,0.20)',
     available: false,
   },
   {
     id: 'phrase',
     icon: <Waves className="w-6 h-6" />,
     title: 'Phrase Practice',
-    description: 'Focus on sustained vocal phrases. Train endurance and consistency over longer note runs.',
+    description: 'Focus on sustained vocal phrases and endurance.',
     color: '#B9FF66',
-    bg: 'rgba(185,255,102,0.07)',
-    border: 'rgba(185,255,102,0.20)',
     available: false,
   },
 ];
+
+function hexToRgb(hex: string): string {
+  const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+  if (!result) return '255,255,255';
+  return `${parseInt(result[1], 16)},${parseInt(result[2], 16)},${parseInt(result[3], 16)}`;
+}
 
 export function TrainingScreen({ onBack, onStartTraining }: TrainingScreenProps) {
   return (
@@ -57,41 +55,49 @@ export function TrainingScreen({ onBack, onStartTraining }: TrainingScreenProps)
       <div className="mg-kit-layer mg-kit-layer--stage" aria-hidden />
       <div className="mg-vignette" aria-hidden />
       <div className="mg-scanlines" aria-hidden />
+
       <header className="mg-topbar shrink-0">
-        <IconButton label="Back" variant="surface" onClick={onBack}>
-          <ArrowLeft className="w-5 h-5" />
+        <IconButton label="Back" variant="white" size="sm" onClick={onBack}>
+          <ChevronLeft className="w-5 h-5" />
         </IconButton>
         <div className="flex-1 min-w-0">
           <h2 className="mg-topbar-title !text-sm">Training bay</h2>
-          <p className="mg-topbar-sub !normal-case !tracking-normal !text-[11px] !font-medium text-[#A7B0C6]">
+          <p className="mg-topbar-sub !normal-case !tracking-normal !text-[11px] !font-medium text-[#8BA0C8]">
             Skill drills (coming soon)
           </p>
         </div>
       </header>
 
       <div className="mg-scroll">
-        {/* Intro */}
+        {/* Hero */}
         <div className="pt-5 pb-4 text-center">
           <div
             className="inline-flex w-16 h-16 rounded-2xl items-center justify-center mx-auto mb-4"
-            style={{ background: 'rgba(125,92,255,0.12)', border: '1px solid rgba(125,92,255,0.25)', boxShadow: '0 0 24px rgba(125,92,255,0.2)' }}
+            style={{
+              background: 'rgba(40, 80, 160, 0.3)',
+              border: '1.5px solid rgba(100, 180, 255, 0.25)',
+              boxShadow: '0 0 24px rgba(60, 120, 255, 0.2)',
+            }}
           >
-            <Mic className="w-7 h-7 text-[#7D5CFF]" />
+            <Mic className="w-7 h-7 text-[#80c8ff]" />
           </div>
-          <h3 className="font-display text-2xl font-black uppercase text-[#F5F7FC] tracking-tight mb-2">
+          <h3
+            className="text-2xl font-black uppercase text-white tracking-tight mb-2"
+            style={{ fontFamily: 'var(--font-game, Orbitron, sans-serif)' }}
+          >
             Sharpen Your Skills
           </h3>
-          <p className="text-sm text-[#4A5068] max-w-[260px] mx-auto leading-relaxed">
-            Dedicated drill modes to improve pitch, timing, and vocal endurance outside of main runs.
+          <p className="text-sm text-[#6B85B0] max-w-[260px] mx-auto leading-relaxed">
+            Dedicated drill modes to improve pitch, timing, and vocal endurance.
           </p>
         </div>
 
-        {/* Coming soon badge */}
+        {/* Coming soon */}
         <div
-          className="text-center py-2.5 px-4 rounded-xl mb-5 mx-auto inline-flex items-center gap-2"
+          className="text-center py-2.5 px-4 rounded-full mb-5 mx-auto inline-flex items-center gap-2"
           style={{
-            background: 'rgba(255,201,74,0.08)',
-            border: '1px solid rgba(255,201,74,0.20)',
+            background: 'rgba(255,201,74,0.10)',
+            border: '1px solid rgba(255,201,74,0.25)',
             color: '#FFC94A',
           }}
         >
@@ -105,26 +111,27 @@ export function TrainingScreen({ onBack, onStartTraining }: TrainingScreenProps)
               key={mode.id}
               onClick={() => mode.available && onStartTraining?.(mode.id)}
               disabled={!mode.available}
-              className="w-full text-left p-4 rounded-2xl border flex items-center gap-4 transition-all"
+              className="w-full text-left p-4 rounded-2xl flex items-center gap-4 transition-all backdrop-blur-sm"
               style={{
-                background: mode.bg,
-                borderColor: mode.border,
+                background: `rgba(${hexToRgb(mode.color)},0.08)`,
+                border: `1.5px solid rgba(${hexToRgb(mode.color)},0.22)`,
                 opacity: mode.available ? 1 : 0.6,
                 cursor: mode.available ? 'pointer' : 'default',
               }}
             >
-              {/* Icon */}
               <div
                 className="w-14 h-14 rounded-xl flex items-center justify-center shrink-0"
-                style={{ background: `rgba(${hexToRgb(mode.color)},0.12)`, border: `1px solid ${mode.border}` }}
+                style={{
+                  background: `rgba(${hexToRgb(mode.color)},0.15)`,
+                  border: `1px solid rgba(${hexToRgb(mode.color)},0.25)`,
+                }}
               >
                 <span style={{ color: mode.color }}>{mode.icon}</span>
               </div>
 
-              {/* Text */}
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 mb-0.5">
-                  <span className="font-black text-base text-[#F5F7FC]">{mode.title}</span>
+                  <span className="font-black text-base text-white">{mode.title}</span>
                   {!mode.available && (
                     <span
                       className="text-[9px] font-black uppercase px-2 py-0.5 rounded-full"
@@ -134,38 +141,28 @@ export function TrainingScreen({ onBack, onStartTraining }: TrainingScreenProps)
                     </span>
                   )}
                 </div>
-                <p className="text-xs text-[#4A5068] leading-snug">{mode.description}</p>
+                <p className="text-xs text-[#6B85B0] leading-snug">{mode.description}</p>
               </div>
 
-              <ChevronRight className="w-4 h-4 shrink-0" style={{ color: mode.available ? mode.color : 'var(--text-disabled)' }} />
+              <ChevronRight className="w-4 h-4 shrink-0" style={{ color: mode.available ? mode.color : '#3A4870' }} />
             </button>
           ))}
         </div>
 
         {/* Tip */}
-        <div
-          className="mt-5 p-4 rounded-2xl"
-          style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-subtle)' }}
-        >
-          <div className="text-[10px] font-black uppercase tracking-[0.2em] text-[#43E7FF] mb-1.5">Pro Tip</div>
-          <p className="text-xs text-[#A7B0C6] leading-relaxed">
+        <div className="mt-5 mg-panel !animate-none">
+          <div className="text-[10px] font-black uppercase tracking-[0.2em] text-[#80c8ff] mb-1.5">Pro Tip</div>
+          <p className="text-xs text-[#8BA0C8] leading-relaxed">
             Regular main runs are the best training right now. Focus on perfect gates and combo chains to improve your score multiplier.
           </p>
         </div>
 
         <div className="mt-4">
-          <PrimaryButton variant="violet" size="md" fullWidth onClick={onBack}>
+          <PrimaryButton variant="gold" size="md" fullWidth onClick={onBack}>
             Back to Home
           </PrimaryButton>
         </div>
       </div>
     </div>
   );
-}
-
-// Helper: convert hex to "r,g,b" string for rgba()
-function hexToRgb(hex: string): string {
-  const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
-  if (!result) return '255,255,255';
-  return `${parseInt(result[1], 16)},${parseInt(result[2], 16)},${parseInt(result[3], 16)}`;
 }

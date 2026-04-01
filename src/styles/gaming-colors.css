@@ -28,19 +28,18 @@
   --color-danger: #FF6B6B;       /* Red — error/fail state */
   --color-danger-dark: #E63B3B;
 
-  /* --- BACKGROUND LAYERS (Professional gaming dark theme) --- */
-  --bg-primary: #07090E;         /* Ultra dark — reduces eye strain */
-  --bg-surface: #0F1118;         /* Slightly elevated */
-  --bg-surface-elevated: #131820;
-  --bg-overlay: rgba(7, 9, 14, 0.94);
-  --bg-glass: rgba(15, 17, 24, 0.80);
+  /* --- BACKGROUND LAYERS (Space adventure theme) --- */
+  --bg-primary: #0B0E2A;
+  --bg-surface: #141845;
+  --bg-surface-elevated: #1C2158;
+  --bg-overlay: rgba(11, 14, 42, 0.94);
+  --bg-glass: rgba(30, 60, 120, 0.45);
 
-  /* --- TEXT HIERARCHY (WCAG AAA Compliant) --- */
-  /* All text meets 7:1 contrast minimum */
-  --text-primary: #F5F7FC;       /* 14:1 contrast on dark bg */
-  --text-secondary: #B8BFD4;     /* 8:1 contrast on dark bg */
-  --text-tertiary: #7A8399;      /* 7:1 contrast on dark bg (WCAG AAA) */
-  --text-disabled: #3E4556;      /* Disabled state */
+  /* --- TEXT HIERARCHY --- */
+  --text-primary: #FFFFFF;
+  --text-secondary: #B8CCE8;
+  --text-tertiary: #6B85B0;
+  --text-disabled: #3A4870;
 
   /* --- BORDER & DIVIDER (Subtle but clear) --- */
   --border-subtle: rgba(255, 255, 255, 0.05);
