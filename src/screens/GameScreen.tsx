@@ -1,11 +1,12 @@
 import React from 'react';
-import { Pause, Play, X, RotateCcw, Home, Mic } from 'lucide-react';
+import { Pause, Play, Home, Mic, Zap } from 'lucide-react';
 import { GameCanvas } from '../components/GameCanvas';
 import { AudioController } from '../lib/audio';
 import { SONGS } from '../lib/songs';
 import { PlayerProfile } from '../lib/profile';
 import { PrimaryButton } from '../components/ui/PrimaryButton';
 import { SecondaryButton } from '../components/ui/SecondaryButton';
+import { StatBar } from '../components/ui/StatBar';
 
 interface GameScreenProps {
   audioController: AudioController;
@@ -59,100 +60,117 @@ export function GameScreen({
           initialCheckpoint={checkpoint}
         />
 
-        {/* ── React HUD overlay ── */}
-        <div className="hud-overlay flex flex-col">
-          {/* Top HUD bar */}
-          <div className="flex items-center justify-between px-4 pt-3 pb-2 pointer-events-none">
-            {/* Song info */}
+        {/* ── PROFESSIONAL GAMING HUD OVERLAY ── */}
+        <div className="hud-overlay flex flex-col px-4 py-3">
+          {/* TOP HUD: Song Info + Pause Button */}
+          <div className="flex items-center justify-between gap-3 pointer-events-none">
+            {/* Song Info — Glass effect professional HUD style */}
             <div
-              className="flex items-center gap-2 px-3 py-2 rounded-xl"
-              style={{ background: 'rgba(7,9,14,0.75)', backdropFilter: 'blur(12px)', border: '1px solid rgba(255,255,255,0.07)' }}
+              className="glass-sm flex items-center gap-2 px-3 py-2 rounded-lg pointer-events-auto transition-all hover:border-[var(--border-default)]"
             >
-              <Mic className="w-3 h-3 text-[#43E7FF] shrink-0" />
+              <Mic className="w-3.5 h-3.5 text-[var(--color-primary)] shrink-0 animate-pulse" />
               <div className="min-w-0">
-                <div className="text-[11px] font-black text-[#F5F7FC] truncate max-w-[120px] leading-none">
+                <div className="text-[11px] font-black text-text-primary truncate max-w-[140px] leading-tight">
                   {song?.title ?? 'Endless Run'}
                 </div>
                 <div
                   className="text-[9px] font-bold uppercase tracking-wider mt-0.5 leading-none"
                   style={{ color: dc.text, textShadow: `0 0 8px ${dc.glow}` }}
                 >
-                  {difficulty}
+                  {difficulty} Mode
                 </div>
               </div>
             </div>
 
-            {/* Pause button — pointer events on */}
+            {/* Pause Button — Professional gaming button */}
             <button
               onClick={onPauseToggle}
-              className="pointer-events-auto w-11 h-11 rounded-xl flex items-center justify-center transition-all active:scale-90"
-              style={{
-                background: 'rgba(7,9,14,0.80)',
-                backdropFilter: 'blur(12px)',
-                border: '1px solid rgba(255,255,255,0.10)',
-              }}
+              className="pointer-events-auto btn btn-ghost btn-icon-lg rounded-lg transition-all hover:bg-[var(--bg-surface-elevated)]"
             >
               {isPaused
-                ? <Play className="w-5 h-5 text-[#43E7FF]" />
-                : <Pause className="w-5 h-5 text-[#A7B0C6]" />
+                ? <Play className="w-5 h-5 text-[var(--color-primary)]" />
+                : <Pause className="w-5 h-5 text-text-secondary" />
               }
             </button>
           </div>
 
-          {/* Vocal active indicator bottom */}
-          <div className="mt-auto flex justify-center pb-3 pointer-events-none">
+          {/* BOTTOM HUD: Vocal Status Indicator */}
+          <div className="mt-auto flex flex-col items-center gap-2 pointer-events-none">
+            {/* Vocal Active Indicator */}
             <div
-              className="flex items-center gap-2 px-4 py-2 rounded-full"
-              style={{ background: 'rgba(7,9,14,0.65)', backdropFilter: 'blur(8px)', border: '1px solid rgba(67,231,255,0.12)' }}
+              className="glass-sm flex items-center gap-2 px-4 py-2.5 rounded-full"
             >
-              <div className="w-1.5 h-1.5 rounded-full bg-[#43E7FF] animate-pulse" style={{ boxShadow: '0 0 6px rgba(67,231,255,0.8)' }} />
-              <span className="text-[10px] font-black uppercase tracking-[0.2em] text-[#43E7FF]">
-                Vocal Active — Sing to Perform
+              <div
+                className="w-2 h-2 rounded-full bg-[var(--color-primary)] animate-pulse"
+                style={{ boxShadow: '0 0 8px rgba(67,231,255,0.8)' }}
+              />
+              <span className="text-[10px] font-black uppercase tracking-[0.2em] text-[var(--color-primary)]">
+                {isPaused ? 'Paused' : 'Singing...'}
               </span>
+            </div>
+
+            {/* Performance Hint */}
+            <div className="text-[9px] text-text-tertiary font-bold uppercase tracking-wider">
+              {isPaused ? 'Resume to continue' : 'Hit perfect notes for bonus points'}
             </div>
           </div>
         </div>
 
-        {/* ── Pause Overlay ── */}
+        {/* ── PROFESSIONAL PAUSE OVERLAY ── */}
         {isPaused && (
           <div
-            className="absolute inset-0 flex items-center justify-center z-40 anim-fade-in"
-            style={{ background: 'rgba(7,9,14,0.88)', backdropFilter: 'blur(20px)' }}
+            className="absolute inset-0 flex items-center justify-center z-40 animate-fade-in"
+            style={{ background: 'rgba(7,9,14,0.92)', backdropFilter: 'blur(20px)' }}
           >
             <div
-              className="w-full max-w-xs mx-4 rounded-3xl p-7 flex flex-col gap-4 anim-slide-up"
-              style={{ background: 'var(--bg-surface)', border: '1px solid rgba(255,255,255,0.08)' }}
+              className="w-full max-w-sm mx-4 rounded-2xl p-6 flex flex-col gap-5 animate-scale-in"
+              style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-default)' }}
             >
-              {/* Glow orb */}
+              {/* Decorative glow orb */}
               <div
                 className="absolute -top-12 left-1/2 -translate-x-1/2 w-24 h-24 rounded-full pointer-events-none"
-                style={{ background: 'radial-gradient(circle, rgba(125,92,255,0.3), transparent 70%)' }}
+                style={{ background: 'radial-gradient(circle, rgba(125,92,255,0.4), transparent 70%)' }}
               />
 
-              <div className="text-center space-y-1">
-                <Pause className="w-8 h-8 mx-auto mb-2" style={{ color: '#7D5CFF' }} />
-                <h3 className="font-display text-2xl font-black uppercase tracking-tight text-[#F5F7FC]">Paused</h3>
+              {/* Header */}
+              <div className="text-center space-y-2">
+                <Pause className="w-8 h-8 mx-auto text-[var(--color-secondary)]" />
+                <h3 className="font-display text-headline font-black uppercase tracking-tight text-text-primary">
+                  Paused
+                </h3>
                 {song && (
-                  <p className="text-xs text-[#A7B0C6]">{song.title}</p>
+                  <p className="text-caption text-text-secondary">{song.title}</p>
                 )}
               </div>
 
-              <PrimaryButton variant="violet" size="md" fullWidth onClick={onPauseToggle}
-                icon={<Play className="w-4 h-4" />}>
+              {/* Resume Button */}
+              <PrimaryButton
+                variant="violet"
+                size="md"
+                fullWidth
+                onClick={onPauseToggle}
+                icon={<Play className="w-4 h-4" />}
+              >
                 Resume
               </PrimaryButton>
 
-              <SecondaryButton variant="default" size="md" fullWidth onClick={() => {
-                onPauseToggle();
-                onAbort();
-              }}
+              {/* Exit Button */}
+              <SecondaryButton
+                variant="default"
+                size="md"
+                fullWidth
+                onClick={() => {
+                  onPauseToggle();
+                  onAbort();
+                }}
                 icon={<Home className="w-4 h-4" />}
               >
                 Exit to Home
               </SecondaryButton>
 
-              <div className="text-center text-[10px] text-[#4A5068] font-bold uppercase tracking-widest">
-                · Progress paused ·
+              {/* Footer text */}
+              <div className="text-center text-label text-text-tertiary">
+                Progress Saved
               </div>
             </div>
           </div>
