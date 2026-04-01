@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ArrowLeft, Mic, Music, Gamepad2, Eye, ChevronRight, Info, Helicopter } from 'lucide-react';
+import { ArrowLeft, Mic, Music, Gamepad2, Eye, ChevronRight, Info, Plane } from 'lucide-react';
 import { IconButton } from '../components/ui/IconButton';
 import { BACKGROUND_MUSIC } from '../lib/backgroundMusic';
 import { AIRCRAFT_MODELS } from '../lib/aircraft';
@@ -198,7 +198,7 @@ export function SettingsScreen({
                             border: `1px solid ${model.palette.accent}66`,
                           }}
                         >
-                          <Helicopter
+                          <Plane
                             className="w-4 h-4"
                             style={{ color: selected ? model.palette.accent : model.palette.canopy }}
                           />
