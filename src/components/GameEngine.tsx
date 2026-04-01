@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useCallback } from 'react';
 import { AudioController } from '../lib/audio';
 import { Song } from '../lib/songs-extended';
 import { getLevelInfo } from '../lib/progression';
+import { WorldBgState, createWorldBgState, updateWorldBg, renderWorldBg } from './WorldBackground';
 
 interface GameEngineProps {
   audioController: AudioController;
@@ -9,6 +10,7 @@ interface GameEngineProps {
   level: number;
   mode: 'A' | 'C';
   difficulty: 'novice' | 'intermediate' | 'advanced' | 'master' | 'legend';
+  worldId: number;
   isPaused: boolean;
   demoMode?: boolean;
   onGameOver: (score: number, win: boolean, stats: GameStats) => void;
@@ -136,7 +138,7 @@ const DIFF_GLOW: Record<string, string> = {
 };
 
 export function GameEngine({
-  audioController, song, level, mode, difficulty, isPaused, demoMode, onGameOver,
+  audioController, song, level, mode, difficulty, worldId, isPaused, demoMode, onGameOver,
 }: GameEngineProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const stateRef = useRef<{
@@ -149,6 +151,7 @@ export function GameEngine({
     waypoints: WaypointData[]; contour: ContourPoint[]; seq: number[];
     trail: { x: number; y: number; a: number }[];
     particles: Particle[]; stars: BgStar[];
+    worldBg: WorldBgState;
     lastFrame: number;
     demoAngle: number; demoNoteIdx: number;
   } | null>(null);
@@ -167,9 +170,10 @@ export function GameEngine({
       waypoints: mode === 'A' ? makeWaypoints(song, seq, level, c.width, c.height) : [],
       contour: mode === 'C' ? makeContour(song, seq, c.width, c.height) : [],
       seq, trail: [], particles: [], stars: createStars(c.width, c.height),
+      worldBg: createWorldBgState(worldId, c.width, c.height),
       lastFrame: 0, demoAngle: 0, demoNoteIdx: 0,
     };
-  }, [song, level, mode]);
+  }, [song, level, mode, worldId]);
 
   useEffect(() => { resetState(); }, [resetState]);
 
@@ -197,27 +201,18 @@ export function GameEngine({
       const levelInfo = getLevelInfo(level);
       const hz = levelInfo?.hitZones ?? 2;
 
-      // --- Background ---
-      ctx.fillStyle = '#07090E';
-      ctx.fillRect(0, 0, W, H);
+      // --- Animated World Background ---
+      updateWorldBg(s.worldBg, dt, W, H);
+      renderWorldBg(ctx, s.worldBg, W, H, now);
 
-      // Stars
-      for (const st of s.stars) {
-        st.x -= st.speed;
-        if (st.x < 0) { st.x = W; st.y = Math.random() * H; }
-        const flicker = st.brightness + Math.sin(now * 0.003 + st.x) * 0.15;
-        ctx.fillStyle = `rgba(200,220,255,${Math.max(0, flicker)})`;
-        ctx.beginPath();
-        ctx.arc(st.x, st.y, st.size, 0, Math.PI * 2);
-        ctx.fill();
-      }
-
-      // Altitude grid
+      // Altitude grid (subtle, adapts to world brightness)
       const noteNames = ['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
-      ctx.strokeStyle = 'rgba(67,231,255,0.08)';
+      const gridAlpha = worldId <= 2 ? 0.06 : 0.08;
+      const labelAlpha = worldId <= 2 ? 0.15 : 0.2;
+      ctx.strokeStyle = `rgba(67,231,255,${gridAlpha})`;
       ctx.lineWidth = 1;
       ctx.font = '10px "Inter",sans-serif';
-      ctx.fillStyle = 'rgba(184,191,212,0.2)';
+      ctx.fillStyle = `rgba(184,191,212,${labelAlpha})`;
       ctx.textAlign = 'right';
       for (let i = 0; i <= nr; i += 2) {
         const y = H - (i / nr) * (H * 0.8) - H * 0.1;
@@ -481,7 +476,7 @@ export function GameEngine({
 
     raf = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(raf);
-  }, [audioController, song, level, mode, difficulty, isPaused, demoMode, resetState]);
+  }, [audioController, song, level, mode, difficulty, worldId, isPaused, demoMode, resetState]);
 
   useEffect(() => {
     const resize = () => {
@@ -495,7 +490,7 @@ export function GameEngine({
 
   return (
     <canvas ref={canvasRef} width={window.innerWidth} height={window.innerHeight}
-      style={{ display: 'block', background: '#07090E' }} />
+      style={{ display: 'block', background: '#000' }} />
   );
 }
 

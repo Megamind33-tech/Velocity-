@@ -13,6 +13,7 @@ interface GameScreenProps {
   level: number;
   mode: 'A' | 'C';
   difficulty: 'novice' | 'intermediate' | 'advanced' | 'master' | 'legend';
+  worldId: number;
   isPaused: boolean;
   profile: PlayerProfile | null;
   demoMode?: boolean;
@@ -27,6 +28,7 @@ export function GameScreen({
   level,
   mode,
   difficulty,
+  worldId,
   isPaused,
   profile,
   demoMode,
@@ -59,6 +61,7 @@ export function GameScreen({
           level={level}
           mode={mode}
           difficulty={difficulty}
+          worldId={worldId}
           isPaused={isPaused}
           demoMode={demoMode}
           onGameOver={onGameOver}

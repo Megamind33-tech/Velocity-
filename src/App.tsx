@@ -244,6 +244,7 @@ export default function App() {
               level={selectedLevel}
               mode={selectedMode}
               difficulty={selectedSong.difficulty}
+              worldId={selectedWorldId || selectedSong.world}
               isPaused={isPaused}
               profile={profile}
               demoMode={demoMode}
