@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { AudioController } from './lib/audio';
 import { SONGS } from './lib/songs-extended';
 import { loadProfile, saveProfile, PlayerProfile, addXp, updateChallengeProgress } from './lib/profile';
@@ -30,11 +30,12 @@ export type Screen =
 
 export default function App() {
   const [currentScreen, setCurrentScreen] = useState<Screen>('home');
-
   const [selectedWorldId, setSelectedWorldId] = useState<number | null>(null);
   const [selectedSongId, setSelectedSongId] = useState<string | null>(null);
   const [selectedLevel, setSelectedLevel] = useState<number>(1);
   const [selectedMode, setSelectedMode] = useState<'A' | 'C'>('A');
+  const [demoMode, setDemoMode] = useState(false);
+  const [gameKey, setGameKey] = useState(0);
 
   const [isPaused, setIsPaused] = useState(false);
   const [lastGameStats, setLastGameStats] = useState<GameStats | null>(null);
@@ -46,28 +47,17 @@ export default function App() {
   const [worldProgress, setWorldProgress] = useState<{ [key: number]: number }>({ 1: 0 });
   const [songProgress, setSongProgress] = useState<{ [key: string]: { stars: number; score: number } }>({});
   const [levelProgress, setLevelProgress] = useState<{ [key: number]: { stars: number; score: number } }>({});
-
   const [selectedBackgroundMusicId, setSelectedBackgroundMusicId] = useState<string>('none');
 
   const audioControllerRef = useRef<AudioController | null>(null);
   const [error, setError] = useState('');
 
-  useEffect(() => {
-    const loadedProfile = loadProfile();
-    setProfile(loadedProfile);
-  }, []);
-
-  useEffect(() => {
-    return () => {
-      audioControllerRef.current?.stop();
-    };
-  }, []);
+  useEffect(() => { setProfile(loadProfile()); }, []);
+  useEffect(() => { return () => { audioControllerRef.current?.stop(); }; }, []);
 
   const selectedSong = selectedSongId ? SONGS.find(s => s.id === selectedSongId) : null;
 
-  const navigate = (screen: Screen) => {
-    setCurrentScreen(screen);
-  };
+  const navigate = (screen: Screen) => setCurrentScreen(screen);
 
   const handleWorldSelect = (worldId: number) => {
     setSelectedWorldId(worldId);
@@ -83,111 +73,111 @@ export default function App() {
   const handleLevelSelect = (level: number, mode: 'A' | 'C') => {
     setSelectedLevel(level);
     setSelectedMode(mode);
-    startGame();
+    startGame(false);
   };
 
-  const startGame = async () => {
+  const startGame = useCallback(async (demo: boolean) => {
     try {
       setError('');
+      setDemoMode(demo);
+      setGameKey(k => k + 1);
 
       if (!audioControllerRef.current) {
         audioControllerRef.current = new AudioController();
       }
 
-      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-        throw new Error('Your browser does not support microphone access. Please use Chrome or Firefox.');
+      if (!demo) {
+        if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+          throw new Error('Microphone not available. Use Demo Mode to play without a mic.');
+        }
+        await audioControllerRef.current.init();
       }
 
-      await audioControllerRef.current.init();
       setCurrentScreen('game');
       setIsPaused(false);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to start game');
+      if (!demo) {
+        setDemoMode(true);
+        setGameKey(k => k + 1);
+        if (!audioControllerRef.current) {
+          audioControllerRef.current = new AudioController();
+        }
+        setCurrentScreen('game');
+        setIsPaused(false);
+        setError('Mic unavailable — playing in Demo Mode');
+      } else {
+        setError(err instanceof Error ? err.message : 'Failed to start');
+      }
     }
-  };
+  }, []);
 
-  const handleGameOver = (score: number, win: boolean, stats?: GameStats) => {
+  const handleGameOver = useCallback((score: number, win: boolean, stats?: GameStats) => {
     setLastGameScore(score);
     setLastGameStats(stats || null);
 
     if (selectedSongId && stats && profile) {
-      const currentSongProg = songProgress[selectedSongId] || { stars: 0, score: 0 };
+      const cur = songProgress[selectedSongId] || { stars: 0, score: 0 };
       const stars = stats.accuracy >= 90 ? 3 : stats.accuracy >= 75 ? 2 : stats.accuracy >= 60 ? 1 : 0;
-      const newScore = Math.max(currentSongProg.score, score);
+      const best = Math.max(cur.score, score);
 
-      const newSongProgress = {
-        ...songProgress,
-        [selectedSongId]: { stars: Math.max(currentSongProg.stars, stars), score: newScore },
-      };
-      setSongProgress(newSongProgress);
+      const nsp = { ...songProgress, [selectedSongId]: { stars: Math.max(cur.stars, stars), score: best } };
+      setSongProgress(nsp);
+      setLevelProgress(lp => ({ ...lp, [selectedLevel]: { stars: Math.max(cur.stars, stars), score: best } }));
 
-      setLevelProgress({
-        ...levelProgress,
-        [selectedLevel]: { stars: Math.max(currentSongProg.stars, stars), score: newScore },
-      });
+      const p = { ...profile };
+      p.songsPlayed += 1;
+      p.totalScore += score;
+      p.perfectGates += stats.notesHit;
 
-      const updatedProfile = { ...profile };
-      updatedProfile.songsPlayed += 1;
-      updatedProfile.totalScore += score;
-      updatedProfile.perfectGates += stats.notesHit;
+      const key = `${selectedSongId}_${selectedSong?.difficulty || 'novice'}`;
+      if (!p.highScores[key] || score > p.highScores[key]) p.highScores[key] = score;
 
-      const songKey = `${selectedSongId}_${selectedSong?.difficulty || 'novice'}`;
-      if (!updatedProfile.highScores[songKey] || score > updatedProfile.highScores[songKey]) {
-        updatedProfile.highScores[songKey] = score;
-      }
+      addXp(p, Math.floor(score / 10) + stars * 50);
 
-      addXp(updatedProfile, Math.floor(score / 10) + (stars * 50));
-
-      updateChallengeProgress(updatedProfile, 'c1', 1);
-      updateChallengeProgress(updatedProfile, 'c2', score, true);
-      updateChallengeProgress(updatedProfile, 'c4', stats.notesHit);
-      updateChallengeProgress(updatedProfile, 'c5', stats.maxCombo, true);
-
+      updateChallengeProgress(p, 'c1', 1);
+      updateChallengeProgress(p, 'c2', score, true);
+      updateChallengeProgress(p, 'c4', stats.notesHit);
+      updateChallengeProgress(p, 'c5', stats.maxCombo, true);
       for (let i = 1; i <= 50; i++) {
-        updateChallengeProgress(updatedProfile, `songs_played_${i}`, updatedProfile.songsPlayed, true);
-        updateChallengeProgress(updatedProfile, `perfect_gates_${i}`, updatedProfile.perfectGates, true);
-        updateChallengeProgress(updatedProfile, `score_milestone_${i}`, updatedProfile.totalScore, true);
-        updateChallengeProgress(updatedProfile, `combo_streak_${i}`, stats.maxCombo, true);
+        updateChallengeProgress(p, `songs_played_${i}`, p.songsPlayed, true);
+        updateChallengeProgress(p, `perfect_gates_${i}`, p.perfectGates, true);
+        updateChallengeProgress(p, `score_milestone_${i}`, p.totalScore, true);
+        updateChallengeProgress(p, `combo_streak_${i}`, stats.maxCombo, true);
       }
 
-      if (updatedProfile.dailyChallenge && !updatedProfile.dailyChallenge.completed) {
-        const dc = updatedProfile.dailyChallenge;
-        if (dc.title === 'Early Bird' || dc.title === 'Night Owl') {
-          dc.progress = Math.min(dc.target, dc.progress + 1);
-        } else if (dc.title === 'Perfect Streak') {
-          dc.progress = Math.max(dc.progress, stats.notesHit);
-        } else if (dc.title === 'High Flyer') {
-          dc.progress = Math.max(dc.progress, score);
-        }
-        if (dc.progress >= dc.target) {
-          dc.completed = true;
-          addXp(updatedProfile, dc.reward);
-        }
+      if (p.dailyChallenge && !p.dailyChallenge.completed) {
+        const dc = p.dailyChallenge;
+        if (dc.title === 'Early Bird' || dc.title === 'Night Owl') dc.progress = Math.min(dc.target, dc.progress + 1);
+        else if (dc.title === 'Perfect Streak') dc.progress = Math.max(dc.progress, stats.notesHit);
+        else if (dc.title === 'High Flyer') dc.progress = Math.max(dc.progress, score);
+        if (dc.progress >= dc.target) { dc.completed = true; addXp(p, dc.reward); }
       }
 
-      saveProfile(updatedProfile);
-      setProfile(updatedProfile);
+      saveProfile(p);
+      setProfile(p);
 
       if (selectedWorldId) {
-        const worldSongs = SONGS.filter(s => s.world === selectedWorldId);
-        const completedInWorld = worldSongs.filter(s => newSongProgress[s.id]?.stars > 0).length;
-        setWorldProgress(prev => ({ ...prev, [selectedWorldId]: completedInWorld }));
-
-        const world = WORLDS.find(w => w.id === selectedWorldId);
-        if (world && completedInWorld >= world.minSongsToUnlock) {
-          const nextWorld = selectedWorldId + 1;
-          if (nextWorld <= 5 && !unlockedWorlds.includes(nextWorld)) {
-            setUnlockedWorlds(prev => [...prev, nextWorld]);
-          }
+        const ws = SONGS.filter(s => s.world === selectedWorldId);
+        const done = ws.filter(s => nsp[s.id]?.stars > 0).length;
+        setWorldProgress(wp => ({ ...wp, [selectedWorldId]: done }));
+        const w = WORLDS.find(w => w.id === selectedWorldId);
+        if (w && done >= w.minSongsToUnlock) {
+          const nw = selectedWorldId + 1;
+          if (nw <= 5) setUnlockedWorlds(u => u.includes(nw) ? u : [...u, nw]);
         }
       }
     }
 
     setCurrentScreen('results');
-  };
+  }, [profile, songProgress, selectedSongId, selectedSong, selectedWorldId, selectedLevel, unlockedWorlds]);
 
-  const handleRetry = () => {
-    startGame();
+  const handleRetry = () => startGame(demoMode);
+  const handleNextLevel = () => {
+    const maxLvl = selectedWorldId ? [10, 15, 15, 18, 20][selectedWorldId - 1] : 20;
+    if (selectedLevel < maxLvl) {
+      setSelectedLevel(selectedLevel + 1);
+      startGame(demoMode);
+    }
   };
 
   const handleHome = () => {
@@ -198,20 +188,12 @@ export default function App() {
     setCurrentScreen('home');
   };
 
-  const handleProfileUpdate = (updatedProfile: PlayerProfile) => {
-    setProfile(updatedProfile);
-    saveProfile(updatedProfile);
-  };
+  const handleProfileUpdate = (p: PlayerProfile) => { setProfile(p); saveProfile(p); };
 
   const renderScreen = () => {
     switch (currentScreen) {
       case 'home':
-        return (
-          <HomeScreen
-            profile={profile}
-            onNavigate={(screen) => navigate(screen)}
-          />
-        );
+        return <HomeScreen profile={profile} onNavigate={navigate} />;
 
       case 'world-select':
         return (
@@ -240,6 +222,7 @@ export default function App() {
             worldId={selectedWorldId || 1}
             levelProgress={levelProgress}
             onSelectLevel={handleLevelSelect}
+            onDemoLevel={(lvl, m) => { setSelectedLevel(lvl); setSelectedMode(m); startGame(true); }}
             onBack={() => navigate('song-select')}
           />
         ) : null;
@@ -247,6 +230,7 @@ export default function App() {
       case 'game':
         return audioControllerRef.current && selectedSong ? (
           <GameScreen
+            key={gameKey}
             audioController={audioControllerRef.current}
             song={selectedSong}
             level={selectedLevel}
@@ -254,7 +238,8 @@ export default function App() {
             difficulty={selectedSong.difficulty}
             isPaused={isPaused}
             profile={profile}
-            onPauseToggle={() => setIsPaused(!isPaused)}
+            demoMode={demoMode}
+            onPauseToggle={() => setIsPaused(p => !p)}
             onGameOver={handleGameOver}
             onAbort={handleHome}
           />
@@ -272,47 +257,27 @@ export default function App() {
             notesHit={lastGameStats.notesHit}
             notesMissed={lastGameStats.notesMissed}
             previousBestScore={previousBestScore}
+            xpEarned={lastGameStats.xpEarned}
             onHome={handleHome}
             onRetry={handleRetry}
+            onNextLevel={handleNextLevel}
           />
         ) : null;
 
       case 'profile':
-        return (
-          <ProfileScreen
-            profile={profile}
-            onBack={() => navigate('home')}
-            onProfileUpdate={handleProfileUpdate}
-          />
-        );
+        return <ProfileScreen profile={profile} onBack={() => navigate('home')} onProfileUpdate={handleProfileUpdate} />;
 
       case 'leaderboard':
-        return (
-          <LeaderboardScreen
-            profile={profile}
-            onBack={() => navigate('home')}
-          />
-        );
+        return <LeaderboardScreen profile={profile} onBack={() => navigate('home')} />;
 
       case 'training':
         return <TrainingScreen onBack={() => navigate('home')} />;
 
       case 'settings':
-        return (
-          <SettingsScreen
-            selectedBackgroundMusicId={selectedBackgroundMusicId}
-            onBackgroundMusicChange={setSelectedBackgroundMusicId}
-            onBack={() => navigate('home')}
-          />
-        );
+        return <SettingsScreen selectedBackgroundMusicId={selectedBackgroundMusicId} onBackgroundMusicChange={setSelectedBackgroundMusicId} onBack={() => navigate('home')} />;
 
       default:
-        return (
-          <HomeScreen
-            profile={profile}
-            onNavigate={(screen) => navigate(screen)}
-          />
-        );
+        return <HomeScreen profile={profile} onNavigate={navigate} />;
     }
   };
 
@@ -320,7 +285,7 @@ export default function App() {
     <div className="w-screen h-screen overflow-hidden">
       {error && (
         <div className="fixed top-4 left-4 right-4 bg-[#FF6B6B] text-white p-4 rounded-lg z-50 flex items-center justify-between">
-          <span>{error}</span>
+          <span className="text-sm">{error}</span>
           <button onClick={() => setError('')} className="ml-3 font-bold">✕</button>
         </div>
       )}
