@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useCallback } from 'react';
 import { AudioController } from '../lib/audio';
 import { Song } from '../lib/songs-extended';
 import { getLevelInfo } from '../lib/progression';
+import { getAircraftModel } from '../lib/aircraft';
 
 interface GameEngineProps {
   audioController: AudioController;
@@ -9,6 +10,7 @@ interface GameEngineProps {
   level: number;
   mode: 'A' | 'C';
   difficulty: 'novice' | 'intermediate' | 'advanced' | 'master' | 'legend';
+  aircraftId?: string;
   isPaused: boolean;
   demoMode?: boolean;
   onGameOver: (score: number, win: boolean, stats: GameStats) => void;
@@ -136,7 +138,7 @@ const DIFF_GLOW: Record<string, string> = {
 };
 
 export function GameEngine({
-  audioController, song, level, mode, difficulty, isPaused, demoMode, onGameOver,
+  audioController, song, level, mode, difficulty, aircraftId, isPaused, demoMode, onGameOver,
 }: GameEngineProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const stateRef = useRef<{
@@ -448,7 +450,7 @@ export function GameEngine({
       }
 
       // --- Plane ---
-      drawPlane(ctx, 100, planeY, pAngle, accurate, difficulty);
+      drawPlane(ctx, 100, planeY, pAngle, accurate, difficulty, aircraftId);
 
       // --- HUD ---
       const acc = s.hitCount > 0 ? s.accSum / s.hitCount : 0;
@@ -481,7 +483,7 @@ export function GameEngine({
 
     raf = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(raf);
-  }, [audioController, song, level, mode, difficulty, isPaused, demoMode, resetState]);
+  }, [audioController, song, level, mode, difficulty, aircraftId, isPaused, demoMode, resetState]);
 
   useEffect(() => {
     const resize = () => {
@@ -512,31 +514,140 @@ function spawnParticles(arr: Particle[], x: number, y: number, perfect: boolean)
   }
 }
 
-function drawPlane(ctx: CanvasRenderingContext2D, x: number, y: number, angle: number, glow: boolean, diff: string) {
+function drawPlane(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  angle: number,
+  glow: boolean,
+  diff: string,
+  aircraftId?: string,
+) {
+  const model = getAircraftModel(aircraftId);
+  const rotorPhase = Date.now() * 0.06;
   ctx.save(); ctx.translate(x, y);
   const a = angle * Math.PI / 180;
   // Glow
   if (glow) {
-    const rgb = DIFF_GLOW[diff] || '67,231,255';
+    const rgb = model.palette.glow || DIFF_GLOW[diff] || '67,231,255';
     ctx.fillStyle = `rgba(${rgb},0.12)`;
     ctx.beginPath(); ctx.arc(0, 0, 55, 0, Math.PI * 2); ctx.fill();
   }
-  // Body
-  ctx.fillStyle = '#C0C0C0';
-  ctx.beginPath(); ctx.ellipse(0, 0, 40, 8, a, 0, Math.PI * 2); ctx.fill();
-  // Wings
-  ctx.fillStyle = '#E8E8E8';
-  ctx.beginPath(); ctx.ellipse(0, 0, 70, 4, a, 0, Math.PI * 2); ctx.fill();
-  // Cockpit
-  ctx.fillStyle = '#0047AB';
-  ctx.beginPath(); ctx.arc(8, -4, 3, 0, Math.PI * 2); ctx.fill();
-  // Outline glow
-  ctx.strokeStyle = glow ? `rgba(${DIFF_GLOW[diff] || '67,231,255'},0.7)` : 'rgba(200,200,200,0.4)';
+  ctx.rotate(a);
+
+  // Main fuselage
+  ctx.fillStyle = model.palette.body;
+  ctx.beginPath();
+  ctx.moveTo(30, 0);
+  ctx.quadraticCurveTo(18, -11, -10, -10);
+  ctx.lineTo(-26, -7);
+  ctx.quadraticCurveTo(-30, 0, -26, 7);
+  ctx.lineTo(-10, 10);
+  ctx.quadraticCurveTo(18, 11, 30, 0);
+  ctx.closePath();
+  ctx.fill();
+
+  // Belly / underside
+  ctx.fillStyle = model.palette.secondary;
+  ctx.beginPath();
+  ctx.moveTo(-4, 5);
+  ctx.lineTo(20, 3);
+  ctx.lineTo(23, 0);
+  ctx.lineTo(-4, 1);
+  ctx.closePath();
+  ctx.fill();
+
+  // Canopy
+  ctx.fillStyle = model.palette.canopy;
+  ctx.beginPath();
+  ctx.moveTo(12, -1);
+  ctx.quadraticCurveTo(18, -8, 24, -2);
+  ctx.quadraticCurveTo(20, 2, 13, 2);
+  ctx.closePath();
+  ctx.fill();
+
+  // Accent stripe
+  ctx.strokeStyle = model.palette.accent;
   ctx.lineWidth = 2;
-  ctx.beginPath(); ctx.ellipse(0, 0, 45, 12, a, 0, Math.PI * 2); ctx.stroke();
-  // Tail
-  ctx.fillStyle = '#B0B0B0';
-  ctx.beginPath(); ctx.moveTo(-35, 0); ctx.lineTo(-42, -10); ctx.lineTo(-42, 10); ctx.closePath(); ctx.fill();
+  ctx.beginPath();
+  ctx.moveTo(-20, -1);
+  ctx.quadraticCurveTo(2, -5, 22, -2);
+  ctx.stroke();
+
+  // Tail boom
+  ctx.fillStyle = model.palette.secondary;
+  ctx.fillRect(-50, -2, 26, 4);
+
+  // Tail fin
+  ctx.fillStyle = model.palette.body;
+  ctx.beginPath();
+  ctx.moveTo(-50, -2);
+  ctx.lineTo(-57, -14);
+  ctx.lineTo(-53, -2);
+  ctx.closePath();
+  ctx.fill();
+
+  // Tail rotor
+  ctx.strokeStyle = model.palette.rotor;
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.moveTo(-58, -8);
+  ctx.lineTo(-66, -8 + Math.sin(rotorPhase * 0.8) * 3);
+  ctx.moveTo(-58, -8);
+  ctx.lineTo(-66, -8 - Math.sin(rotorPhase * 0.8) * 3);
+  ctx.stroke();
+
+  // Rotor mast
+  ctx.strokeStyle = model.palette.skid;
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.moveTo(-2, -10);
+  ctx.lineTo(-2, -17);
+  ctx.stroke();
+
+  // Main rotor
+  const rotorTilt = Math.sin(rotorPhase) * 6;
+  ctx.strokeStyle = model.palette.rotor;
+  ctx.lineWidth = 2.6;
+  ctx.beginPath();
+  ctx.moveTo(-62, -17 - rotorTilt * 0.08);
+  ctx.lineTo(58, -17 + rotorTilt * 0.08);
+  ctx.stroke();
+  ctx.lineWidth = 1.2;
+  ctx.beginPath();
+  ctx.moveTo(-42, -17 + rotorTilt * 0.1);
+  ctx.lineTo(43, -17 - rotorTilt * 0.1);
+  ctx.stroke();
+
+  // Skids
+  ctx.strokeStyle = model.palette.skid;
+  ctx.lineWidth = 3;
+  ctx.beginPath();
+  ctx.moveTo(-18, 12);
+  ctx.lineTo(20, 12);
+  ctx.moveTo(-14, 16);
+  ctx.lineTo(24, 16);
+  ctx.stroke();
+  ctx.lineWidth = 1.5;
+  ctx.beginPath();
+  ctx.moveTo(-10, 7);
+  ctx.lineTo(-10, 16);
+  ctx.moveTo(15, 7);
+  ctx.lineTo(15, 16);
+  ctx.stroke();
+
+  // Outline glow
+  ctx.strokeStyle = glow ? `rgba(${model.palette.glow || DIFF_GLOW[diff] || '67,231,255'},0.75)` : 'rgba(220,225,235,0.5)';
+  ctx.lineWidth = 1.5;
+  ctx.beginPath();
+  ctx.moveTo(30, 0);
+  ctx.quadraticCurveTo(18, -11, -10, -10);
+  ctx.lineTo(-26, -7);
+  ctx.quadraticCurveTo(-30, 0, -26, 7);
+  ctx.lineTo(-10, 10);
+  ctx.quadraticCurveTo(18, 11, 30, 0);
+  ctx.closePath();
+  ctx.stroke();
   ctx.restore();
 }
 

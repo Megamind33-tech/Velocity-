@@ -3,6 +3,7 @@ import { AudioController } from './lib/audio';
 import { SONGS } from './lib/songs-extended';
 import { loadProfile, saveProfile, PlayerProfile, addXp, updateChallengeProgress } from './lib/profile';
 import { WORLDS } from './lib/progression';
+import { DEFAULT_AIRCRAFT_ID } from './lib/aircraft';
 
 import { HomeScreen } from './screens/HomeScreen';
 import { WorldSelectScreen } from './screens/WorldSelectScreen';
@@ -48,13 +49,18 @@ export default function App() {
   const [songProgress, setSongProgress] = useState<{ [key: string]: { stars: number; score: number } }>({});
   const [levelProgress, setLevelProgress] = useState<{ [key: number]: { stars: number; score: number } }>({});
   const [selectedBackgroundMusicId, setSelectedBackgroundMusicId] = useState<string>('none');
+  const [selectedAircraftId, setSelectedAircraftId] = useState<string>(DEFAULT_AIRCRAFT_ID);
 
   const audioControllerRef = useRef<AudioController | null>(null);
 
   // Error State
   const [error, setError] = useState('');
 
-  useEffect(() => { setProfile(loadProfile()); }, []);
+  useEffect(() => {
+    const loadedProfile = loadProfile();
+    setProfile(loadedProfile);
+    setSelectedAircraftId(loadedProfile.selectedAircraftId ?? DEFAULT_AIRCRAFT_ID);
+  }, []);
   useEffect(() => { return () => { audioControllerRef.current?.stop(); }; }, []);
 
   const selectedSong = selectedSongId ? SONGS.find(s => s.id === selectedSongId) : null;
@@ -195,6 +201,14 @@ export default function App() {
     saveProfile(p);
   };
 
+  const handleAircraftChange = (aircraftId: string) => {
+    setSelectedAircraftId(aircraftId);
+    if (!profile) return;
+    const updatedProfile: PlayerProfile = { ...profile, selectedAircraftId: aircraftId };
+    setProfile(updatedProfile);
+    saveProfile(updatedProfile);
+  };
+
   // Render current screen
   const renderScreen = () => {
     switch (currentScreen) {
@@ -246,6 +260,7 @@ export default function App() {
               difficulty={selectedSong.difficulty}
               isPaused={isPaused}
               profile={profile}
+              aircraftId={selectedAircraftId}
               demoMode={demoMode}
               onPauseToggle={() => setIsPaused(p => !p)}
               onGameOver={handleGameOver}
@@ -293,6 +308,8 @@ export default function App() {
           <SettingsScreen
             selectedBackgroundMusicId={selectedBackgroundMusicId}
             onBackgroundMusicChange={setSelectedBackgroundMusicId}
+            selectedAircraftId={selectedAircraftId}
+            onAircraftChange={handleAircraftChange}
             onBack={() => navigate('home')}
           />
         );

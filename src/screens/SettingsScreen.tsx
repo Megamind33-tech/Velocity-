@@ -1,11 +1,14 @@
 import React, { useState } from 'react';
-import { ArrowLeft, Mic, Music, Gamepad2, Eye, ChevronRight, Info } from 'lucide-react';
+import { ArrowLeft, Mic, Music, Gamepad2, Eye, ChevronRight, Info, Helicopter } from 'lucide-react';
 import { IconButton } from '../components/ui/IconButton';
 import { BACKGROUND_MUSIC } from '../lib/backgroundMusic';
+import { AIRCRAFT_MODELS } from '../lib/aircraft';
 
 interface SettingsScreenProps {
   selectedBackgroundMusicId: string;
   onBackgroundMusicChange: (id: string) => void;
+  selectedAircraftId: string;
+  onAircraftChange: (id: string) => void;
   onBack: () => void;
 }
 
@@ -54,6 +57,8 @@ function Toggle({ value, onChange }: { value: boolean; onChange: (v: boolean) =>
 export function SettingsScreen({
   selectedBackgroundMusicId,
   onBackgroundMusicChange,
+  selectedAircraftId,
+  onAircraftChange,
   onBack,
 }: SettingsScreenProps) {
   const [pitchGuide, setPitchGuide] = useState(true);
@@ -62,6 +67,7 @@ export function SettingsScreen({
   const [showMusicPicker, setShowMusicPicker] = useState(false);
 
   const selectedMusic = BACKGROUND_MUSIC.find(m => m.id === selectedBackgroundMusicId);
+  const selectedAircraft = AIRCRAFT_MODELS.find(model => model.id === selectedAircraftId) ?? AIRCRAFT_MODELS[0];
 
   return (
     <div className="game-screen mg-stage flex flex-col">
@@ -159,6 +165,63 @@ export function SettingsScreen({
             <SettingRow label="Haptic Feedback" description="Vibration on gates and events (mobile)">
               <Toggle value={haptics} onChange={setHaptics} />
             </SettingRow>
+            <div className="py-4">
+              <div className="text-sm font-bold text-[#F5F7FC] mb-2">Aircraft Hangar</div>
+              <div className="text-xs text-[#4A5068] mb-3">
+                Select your helicopter model for every run.
+              </div>
+              <div className="space-y-2 max-h-72 overflow-y-auto pr-1">
+                {AIRCRAFT_MODELS.map(model => {
+                  const selected = model.id === selectedAircraft.id;
+                  return (
+                    <button
+                      key={model.id}
+                      type="button"
+                      onClick={() => onAircraftChange(model.id)}
+                      className="w-full text-left px-3 py-3 rounded-xl transition-colors border"
+                      style={selected
+                        ? {
+                          background: `linear-gradient(135deg, ${model.palette.secondary}30, ${model.palette.accent}24)`,
+                          borderColor: `${model.palette.accent}AA`,
+                        }
+                        : {
+                          background: 'var(--bg-elevated)',
+                          borderColor: 'rgba(255,255,255,0.08)',
+                        }
+                      }
+                    >
+                      <div className="flex items-center gap-3">
+                        <div
+                          className="w-9 h-9 rounded-lg flex items-center justify-center"
+                          style={{
+                            background: `linear-gradient(145deg, ${model.palette.body}, ${model.palette.secondary})`,
+                            border: `1px solid ${model.palette.accent}66`,
+                          }}
+                        >
+                          <Helicopter
+                            className="w-4 h-4"
+                            style={{ color: selected ? model.palette.accent : model.palette.canopy }}
+                          />
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <div className="text-sm font-bold text-[#F5F7FC] truncate">
+                            {model.name}
+                          </div>
+                          <div className="text-[11px] text-[#A7B0C6] truncate">
+                            {model.manufacturer} · {model.role}
+                          </div>
+                        </div>
+                        {selected && (
+                          <div className="text-[10px] font-black uppercase tracking-[0.16em]" style={{ color: model.palette.accent }}>
+                            Active
+                          </div>
+                        )}
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
           </div>
         </section>
 

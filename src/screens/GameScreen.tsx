@@ -12,6 +12,7 @@ interface GameScreenProps {
   song: Song | null;
   level: number;
   mode: 'A' | 'C';
+  aircraftId: string;
   difficulty: 'novice' | 'intermediate' | 'advanced' | 'master' | 'legend';
   isPaused: boolean;
   profile: PlayerProfile | null;
@@ -26,6 +27,7 @@ export function GameScreen({
   song,
   level,
   mode,
+  aircraftId,
   difficulty,
   isPaused,
   profile,
@@ -58,6 +60,7 @@ export function GameScreen({
           song={song}
           level={level}
           mode={mode}
+          aircraftId={aircraftId}
           difficulty={difficulty}
           isPaused={isPaused}
           demoMode={demoMode}
