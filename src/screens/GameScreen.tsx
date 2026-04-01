@@ -1,38 +1,38 @@
 import React from 'react';
 import { Pause, Play, Home, Mic } from 'lucide-react';
-import { GameCanvas } from '../components/GameCanvas';
+import { GameEngine, GameStats } from '../components/GameEngine';
 import { AudioController } from '../lib/audio';
-import { SONGS } from '../lib/songs';
+import { SONGS } from '../lib/songs-extended';
+import { Song } from '../lib/songs-extended';
 import { PlayerProfile } from '../lib/profile';
 import { PrimaryButton } from '../components/ui/PrimaryButton';
 import { SecondaryButton } from '../components/ui/SecondaryButton';
 
 interface GameScreenProps {
   audioController: AudioController;
-  difficulty: 'easy' | 'medium' | 'hard';
-  selectedSongId: string;
+  song: Song | null;
+  level: number;
+  mode: 'A' | 'C';
+  difficulty: 'novice' | 'intermediate' | 'advanced' | 'master' | 'legend';
   isPaused: boolean;
-  checkpoint: { score: number; currentLyricIndex: number; obstaclesPassed: number } | null;
   profile: PlayerProfile | null;
   onPauseToggle: () => void;
-  onGameOver: (score: number, win: boolean, stats?: { perfectGates: number; maxCombo: number }) => void;
-  onCheckpointReached: (cp: { score: number; currentLyricIndex: number; obstaclesPassed: number }) => void;
+  onGameOver: (score: number, win: boolean, stats?: GameStats) => void;
   onAbort: () => void;
 }
 
 export function GameScreen({
   audioController,
+  song,
+  level,
+  mode,
   difficulty,
-  selectedSongId,
   isPaused,
-  checkpoint,
   profile,
   onPauseToggle,
   onGameOver,
-  onCheckpointReached,
   onAbort,
 }: GameScreenProps) {
-  const song = SONGS.find(s => s.id === selectedSongId) ?? null;
 
   const DIFF_COLORS = {
     easy:   { text: '#B9FF66', glow: 'rgba(185,255,102,0.4)' },
@@ -46,17 +46,16 @@ export function GameScreen({
       className="fixed inset-0 bg-[#07090E] flex flex-col overflow-hidden"
       style={{ paddingTop: 'var(--safe-top)', paddingBottom: 'var(--safe-bottom)' }}
     >
-      {/* ── Game canvas ── fills all remaining space */}
+      {/* ── Game Engine ── fills all remaining space */}
       <div className="flex-1 relative overflow-hidden">
-        <GameCanvas
+        <GameEngine
           audioController={audioController}
-          onGameOver={onGameOver}
-          onCheckpointReached={onCheckpointReached}
-          difficulty={difficulty}
           song={song}
-          level={profile?.level ?? 1}
+          level={level}
+          mode={mode}
+          difficulty={difficulty}
           isPaused={isPaused}
-          initialCheckpoint={checkpoint}
+          onGameOver={onGameOver}
         />
 
         {/* ── PROFESSIONAL GAMING HUD OVERLAY ── */}
