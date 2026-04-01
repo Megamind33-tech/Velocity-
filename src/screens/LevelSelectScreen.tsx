@@ -1,5 +1,5 @@
 import React from 'react';
-import { Play, Star } from 'lucide-react';
+import { Play, Star, Eye } from 'lucide-react';
 import { getLevelInfo } from '../lib/progression';
 import { Song } from '../lib/songs-extended';
 import { PrimaryButton } from '../components/ui/PrimaryButton';
@@ -21,6 +21,7 @@ export function LevelSelectScreen({
 
   return (
     <div className="game-screen mg-stage flex flex-col">
+      <div className="mg-kit-layer mg-kit-layer--stage" aria-hidden />
       <div className="mg-vignette" aria-hidden />
       <div className="mg-scanlines" aria-hidden />
       <header className="mg-topbar shrink-0 flex-col items-stretch !gap-1">

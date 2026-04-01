@@ -1,6 +1,7 @@
 node_modules/
 build/
 dist/
+tmp-ui-kit/
 coverage/
 .DS_Store
 *.log
