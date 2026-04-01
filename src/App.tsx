@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { AudioController } from './lib/audio';
 import { SONGS } from './lib/songs-extended';
-import { loadProfile, saveProfile, PlayerProfile } from './lib/profile';
+import { loadProfile, saveProfile, PlayerProfile, addXp, updateChallengeProgress } from './lib/profile';
 import { WORLDS } from './lib/progression';
 
 import { HomeScreen } from './screens/HomeScreen';
@@ -29,52 +29,42 @@ export type Screen =
   | 'settings';
 
 export default function App() {
-  // Navigation
   const [currentScreen, setCurrentScreen] = useState<Screen>('home');
 
-  // World/Song/Level Selection
   const [selectedWorldId, setSelectedWorldId] = useState<number | null>(null);
   const [selectedSongId, setSelectedSongId] = useState<string | null>(null);
   const [selectedLevel, setSelectedLevel] = useState<number>(1);
   const [selectedMode, setSelectedMode] = useState<'A' | 'C'>('A');
 
-  // Game State
   const [isPaused, setIsPaused] = useState(false);
   const [lastGameStats, setLastGameStats] = useState<GameStats | null>(null);
   const [lastGameScore, setLastGameScore] = useState(0);
   const [previousBestScore, setPreviousBestScore] = useState(0);
 
-  // Profile
   const [profile, setProfile] = useState<PlayerProfile | null>(null);
   const [unlockedWorlds, setUnlockedWorlds] = useState<number[]>([1]);
   const [worldProgress, setWorldProgress] = useState<{ [key: number]: number }>({ 1: 0 });
   const [songProgress, setSongProgress] = useState<{ [key: string]: { stars: number; score: number } }>({});
   const [levelProgress, setLevelProgress] = useState<{ [key: number]: { stars: number; score: number } }>({});
 
-  // Audio Controller
-  const audioControllerRef = useRef<AudioController | null>(null);
+  const [selectedBackgroundMusicId, setSelectedBackgroundMusicId] = useState<string>('none');
 
-  // Error State
+  const audioControllerRef = useRef<AudioController | null>(null);
   const [error, setError] = useState('');
 
-  // Load profile on mount
   useEffect(() => {
     const loadedProfile = loadProfile();
     setProfile(loadedProfile);
-    // TODO: Load progression state from profile
   }, []);
 
-  // Cleanup audio on unmount
   useEffect(() => {
     return () => {
       audioControllerRef.current?.stop();
     };
   }, []);
 
-  // Get selected song object
   const selectedSong = selectedSongId ? SONGS.find(s => s.id === selectedSongId) : null;
 
-  // Navigation handlers
   const navigate = (screen: Screen) => {
     setCurrentScreen(screen);
   };
@@ -86,10 +76,7 @@ export default function App() {
 
   const handleSongSelect = (songId: string) => {
     setSelectedSongId(songId);
-    const song = SONGS.find(s => s.id === songId);
-    if (song) {
-      setPreviousBestScore(songProgress[songId]?.score || 0);
-    }
+    setPreviousBestScore(songProgress[songId]?.score || 0);
     setCurrentScreen('level-select');
   };
 
@@ -123,30 +110,74 @@ export default function App() {
     setLastGameScore(score);
     setLastGameStats(stats || null);
 
-    // Update progress
-    if (selectedSongId && stats) {
+    if (selectedSongId && stats && profile) {
       const currentSongProg = songProgress[selectedSongId] || { stars: 0, score: 0 };
       const stars = stats.accuracy >= 90 ? 3 : stats.accuracy >= 75 ? 2 : stats.accuracy >= 60 ? 1 : 0;
       const newScore = Math.max(currentSongProg.score, score);
 
-      setSongProgress({
+      const newSongProgress = {
         ...songProgress,
         [selectedSongId]: { stars: Math.max(currentSongProg.stars, stars), score: newScore },
-      });
+      };
+      setSongProgress(newSongProgress);
 
       setLevelProgress({
         ...levelProgress,
         [selectedLevel]: { stars: Math.max(currentSongProg.stars, stars), score: newScore },
       });
 
-      // Check if we should unlock next world
+      const updatedProfile = { ...profile };
+      updatedProfile.songsPlayed += 1;
+      updatedProfile.totalScore += score;
+      updatedProfile.perfectGates += stats.notesHit;
+
+      const songKey = `${selectedSongId}_${selectedSong?.difficulty || 'novice'}`;
+      if (!updatedProfile.highScores[songKey] || score > updatedProfile.highScores[songKey]) {
+        updatedProfile.highScores[songKey] = score;
+      }
+
+      addXp(updatedProfile, Math.floor(score / 10) + (stars * 50));
+
+      updateChallengeProgress(updatedProfile, 'c1', 1);
+      updateChallengeProgress(updatedProfile, 'c2', score, true);
+      updateChallengeProgress(updatedProfile, 'c4', stats.notesHit);
+      updateChallengeProgress(updatedProfile, 'c5', stats.maxCombo, true);
+
+      for (let i = 1; i <= 50; i++) {
+        updateChallengeProgress(updatedProfile, `songs_played_${i}`, updatedProfile.songsPlayed, true);
+        updateChallengeProgress(updatedProfile, `perfect_gates_${i}`, updatedProfile.perfectGates, true);
+        updateChallengeProgress(updatedProfile, `score_milestone_${i}`, updatedProfile.totalScore, true);
+        updateChallengeProgress(updatedProfile, `combo_streak_${i}`, stats.maxCombo, true);
+      }
+
+      if (updatedProfile.dailyChallenge && !updatedProfile.dailyChallenge.completed) {
+        const dc = updatedProfile.dailyChallenge;
+        if (dc.title === 'Early Bird' || dc.title === 'Night Owl') {
+          dc.progress = Math.min(dc.target, dc.progress + 1);
+        } else if (dc.title === 'Perfect Streak') {
+          dc.progress = Math.max(dc.progress, stats.notesHit);
+        } else if (dc.title === 'High Flyer') {
+          dc.progress = Math.max(dc.progress, score);
+        }
+        if (dc.progress >= dc.target) {
+          dc.completed = true;
+          addXp(updatedProfile, dc.reward);
+        }
+      }
+
+      saveProfile(updatedProfile);
+      setProfile(updatedProfile);
+
       if (selectedWorldId) {
         const worldSongs = SONGS.filter(s => s.world === selectedWorldId);
-        const worldComplete = worldSongs.filter(s => songProgress[s.id]?.stars > 0).length;
+        const completedInWorld = worldSongs.filter(s => newSongProgress[s.id]?.stars > 0).length;
+        setWorldProgress(prev => ({ ...prev, [selectedWorldId]: completedInWorld }));
 
-        if (worldComplete >= WORLDS[selectedWorldId - 1].minSongsToUnlock) {
-          if (!unlockedWorlds.includes(selectedWorldId + 1)) {
-            setUnlockedWorlds([...unlockedWorlds, selectedWorldId + 1]);
+        const world = WORLDS.find(w => w.id === selectedWorldId);
+        if (world && completedInWorld >= world.minSongsToUnlock) {
+          const nextWorld = selectedWorldId + 1;
+          if (nextWorld <= 5 && !unlockedWorlds.includes(nextWorld)) {
+            setUnlockedWorlds(prev => [...prev, nextWorld]);
           }
         }
       }
@@ -167,14 +198,18 @@ export default function App() {
     setCurrentScreen('home');
   };
 
-  // Render current screen
+  const handleProfileUpdate = (updatedProfile: PlayerProfile) => {
+    setProfile(updatedProfile);
+    saveProfile(updatedProfile);
+  };
+
   const renderScreen = () => {
     switch (currentScreen) {
       case 'home':
         return (
           <HomeScreen
             profile={profile}
-            onNavigate={(screen) => navigate(screen as any)}
+            onNavigate={(screen) => navigate(screen)}
           />
         );
 
@@ -243,27 +278,50 @@ export default function App() {
         ) : null;
 
       case 'profile':
-        return <ProfileScreen profile={profile} onBack={() => navigate('home')} />;
+        return (
+          <ProfileScreen
+            profile={profile}
+            onBack={() => navigate('home')}
+            onProfileUpdate={handleProfileUpdate}
+          />
+        );
 
       case 'leaderboard':
-        return <LeaderboardScreen onBack={() => navigate('home')} />;
+        return (
+          <LeaderboardScreen
+            profile={profile}
+            onBack={() => navigate('home')}
+          />
+        );
 
       case 'training':
         return <TrainingScreen onBack={() => navigate('home')} />;
 
       case 'settings':
-        return <SettingsScreen onBack={() => navigate('home')} />;
+        return (
+          <SettingsScreen
+            selectedBackgroundMusicId={selectedBackgroundMusicId}
+            onBackgroundMusicChange={setSelectedBackgroundMusicId}
+            onBack={() => navigate('home')}
+          />
+        );
 
       default:
-        return <HomeScreen profile={profile} onNavigate={(screen) => navigate(screen as any)} />;
+        return (
+          <HomeScreen
+            profile={profile}
+            onNavigate={(screen) => navigate(screen)}
+          />
+        );
     }
   };
 
   return (
     <div className="w-screen h-screen overflow-hidden">
       {error && (
-        <div className="fixed top-4 left-4 right-4 bg-[#FF6B6B] text-white p-4 rounded-lg z-50">
-          {error}
+        <div className="fixed top-4 left-4 right-4 bg-[#FF6B6B] text-white p-4 rounded-lg z-50 flex items-center justify-between">
+          <span>{error}</span>
+          <button onClick={() => setError('')} className="ml-3 font-bold">✕</button>
         </div>
       )}
       {renderScreen()}

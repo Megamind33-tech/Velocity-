@@ -34,12 +34,14 @@ export function GameScreen({
   onAbort,
 }: GameScreenProps) {
 
-  const DIFF_COLORS = {
-    easy:   { text: '#B9FF66', glow: 'rgba(185,255,102,0.4)' },
-    medium: { text: '#FFC94A', glow: 'rgba(255,201,74,0.4)' },
-    hard:   { text: '#FF6B6B', glow: 'rgba(255,107,107,0.4)' },
+  const DIFF_COLORS: Record<string, { text: string; glow: string }> = {
+    novice:       { text: '#B9FF66', glow: 'rgba(185,255,102,0.4)' },
+    intermediate: { text: '#FFC94A', glow: 'rgba(255,201,74,0.4)' },
+    advanced:     { text: '#FF6B6B', glow: 'rgba(255,107,107,0.4)' },
+    master:       { text: '#7D5CFF', glow: 'rgba(125,92,255,0.4)' },
+    legend:       { text: '#43E7FF', glow: 'rgba(67,231,255,0.4)' },
   };
-  const dc = DIFF_COLORS[difficulty];
+  const dc = DIFF_COLORS[difficulty] || DIFF_COLORS.novice;
 
   return (
     <div

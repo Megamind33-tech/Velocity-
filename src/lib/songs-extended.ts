@@ -1253,47 +1253,127 @@ export const SONGS: Song[] = [
   },
 
   // ============================================================
-  // WORLD 2: INTERMEDIATE AIRWAYS (100 songs - 90-120 seconds)
-  // More complex melodies, wider range, some chromatic notes
+  // WORLD 2: INTERMEDIATE AIRWAYS (20 songs - 90-120 seconds)
   // ============================================================
-  // (Due to character limits, abbreviated - full list continues...)
 
-  // --- INTERMEDIATE ZAMBIAN SONGS (5 songs)
-  {
-    id: 'intermediate_001',
-    title: 'Chikwata',
-    artist: 'Zambian Traditional',
-    duration: 95,
-    key: 'G',
-    minNote: 67,
-    maxNote: 81,
-    difficulty: 'intermediate',
-    world: 2,
-    genre: 'Zambian Traditional',
-    region: 'Zambia',
-    bpm: 110,
-    timeSignature: '4/4',
-    vibratZones: 2,
-  },
-  // ... (95 more intermediate songs needed)
+  // --- ZAMBIAN SONGS (World 2)
+  { id: 'inter_z01', title: 'Chikwata', artist: 'Zambian Traditional', duration: 95, key: 'G', minNote: 67, maxNote: 81, difficulty: 'intermediate', world: 2, genre: 'Zambian Traditional', region: 'Zambia', bpm: 110, timeSignature: '4/4', vibratZones: 2 },
+  { id: 'inter_z02', title: 'Bwana Yesu Akufuna', artist: 'Zambian Gospel', duration: 100, key: 'C', minNote: 60, maxNote: 79, difficulty: 'intermediate', world: 2, genre: 'Zambian Gospel', region: 'Zambia', bpm: 95, timeSignature: '4/4', vibratZones: 2 },
+  { id: 'inter_z03', title: 'Tiyende Pamodzi', artist: 'Zambian Anthem', duration: 90, key: 'F', minNote: 65, maxNote: 81, difficulty: 'intermediate', world: 2, genre: 'Zambian Patriotic', region: 'Zambia', bpm: 100, timeSignature: '4/4', vibratZones: 2 },
+  { id: 'inter_z04', title: 'Chikondi Changa', artist: 'Zambian Love Song', duration: 95, key: 'D', minNote: 62, maxNote: 79, difficulty: 'intermediate', world: 2, genre: 'Zambian Pop', region: 'Zambia', bpm: 105, timeSignature: '4/4', vibratZones: 2 },
+  { id: 'inter_z05', title: 'Mwabombeni', artist: 'Zambian Traditional', duration: 100, key: 'A', minNote: 69, maxNote: 84, difficulty: 'intermediate', world: 2, genre: 'Zambian Traditional', region: 'Zambia', bpm: 115, timeSignature: '4/4', vibratZones: 3 },
+
+  // --- POP & ROCK (World 2)
+  { id: 'inter_001', title: 'Bohemian Rhapsody', artist: 'Queen', duration: 110, key: 'B♭', minNote: 58, maxNote: 82, difficulty: 'intermediate', world: 2, genre: 'Rock', bpm: 72, timeSignature: '4/4', vibratZones: 3 },
+  { id: 'inter_002', title: 'Rolling in the Deep', artist: 'Adele', duration: 100, key: 'C', minNote: 60, maxNote: 81, difficulty: 'intermediate', world: 2, genre: 'Pop/Soul', bpm: 105, timeSignature: '4/4', vibratZones: 2 },
+  { id: 'inter_003', title: 'Shallow', artist: 'Lady Gaga & Bradley Cooper', duration: 105, key: 'G', minNote: 67, maxNote: 84, difficulty: 'intermediate', world: 2, genre: 'Pop/Rock', bpm: 96, timeSignature: '4/4', vibratZones: 2 },
+  { id: 'inter_004', title: 'Chandelier', artist: 'Sia', duration: 95, key: 'B♭', minNote: 58, maxNote: 84, difficulty: 'intermediate', world: 2, genre: 'Pop', bpm: 116, timeSignature: '4/4', vibratZones: 3 },
+  { id: 'inter_005', title: 'Stay With Me', artist: 'Sam Smith', duration: 100, key: 'C', minNote: 60, maxNote: 79, difficulty: 'intermediate', world: 2, genre: 'Pop/Soul', bpm: 84, timeSignature: '4/4', vibratZones: 2 },
+
+  // --- SOUL & R&B (World 2)
+  { id: 'inter_006', title: 'Superstition', artist: 'Stevie Wonder', duration: 100, key: 'E♭', minNote: 63, maxNote: 81, difficulty: 'intermediate', world: 2, genre: 'Funk/Soul', bpm: 102, timeSignature: '4/4', vibratZones: 2 },
+  { id: 'inter_007', title: 'Ain\'t No Sunshine', artist: 'Bill Withers', duration: 95, key: 'A', minNote: 69, maxNote: 81, difficulty: 'intermediate', world: 2, genre: 'Soul', bpm: 74, timeSignature: '4/4', vibratZones: 2 },
+  { id: 'inter_008', title: 'Natural Woman', artist: 'Aretha Franklin', duration: 105, key: 'A', minNote: 69, maxNote: 84, difficulty: 'intermediate', world: 2, genre: 'Soul', bpm: 75, timeSignature: '4/4', vibratZones: 3 },
+
+  // --- AFRICAN CONTEMPORARY (World 2)
+  { id: 'inter_a01', title: 'Pata Pata', artist: 'Miriam Makeba', duration: 95, key: 'C', minNote: 60, maxNote: 79, difficulty: 'intermediate', world: 2, genre: 'Afro-Pop', region: 'South Africa', bpm: 130, timeSignature: '4/4', vibratZones: 2 },
+  { id: 'inter_a02', title: 'Malaika', artist: 'East African Traditional', duration: 100, key: 'G', minNote: 67, maxNote: 81, difficulty: 'intermediate', world: 2, genre: 'East African', region: 'East Africa', bpm: 90, timeSignature: '4/4', vibratZones: 2 },
+
+  // --- CLASSICAL (World 2)
+  { id: 'inter_c01', title: 'Nessun Dorma (Simplified)', artist: 'Giacomo Puccini', duration: 110, key: 'G', minNote: 67, maxNote: 84, difficulty: 'intermediate', world: 2, genre: 'Opera/Classical', bpm: 72, timeSignature: '4/4', vibratZones: 3 },
+  { id: 'inter_c02', title: 'Clair de Lune (Vocal)', artist: 'Claude Debussy', duration: 100, key: 'D♭', minNote: 61, maxNote: 79, difficulty: 'intermediate', world: 2, genre: 'Classical', bpm: 60, timeSignature: '9/8', vibratZones: 2 },
+
+  // --- WORLD MUSIC (World 2)
+  { id: 'inter_w01', title: 'Bésame Mucho', artist: 'Consuelo Velázquez', duration: 100, key: 'D', minNote: 62, maxNote: 79, difficulty: 'intermediate', world: 2, genre: 'Latin Bolero', bpm: 70, timeSignature: '4/4', vibratZones: 2 },
+  { id: 'inter_w02', title: 'Chan Chan', artist: 'Buena Vista Social Club', duration: 95, key: 'A', minNote: 69, maxNote: 81, difficulty: 'intermediate', world: 2, genre: 'Cuban Son', bpm: 100, timeSignature: '4/4', vibratZones: 2 },
+  { id: 'inter_w03', title: 'Waka Waka', artist: 'Shakira', duration: 100, key: 'G', minNote: 67, maxNote: 81, difficulty: 'intermediate', world: 2, genre: 'Afro-Pop', bpm: 130, timeSignature: '4/4', vibratZones: 2 },
 
   // ============================================================
-  // WORLD 3: ADVANCED ALTITUDES (100 songs - 120-180 seconds)
+  // WORLD 3: ADVANCED ALTITUDES (20 songs - 120-180 seconds)
   // ============================================================
-  // ... (100 advanced songs needed)
+
+  // --- ZAMBIAN SONGS (World 3)
+  { id: 'adv_z01', title: 'Mutima Wanga', artist: 'Zambian Gospel Choir', duration: 130, key: 'D', minNote: 62, maxNote: 84, difficulty: 'advanced', world: 3, genre: 'Zambian Gospel', region: 'Zambia', bpm: 90, timeSignature: '4/4', vibratZones: 4 },
+  { id: 'adv_z02', title: 'Ifikisheni', artist: 'Zambian Traditional', duration: 140, key: 'G', minNote: 67, maxNote: 86, difficulty: 'advanced', world: 3, genre: 'Zambian Traditional', region: 'Zambia', bpm: 120, timeSignature: '4/4', vibratZones: 4 },
+  { id: 'adv_z03', title: 'Nshikamone', artist: 'Zambian Love Ballad', duration: 135, key: 'C', minNote: 60, maxNote: 84, difficulty: 'advanced', world: 3, genre: 'Zambian Ballad', region: 'Zambia', bpm: 85, timeSignature: '4/4', vibratZones: 4 },
+  { id: 'adv_z04', title: 'Lesa Mukulu', artist: 'Zambian Hymn', duration: 145, key: 'F', minNote: 65, maxNote: 84, difficulty: 'advanced', world: 3, genre: 'Zambian Hymn', region: 'Zambia', bpm: 80, timeSignature: '4/4', vibratZones: 5 },
+  { id: 'adv_z05', title: 'Kalindula Fusion', artist: 'Zambian Modern', duration: 140, key: 'A', minNote: 69, maxNote: 86, difficulty: 'advanced', world: 3, genre: 'Zambian Fusion', region: 'Zambia', bpm: 125, timeSignature: '4/4', vibratZones: 4 },
+
+  // --- ADVANCED POP/ROCK (World 3)
+  { id: 'adv_001', title: 'I Will Always Love You', artist: 'Whitney Houston', duration: 135, key: 'A', minNote: 69, maxNote: 88, difficulty: 'advanced', world: 3, genre: 'Pop/Soul', bpm: 68, timeSignature: '4/4', vibratZones: 5 },
+  { id: 'adv_002', title: 'Defying Gravity', artist: 'Wicked', duration: 140, key: 'D', minNote: 62, maxNote: 86, difficulty: 'advanced', world: 3, genre: 'Musical Theatre', bpm: 80, timeSignature: '4/4', vibratZones: 4 },
+  { id: 'adv_003', title: 'Listen', artist: 'Beyoncé', duration: 130, key: 'C', minNote: 60, maxNote: 86, difficulty: 'advanced', world: 3, genre: 'R&B/Pop', bpm: 78, timeSignature: '4/4', vibratZones: 4 },
+  { id: 'adv_004', title: 'Creep', artist: 'Radiohead', duration: 125, key: 'G', minNote: 67, maxNote: 84, difficulty: 'advanced', world: 3, genre: 'Alternative Rock', bpm: 78, timeSignature: '4/4', vibratZones: 3 },
+  { id: 'adv_005', title: 'Purple Rain', artist: 'Prince', duration: 150, key: 'B♭', minNote: 58, maxNote: 84, difficulty: 'advanced', world: 3, genre: 'Rock/Pop', bpm: 114, timeSignature: '4/4', vibratZones: 4 },
+
+  // --- ADVANCED CLASSICAL (World 3)
+  { id: 'adv_c01', title: 'O Mio Babbino Caro', artist: 'Giacomo Puccini', duration: 130, key: 'A♭', minNote: 68, maxNote: 86, difficulty: 'advanced', world: 3, genre: 'Opera', bpm: 55, timeSignature: '6/8', vibratZones: 5 },
+  { id: 'adv_c02', title: 'La Ci Darem La Mano', artist: 'W.A. Mozart', duration: 140, key: 'A', minNote: 69, maxNote: 84, difficulty: 'advanced', world: 3, genre: 'Opera', bpm: 80, timeSignature: '4/4', vibratZones: 4 },
+
+  // --- AFRICAN/WORLD (World 3)
+  { id: 'adv_a01', title: 'Asimbonanga', artist: 'Johnny Clegg', duration: 135, key: 'D', minNote: 62, maxNote: 84, difficulty: 'advanced', world: 3, genre: 'South African', region: 'South Africa', bpm: 120, timeSignature: '4/4', vibratZones: 3 },
+  { id: 'adv_a02', title: 'Shosholoza', artist: 'South African Traditional', duration: 125, key: 'G', minNote: 67, maxNote: 84, difficulty: 'advanced', world: 3, genre: 'South African', region: 'South Africa', bpm: 100, timeSignature: '4/4', vibratZones: 3 },
+
+  // --- MORE ADVANCED (World 3)
+  { id: 'adv_006', title: 'Unchained Melody', artist: 'The Righteous Brothers', duration: 130, key: 'C', minNote: 60, maxNote: 84, difficulty: 'advanced', world: 3, genre: 'Pop/Soul', bpm: 72, timeSignature: '4/4', vibratZones: 4 },
+  { id: 'adv_007', title: 'My Heart Will Go On', artist: 'Celine Dion', duration: 140, key: 'E', minNote: 64, maxNote: 86, difficulty: 'advanced', world: 3, genre: 'Pop', bpm: 100, timeSignature: '4/4', vibratZones: 5 },
+  { id: 'adv_008', title: 'Bridge Over Troubled Water', artist: 'Simon & Garfunkel', duration: 150, key: 'E♭', minNote: 63, maxNote: 84, difficulty: 'advanced', world: 3, genre: 'Pop/Folk', bpm: 82, timeSignature: '4/4', vibratZones: 4 },
+  { id: 'adv_009', title: 'No Woman No Cry', artist: 'Bob Marley', duration: 125, key: 'C', minNote: 60, maxNote: 81, difficulty: 'advanced', world: 3, genre: 'Reggae', bpm: 76, timeSignature: '4/4', vibratZones: 3 },
+  { id: 'adv_010', title: 'Redemption Song', artist: 'Bob Marley', duration: 130, key: 'G', minNote: 67, maxNote: 84, difficulty: 'advanced', world: 3, genre: 'Reggae/Folk', bpm: 80, timeSignature: '4/4', vibratZones: 3 },
 
   // ============================================================
-  // WORLD 4: MASTER FLIGHT (60 songs - 150-200 seconds)
+  // WORLD 4: MASTER FLIGHT (15 songs - 150-200 seconds)
   // ============================================================
-  // ... (60 master songs needed)
+
+  // --- ZAMBIAN SONGS (World 4)
+  { id: 'mast_z01', title: 'Umutima Wandi', artist: 'Zambian Opera Singer', duration: 160, key: 'D', minNote: 62, maxNote: 88, difficulty: 'master', world: 4, genre: 'Zambian Classical', region: 'Zambia', bpm: 75, timeSignature: '4/4', vibratZones: 6 },
+  { id: 'mast_z02', title: 'Iminshi ya Lesa', artist: 'Zambian Choir', duration: 170, key: 'G', minNote: 67, maxNote: 88, difficulty: 'master', world: 4, genre: 'Zambian Sacred', region: 'Zambia', bpm: 70, timeSignature: '4/4', vibratZones: 6 },
+  { id: 'mast_z03', title: 'Bana Ba Zambia', artist: 'Zambian Patriotic', duration: 165, key: 'C', minNote: 60, maxNote: 86, difficulty: 'master', world: 4, genre: 'Zambian Anthem', region: 'Zambia', bpm: 90, timeSignature: '4/4', vibratZones: 5 },
+
+  // --- MASTER LEVEL SONGS
+  { id: 'mast_001', title: 'Nessun Dorma', artist: 'Giacomo Puccini', duration: 170, key: 'G', minNote: 67, maxNote: 90, difficulty: 'master', world: 4, genre: 'Opera', bpm: 72, timeSignature: '4/4', vibratZones: 6 },
+  { id: 'mast_002', title: 'The Phantom of the Opera', artist: 'Andrew Lloyd Webber', duration: 180, key: 'D', minNote: 62, maxNote: 90, difficulty: 'master', world: 4, genre: 'Musical Theatre', bpm: 85, timeSignature: '4/4', vibratZones: 5 },
+  { id: 'mast_003', title: 'And I Am Telling You', artist: 'Dreamgirls', duration: 160, key: 'E♭', minNote: 63, maxNote: 88, difficulty: 'master', world: 4, genre: 'Musical Theatre', bpm: 70, timeSignature: '4/4', vibratZones: 6 },
+  { id: 'mast_004', title: 'Think', artist: 'Aretha Franklin', duration: 155, key: 'C', minNote: 60, maxNote: 86, difficulty: 'master', world: 4, genre: 'Soul/Funk', bpm: 140, timeSignature: '4/4', vibratZones: 5 },
+  { id: 'mast_005', title: 'Georgia On My Mind', artist: 'Ray Charles', duration: 165, key: 'G', minNote: 67, maxNote: 86, difficulty: 'master', world: 4, genre: 'Jazz/Soul', bpm: 72, timeSignature: '4/4', vibratZones: 5 },
+  { id: 'mast_006', title: 'Summertime', artist: 'George Gershwin', duration: 160, key: 'A', minNote: 69, maxNote: 88, difficulty: 'master', world: 4, genre: 'Jazz/Opera', bpm: 56, timeSignature: '4/4', vibratZones: 6 },
+  { id: 'mast_007', title: 'Ave Maria (Bach/Gounod)', artist: 'Charles Gounod', duration: 170, key: 'C', minNote: 60, maxNote: 88, difficulty: 'master', world: 4, genre: 'Classical', bpm: 62, timeSignature: '4/4', vibratZones: 6 },
+
+  // --- AFRICAN MASTER (World 4)
+  { id: 'mast_a01', title: 'Mbube (The Lion Sleeps)', artist: 'Solomon Linda', duration: 155, key: 'G', minNote: 67, maxNote: 88, difficulty: 'master', world: 4, genre: 'Zulu', region: 'South Africa', bpm: 130, timeSignature: '4/4', vibratZones: 5 },
+  { id: 'mast_a02', title: 'Senzenina', artist: 'South African Freedom Song', duration: 165, key: 'D', minNote: 62, maxNote: 86, difficulty: 'master', world: 4, genre: 'South African', region: 'South Africa', bpm: 70, timeSignature: '4/4', vibratZones: 5 },
+
+  // --- MORE MASTER
+  { id: 'mast_008', title: 'I Have Nothing', artist: 'Whitney Houston', duration: 175, key: 'D', minNote: 62, maxNote: 90, difficulty: 'master', world: 4, genre: 'Pop/Soul', bpm: 68, timeSignature: '4/4', vibratZones: 6 },
+  { id: 'mast_009', title: 'Run', artist: 'Leona Lewis', duration: 160, key: 'C', minNote: 60, maxNote: 88, difficulty: 'master', world: 4, genre: 'Pop', bpm: 75, timeSignature: '4/4', vibratZones: 5 },
 
   // ============================================================
-  // WORLD 5: LEGENDARY HEIGHTS (60 songs - 200-300 seconds)
+  // WORLD 5: LEGENDARY HEIGHTS (15 songs - 200-300 seconds)
   // ============================================================
-  // ... (60 legend songs needed)
 
-  // TOTAL STRUCTURE: 400+ songs across 5 worlds
-  // Each song × 20 levels = 8,000+ gameplay variations
+  // --- ZAMBIAN LEGENDARY
+  { id: 'leg_z01', title: 'Zambia Shall Be Free', artist: 'Zambian Epic', duration: 210, key: 'D', minNote: 62, maxNote: 90, difficulty: 'legend', world: 5, genre: 'Zambian Epic', region: 'Zambia', bpm: 85, timeSignature: '4/4', vibratZones: 8 },
+  { id: 'leg_z02', title: 'Chalo Chatu', artist: 'Zambian Cultural Heritage', duration: 220, key: 'G', minNote: 67, maxNote: 91, difficulty: 'legend', world: 5, genre: 'Zambian Cultural', region: 'Zambia', bpm: 90, timeSignature: '4/4', vibratZones: 8 },
+  { id: 'leg_z03', title: 'Imfumu ya Zambia', artist: 'Zambian Royal Heritage', duration: 230, key: 'C', minNote: 60, maxNote: 90, difficulty: 'legend', world: 5, genre: 'Zambian Traditional', region: 'Zambia', bpm: 80, timeSignature: '4/4', vibratZones: 8 },
+
+  // --- LEGENDARY CLASSICAL
+  { id: 'leg_001', title: 'Queen of the Night Aria', artist: 'W.A. Mozart', duration: 200, key: 'D', minNote: 62, maxNote: 96, difficulty: 'legend', world: 5, genre: 'Opera', bpm: 120, timeSignature: '4/4', vibratZones: 8 },
+  { id: 'leg_002', title: 'Un Bel Di Vedremo', artist: 'Giacomo Puccini', duration: 240, key: 'G♭', minNote: 66, maxNote: 90, difficulty: 'legend', world: 5, genre: 'Opera', bpm: 60, timeSignature: '4/4', vibratZones: 8 },
+  { id: 'leg_003', title: 'Liebestod', artist: 'Richard Wagner', duration: 250, key: 'A♭', minNote: 68, maxNote: 91, difficulty: 'legend', world: 5, genre: 'Opera', bpm: 55, timeSignature: '4/4', vibratZones: 8 },
+
+  // --- LEGENDARY VOCAL PERFORMANCES
+  { id: 'leg_004', title: 'Without You', artist: 'Mariah Carey', duration: 210, key: 'D', minNote: 62, maxNote: 93, difficulty: 'legend', world: 5, genre: 'Pop', bpm: 120, timeSignature: '4/4', vibratZones: 7 },
+  { id: 'leg_005', title: 'Emotions', artist: 'Mariah Carey', duration: 220, key: 'C', minNote: 60, maxNote: 96, difficulty: 'legend', world: 5, genre: 'Pop/R&B', bpm: 116, timeSignature: '4/4', vibratZones: 7 },
+  { id: 'leg_006', title: 'I Believe I Can Fly', artist: 'R. Kelly', duration: 230, key: 'C', minNote: 60, maxNote: 88, difficulty: 'legend', world: 5, genre: 'R&B', bpm: 72, timeSignature: '4/4', vibratZones: 6 },
+  { id: 'leg_007', title: 'The Prayer', artist: 'Andrea Bocelli & Celine Dion', duration: 240, key: 'B♭', minNote: 58, maxNote: 90, difficulty: 'legend', world: 5, genre: 'Classical Crossover', bpm: 65, timeSignature: '4/4', vibratZones: 8 },
+
+  // --- AFRICAN LEGENDARY
+  { id: 'leg_a01', title: 'Africa', artist: 'Toto', duration: 210, key: 'A', minNote: 69, maxNote: 88, difficulty: 'legend', world: 5, genre: 'Rock/Pop', bpm: 93, timeSignature: '4/4', vibratZones: 6 },
+  { id: 'leg_a02', title: 'Djembe Fire', artist: 'West African Traditional', duration: 225, key: 'D', minNote: 62, maxNote: 90, difficulty: 'legend', world: 5, genre: 'West African', region: 'West Africa', bpm: 140, timeSignature: '4/4', vibratZones: 7 },
+
+  // --- ULTIMATE CHALLENGES
+  { id: 'leg_008', title: 'Music of the Night', artist: 'Andrew Lloyd Webber', duration: 250, key: 'D', minNote: 62, maxNote: 88, difficulty: 'legend', world: 5, genre: 'Musical Theatre', bpm: 66, timeSignature: '4/4', vibratZones: 7 },
+  { id: 'leg_009', title: 'O Holy Night', artist: 'Adolphe Adam', duration: 260, key: 'C', minNote: 60, maxNote: 91, difficulty: 'legend', world: 5, genre: 'Classical/Hymn', bpm: 60, timeSignature: '4/4', vibratZones: 8 },
 ];
 
 // Level Challenge Types (Applied to each song)
