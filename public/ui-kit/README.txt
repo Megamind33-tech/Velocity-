@@ -1,8 +1,11 @@
-Velocity — purchased UI kit (source: Google Drive export)
+Velocity — purchased UI kit (Google Drive)
 
-Raster previews exported from the kit’s PSD composites for in-app use:
-- battle-game.png — Battle Game.psd
-- my-account.png — My Account.psd
-- tournament.png — Tournament.psd
+Web backdrops are exported from each PSD’s Background group only (no mock UI:
+stats, Strike, tab labels, etc.).
 
-Original editable sources remain in your purchased archive (FIG / PSD / AI / EPS).
+Files:
+- stage-ambient.png — from Battle Game.psd → Background only (in-app name: stage)
+- tournament.png — Tournament.psd → Background only
+- my-account.png — My Account.psd → Background only
+
+Full editable sources: FIG / PSD / AI / EPS in your purchased archive.

@@ -45,7 +45,7 @@
     linear-gradient(180deg, #0c0a18 0%, #05060c 50%, #0a0816 100%);
 }
 
-/* --- Purchased kit backdrops (PNG composites from PSD) --- */
+/* --- Purchased kit backdrops (Background group only from PSD — no mock UI text) --- */
 .mg-kit-layer {
   position: absolute;
   inset: 0;
@@ -53,31 +53,35 @@
   z-index: 0;
   background-repeat: no-repeat;
   background-size: cover;
-  background-position: center 20%;
-  opacity: 0.22;
-  filter: saturate(1.05) contrast(1.05);
-  mix-blend-mode: lighten;
+  background-position: center 22%;
+  opacity: 0.52;
+  filter: saturate(1.12) contrast(1.04) brightness(1.12);
+  mix-blend-mode: screen;
 }
 
-.mg-kit-layer--battle {
-  background-image: url('/ui-kit/battle-game.png');
+/* Primary kit art (was “Battle Game” PSD — art layer only, renamed in app) */
+.mg-kit-layer--stage {
+  background-image: url('/ui-kit/stage-ambient.png');
 }
 
 .mg-kit-layer--account {
   background-image: url('/ui-kit/my-account.png');
-  opacity: 0.2;
+  opacity: 0.48;
   background-position: center top;
+  filter: saturate(1.1) contrast(1.03) brightness(1.1);
 }
 
 .mg-kit-layer--tournament {
   background-image: url('/ui-kit/tournament.png');
-  opacity: 0.2;
+  opacity: 0.5;
+  filter: saturate(1.12) contrast(1.04) brightness(1.1);
 }
 
-/* In-game: keep HUD readable */
+/* In-game: brighter than before but keeps playfield readable */
 .mg-kit-layer--subtle {
-  opacity: 0.12;
+  opacity: 0.3;
   mix-blend-mode: screen;
+  filter: saturate(1.08) contrast(1.02) brightness(1.08);
 }
 
 .mg-vignette {

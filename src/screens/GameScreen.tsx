@@ -49,7 +49,7 @@ export function GameScreen({
       className="fixed inset-0 mg-stage flex flex-col overflow-hidden"
       style={{ paddingTop: 'var(--safe-top)', paddingBottom: 'var(--safe-bottom)' }}
     >
-      <div className="mg-kit-layer mg-kit-layer--battle mg-kit-layer--subtle" aria-hidden />
+      <div className="mg-kit-layer mg-kit-layer--stage mg-kit-layer--subtle" aria-hidden />
       <div className="flex-1 relative overflow-hidden">
         <GameEngine
           audioController={audioController}
