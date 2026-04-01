@@ -1,224 +1,167 @@
 import React from 'react';
 import {
-  Mic, Music, User, Trophy, Dumbbell, Settings, ChevronRight, Zap, Star, Target
+  Music,
+  User,
+  Trophy,
+  Dumbbell,
+  Settings,
+  Zap,
+  Target,
+  Play,
 } from 'lucide-react';
-import { SONGS } from '../lib/songs';
-import { BACKGROUND_MUSIC } from '../lib/backgroundMusic';
 import { PlayerProfile } from '../lib/profile';
-import { PrimaryButton } from '../components/ui/PrimaryButton';
-import { IconButton } from '../components/ui/IconButton';
-import { SongCard } from '../components/ui/SongCard';
-import { ScoreDisplay } from '../components/ui/ScoreDisplay';
-import { StatBar } from '../components/ui/StatBar';
 import type { Screen } from '../App';
 
 interface HomeScreenProps {
   profile: PlayerProfile | null;
-  selectedSongId: string;
-  difficulty: 'easy' | 'medium' | 'hard';
-  selectedBackgroundMusicId: string;
-  error: string;
-  onPlay: () => void;
   onNavigate: (screen: Screen) => void;
-  onDifficultyChange: (d: 'easy' | 'medium' | 'hard') => void;
-  onClearError: () => void;
 }
 
-export function HomeScreen({
-  profile,
-  selectedSongId,
-  difficulty,
-  selectedBackgroundMusicId,
-  error,
-  onPlay,
-  onNavigate,
-  onDifficultyChange,
-  onClearError,
-}: HomeScreenProps) {
-  const selectedSong = SONGS.find(s => s.id === selectedSongId);
-  const effectiveDiff = selectedSong ? selectedSong.difficulty : difficulty;
-  const selectedMusic = BACKGROUND_MUSIC.find(m => m.id === selectedBackgroundMusicId);
+export function HomeScreen({ profile, onNavigate }: HomeScreenProps) {
   const xpPct = profile ? Math.min(100, (profile.xp / (profile.level * 1000)) * 100) : 0;
-  const bestScore = profile && selectedSong
-    ? profile.highScores[`${selectedSong.id}_${effectiveDiff}`] ?? 0
-    : 0;
 
   return (
-    <div className="game-screen stage-bg flex flex-col">
-      {/* ── PROFESSIONAL HEADER ── */}
-      <header className="px-4 py-4 shrink-0 border-b border-[var(--border-subtle)]">
-        <div className="flex items-center justify-between gap-4">
-          {/* Profile Button */}
-          <button
-            onClick={() => onNavigate('profile')}
-            className="flex items-center gap-3 flex-1 min-w-0 transition-opacity hover:opacity-80"
-          >
-            <div className="relative flex-shrink-0">
-              <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-[var(--color-secondary)] to-[var(--color-primary)] flex items-center justify-center text-lg font-black text-white shadow-md" style={{ boxShadow: '0 0 16px rgba(125,92,255,0.4)' }}>
-                {profile?.username?.[0]?.toUpperCase() ?? 'V'}
-              </div>
-              <div className="absolute -bottom-0.5 -right-0.5 badge-filled-primary text-[8px] px-1.5 py-0.5">
-                {profile?.level ?? 1}
-              </div>
+    <div className="game-screen mg-stage flex flex-col">
+      <div className="mg-vignette" aria-hidden />
+      <div className="mg-scanlines" aria-hidden />
+
+      <header className="mg-topbar shrink-0">
+        <button
+          type="button"
+          onClick={() => onNavigate('profile')}
+          className="flex items-center gap-3 min-w-0 flex-1 text-left rounded-xl -m-1 p-1 active:opacity-90"
+        >
+          <div className="relative shrink-0">
+            <div
+              className="mg-hex w-11 h-12 text-sm"
+              style={{
+                background: 'linear-gradient(145deg, #9b7fff, #43e7ff)',
+                boxShadow: '0 0 22px rgba(125,92,255,0.55)',
+              }}
+            >
+              {profile?.username?.[0]?.toUpperCase() ?? 'V'}
             </div>
-            <div className="min-w-0 flex-1">
-              <div className="text-title font-black truncate text-primary">
-                {profile?.username ?? 'Performer'}
-              </div>
-              <div className="text-caption text-tertiary">Level {profile?.level ?? 1}</div>
-              <div className="progress-bar mt-2 h-1" style={{ width: '100px' }}>
-                <div className="progress-bar-fill" style={{ width: `${xpPct}%` }} />
-              </div>
-            </div>
-          </button>
-
-          {/* Settings Button */}
-          <button
-            onClick={() => onNavigate('settings')}
-            className="btn btn-ghost btn-icon transition-all hover:bg-[var(--bg-surface-elevated)]"
-          >
-            <Settings className="w-5 h-5" />
-          </button>
-        </div>
-      </header>
-
-      {/* ── ERROR BANNER ── */}
-      {error && (
-        <div className="mx-4 mt-3 mb-3 px-4 py-3 rounded-lg surface-danger flex items-center gap-3 animate-slide-down">
-          <Zap className="w-4 h-4 text-[var(--color-danger)] shrink-0" />
-          <p className="text-xs text-[var(--color-danger)] flex-1 leading-snug">{error}</p>
-          <button onClick={onClearError} className="text-tertiary hover:text-secondary p-1 transition-colors">
-            ✕
-          </button>
-        </div>
-      )}
-
-      {/* ── SCROLLABLE CONTENT ── */}
-      <div className="game-screen-scroll px-4 pb-6">
-        {/* Brand / Title */}
-        <div className="pt-4 pb-6">
-          <h1 className="text-display-lg font-black uppercase italic tracking-tighter text-primary leading-tight">
-            VELOCITY
-            <span className="ml-2 text-[var(--color-primary)]" style={{ textShadow: '0 0 18px rgba(67,231,255,0.6)' }}>
-              //
+            <span
+              className="absolute -bottom-0.5 -right-1 text-[9px] font-black px-1.5 py-0.5 rounded-md"
+              style={{ background: '#FFC94A', color: '#05060c' }}
+            >
+              {profile?.level ?? 1}
             </span>
-          </h1>
-          <p className="text-label text-tertiary mt-2">Vocal Performance Challenge</p>
-        </div>
-
-        {/* ── SELECTED SONG CARD (Professional Music App Style) ── */}
-        {selectedSong ? (
-          <SongCard
-            title={selectedSong.title}
-            artist={selectedSong.artist}
-            tempo={selectedSong.tempo}
-            difficulty={effectiveDiff}
-            bestScore={bestScore}
-            isSelected
-            onClick={() => onNavigate('song-select')}
-          />
-        ) : (
-          <div className="card-accent-primary p-4 mb-5 rounded-lg">
-            <div className="flex items-center justify-between gap-3">
-              <div className="min-w-0">
-                <div className="text-label text-tertiary mb-1">Now Selected</div>
-                <h2 className="text-headline font-black text-primary">Endless Run</h2>
-                <p className="text-caption text-secondary mt-1">Procedural · No lyrics</p>
-              </div>
-              <button
-                onClick={() => onNavigate('song-select')}
-                className="btn btn-primary btn-sm shrink-0"
-              >
-                Change
-              </button>
+          </div>
+          <div className="min-w-0 flex-1">
+            <div className="text-sm font-black text-[#F5F7FC] truncate tracking-tight">
+              {profile?.username ?? 'Performer'}
+            </div>
+            <div className="text-[10px] font-bold uppercase tracking-widest text-[#7A8399]">
+              XP {profile?.xp?.toLocaleString() ?? 0}
+            </div>
+            <div className="xp-bar-track w-full max-w-[140px] mt-1.5 h-1.5">
+              <div className="xp-bar-fill h-full rounded-full" style={{ width: `${xpPct}%` }} />
             </div>
           </div>
-        )}
-
-        {/* ── PLAY BUTTON (Main CTA) ── */}
-        <PrimaryButton
-          variant="cyan"
-          size="lg"
-          fullWidth
-          onClick={onPlay}
-          icon={<Mic className="w-5 h-5" />}
-          className="mb-6 font-display text-lg tracking-widest"
+        </button>
+        <button
+          type="button"
+          onClick={() => onNavigate('settings')}
+          className="mg-action-icon shrink-0 w-11 h-11 rounded-xl"
+          aria-label="Settings"
         >
-          Play Now
-        </PrimaryButton>
+          <Settings className="w-5 h-5" />
+        </button>
+      </header>
 
-        {/* ── QUICK ACTION BUTTONS ── */}
-        <div className="grid grid-cols-4 gap-2 mb-6">
+      <div className="mg-scroll flex flex-col gap-5">
+        <div className="text-center pt-2">
+          <p className="mg-logo-tag mb-2">Vocal rhythm</p>
+          <h1 className="mg-logo">Velocity</h1>
+          <p className="text-xs text-[#A7B0C6] mt-3 max-w-[280px] mx-auto leading-relaxed">
+            Worlds, songs, and levels — tap Play to enter the campaign.
+          </p>
+        </div>
+
+        <div className="mg-panel">
+          <div className="mg-panel-header flex items-center gap-2">
+            <Zap className="w-3.5 h-3.5" />
+            Campaign
+          </div>
+          <p className="mg-panel-body mb-4">
+            Progress through vocal worlds, unlock tracks, and chase three-star clears.
+          </p>
+          <button type="button" className="mg-cta" onClick={() => onNavigate('world-select')}>
+            <Play className="w-5 h-5 shrink-0" fill="currentColor" />
+            Play
+          </button>
+        </div>
+
+        <div className="mg-action-grid">
           {[
-            { label: 'Train', icon: <Dumbbell className="w-5 h-5" />, screen: 'training' as Screen, variant: 'secondary' },
-            { label: 'Profile', icon: <User className="w-5 h-5" />, screen: 'profile' as Screen, variant: 'primary' },
-            { label: 'Rank', icon: <Trophy className="w-5 h-5" />, screen: 'leaderboard' as Screen, variant: 'warning' },
-            { label: 'Settings', icon: <Settings className="w-5 h-5" />, screen: 'settings' as Screen, variant: 'secondary' },
-          ].map(item => (
+            { label: 'Train', icon: <Dumbbell className="w-5 h-5" />, screen: 'training' as Screen },
+            { label: 'Profile', icon: <User className="w-5 h-5" />, screen: 'profile' as Screen },
+            { label: 'Rank', icon: <Trophy className="w-5 h-5" />, screen: 'leaderboard' as Screen },
+            { label: 'Audio', icon: <Music className="w-5 h-5" />, screen: 'settings' as Screen },
+          ].map((item) => (
             <button
               key={item.label}
+              type="button"
               onClick={() => onNavigate(item.screen)}
-              className="btn btn-ghost rounded-xl flex flex-col items-center gap-2 p-3 h-auto border-[var(--border-default)]"
+              className="mg-action-tile"
             >
-              <div className="text-xl">{item.icon}</div>
-              <span className="text-[9px] font-black uppercase tracking-wider">{item.label}</span>
+              <span className="mg-action-icon">{item.icon}</span>
+              <span className="mg-action-label">{item.label}</span>
             </button>
           ))}
         </div>
 
-        {/* ── PLAYER STATS ── */}
         {profile && profile.songsPlayed > 0 && (
-          <div className="grid grid-cols-3 gap-3 mb-6">
-            <div className="card rounded-lg p-4 text-center">
-              <ScoreDisplay score={profile.songsPlayed} label="Plays" size="md" variant="primary" />
-            </div>
-            <div className="card rounded-lg p-4 text-center">
-              <ScoreDisplay score={profile.perfectGates} label="Perfects" size="md" variant="success" />
-            </div>
-            <div className="card rounded-lg p-4 text-center">
-              <ScoreDisplay score={profile.totalScore} label="Total XP" size="md" variant="secondary" />
-            </div>
+          <div className="grid grid-cols-3 gap-2">
+            {[
+              { v: profile.songsPlayed, l: 'Runs', c: '#43E7FF' },
+              { v: profile.perfectGates, l: 'Perfect', c: '#B9FF66' },
+              { v: profile.totalScore, l: 'Score', c: '#7D5CFF' },
+            ].map((s) => (
+              <div
+                key={s.l}
+                className="rounded-2xl p-3 text-center border border-[rgba(255,255,255,0.08)]"
+                style={{ background: 'rgba(12,14,26,0.85)' }}
+              >
+                <div className="score-display text-lg font-black tabular-nums" style={{ color: s.c }}>
+                  {s.v > 9999 ? `${(s.v / 1000).toFixed(1)}k` : s.v}
+                </div>
+                <div className="text-[9px] font-black uppercase tracking-widest text-[#7A8399] mt-1">{s.l}</div>
+              </div>
+            ))}
           </div>
         )}
 
-        {/* ── DAILY MISSION ── */}
         {profile?.dailyChallenge && (
-          <div className="card-accent-tertiary rounded-lg p-4 mb-6">
-            <div className="flex items-start justify-between mb-3">
-              <div className="flex items-center gap-2">
-                <Target className="w-4 h-4 text-[var(--color-tertiary)]" />
-                <span className="text-label text-[var(--color-tertiary)]">Daily Mission</span>
-              </div>
+          <div className="mg-panel" style={{ animation: 'none', boxShadow: '0 12px 40px rgba(0,0,0,0.45)' }}>
+            <div className="mg-panel-header flex items-center justify-between gap-2">
+              <span className="flex items-center gap-2">
+                <Target className="w-3.5 h-3.5" />
+                Daily op
+              </span>
               {profile.dailyChallenge.completed && (
-                <span className="badge-filled-primary text-[8px] px-2 py-0.5">Complete ✓</span>
+                <span className="text-[9px] font-black uppercase text-[#B9FF66]">Done</span>
               )}
             </div>
-            <div className="mb-3">
-              <h3 className="text-title font-black text-primary mb-1">{profile.dailyChallenge.title}</h3>
-              <p className="text-caption text-secondary">{profile.dailyChallenge.description}</p>
+            <h3 className="font-display text-base font-black text-[#F5F7FC] mb-1">
+              {profile.dailyChallenge.title}
+            </h3>
+            <p className="text-xs text-[#A7B0C6] mb-3">{profile.dailyChallenge.description}</p>
+            <div className="xp-bar-track h-2">
+              <div
+                className="xp-bar-fill"
+                style={{
+                  width: `${Math.min(100, (profile.dailyChallenge.progress / profile.dailyChallenge.target) * 100)}%`,
+                }}
+              />
             </div>
-            <StatBar
-              label="Progress"
-              value={profile.dailyChallenge.progress}
-              max={profile.dailyChallenge.target}
-              variant="secondary"
-              showBar
-              compact={false}
-            />
-            <div className="flex items-center justify-between mt-3 pt-3 border-t border-[var(--border-subtle)]">
-              <span className="text-caption text-tertiary">
+            <div className="flex justify-between text-[10px] font-bold text-[#7A8399] mt-2">
+              <span>
                 {profile.dailyChallenge.progress} / {profile.dailyChallenge.target}
               </span>
-              <span className="badge-warning text-[10px]">+{profile.dailyChallenge.reward} XP</span>
+              <span style={{ color: '#FFC94A' }}>+{profile.dailyChallenge.reward} XP</span>
             </div>
-          </div>
-        )}
-
-        {/* ── BACKGROUND MUSIC INDICATOR ── */}
-        {selectedMusic && (
-          <div className="card-elevated rounded-lg p-3 flex items-center gap-2 mb-6">
-            <Music className="w-4 h-4 text-[var(--color-secondary)]" />
-            <span className="text-label text-secondary">Ambient: {selectedMusic.title}</span>
           </div>
         )}
       </div>

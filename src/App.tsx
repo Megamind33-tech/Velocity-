@@ -54,6 +54,9 @@ export default function App() {
   // Audio Controller
   const audioControllerRef = useRef<AudioController | null>(null);
 
+  // Settings (ambient track selection — UI only until wired to audio engine)
+  const [selectedBackgroundMusicId, setSelectedBackgroundMusicId] = useState('none');
+
   // Error State
   const [error, setError] = useState('');
 
@@ -167,15 +170,17 @@ export default function App() {
     setCurrentScreen('home');
   };
 
+  const handleProfileUpdate = (p: PlayerProfile) => {
+    setProfile(p);
+    saveProfile(p);
+  };
+
   // Render current screen
   const renderScreen = () => {
     switch (currentScreen) {
       case 'home':
         return (
-          <HomeScreen
-            profile={profile}
-            onNavigate={(screen) => navigate(screen as any)}
-          />
+          <HomeScreen profile={profile} onNavigate={navigate} />
         );
 
       case 'world-select':
@@ -243,26 +248,46 @@ export default function App() {
         ) : null;
 
       case 'profile':
-        return <ProfileScreen profile={profile} onBack={() => navigate('home')} />;
+        return (
+          <ProfileScreen
+            profile={profile}
+            onBack={() => navigate('home')}
+            onProfileUpdate={handleProfileUpdate}
+          />
+        );
 
       case 'leaderboard':
-        return <LeaderboardScreen onBack={() => navigate('home')} />;
+        return <LeaderboardScreen profile={profile} onBack={() => navigate('home')} />;
 
       case 'training':
         return <TrainingScreen onBack={() => navigate('home')} />;
 
       case 'settings':
-        return <SettingsScreen onBack={() => navigate('home')} />;
+        return (
+          <SettingsScreen
+            selectedBackgroundMusicId={selectedBackgroundMusicId}
+            onBackgroundMusicChange={setSelectedBackgroundMusicId}
+            onBack={() => navigate('home')}
+          />
+        );
 
       default:
-        return <HomeScreen profile={profile} onNavigate={(screen) => navigate(screen as any)} />;
+        return <HomeScreen profile={profile} onNavigate={navigate} />;
     }
   };
 
   return (
     <div className="w-screen h-screen overflow-hidden">
       {error && (
-        <div className="fixed top-4 left-4 right-4 bg-[#FF6B6B] text-white p-4 rounded-lg z-50">
+        <div
+          className="fixed left-3 right-3 z-[300] rounded-2xl px-4 py-3 text-sm font-bold text-white shadow-lg border border-[rgba(255,255,255,0.2)]"
+          style={{
+            top: 'calc(12px + var(--safe-top))',
+            background: 'linear-gradient(135deg, #ff6b6b, #e63b3b)',
+            boxShadow: '0 8px 32px rgba(255,107,107,0.45)',
+          }}
+          role="alert"
+        >
           {error}
         </div>
       )}
