@@ -1,7 +1,9 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { AudioController } from './lib/audio';
 import { SONGS } from './lib/songs-extended';
-import { loadProfile, saveProfile, PlayerProfile } from './lib/profile';
+import { SONGS as HOME_SONGS } from './lib/songs';
+import { BACKGROUND_MUSIC } from './lib/backgroundMusic';
+import { loadProfile, PlayerProfile } from './lib/profile';
 import { WORLDS } from './lib/progression';
 
 import { HomeScreen } from './screens/HomeScreen';
@@ -43,6 +45,15 @@ export default function App() {
   const [lastGameStats, setLastGameStats] = useState<GameStats | null>(null);
   const [lastGameScore, setLastGameScore] = useState(0);
   const [previousBestScore, setPreviousBestScore] = useState(0);
+
+  // Home screen (classic song list / ambient prefs)
+  const [homeSelectedSongId, setHomeSelectedSongId] = useState<string>(
+    () => HOME_SONGS[0]?.id ?? 'twinkle'
+  );
+  const [homeDifficulty, setHomeDifficulty] = useState<'easy' | 'medium' | 'hard'>('easy');
+  const [selectedBackgroundMusicId, setSelectedBackgroundMusicId] = useState<string>(
+    () => BACKGROUND_MUSIC[0]?.id ?? 'ambient-1'
+  );
 
   // Profile
   const [profile, setProfile] = useState<PlayerProfile | null>(null);
@@ -129,10 +140,12 @@ export default function App() {
       const stars = stats.accuracy >= 90 ? 3 : stats.accuracy >= 75 ? 2 : stats.accuracy >= 60 ? 1 : 0;
       const newScore = Math.max(currentSongProg.score, score);
 
-      setSongProgress({
+      const nextSongProgress = {
         ...songProgress,
         [selectedSongId]: { stars: Math.max(currentSongProg.stars, stars), score: newScore },
-      });
+      };
+
+      setSongProgress(nextSongProgress);
 
       setLevelProgress({
         ...levelProgress,
@@ -142,7 +155,7 @@ export default function App() {
       // Check if we should unlock next world
       if (selectedWorldId) {
         const worldSongs = SONGS.filter(s => s.world === selectedWorldId);
-        const worldComplete = worldSongs.filter(s => songProgress[s.id]?.stars > 0).length;
+        const worldComplete = worldSongs.filter(s => nextSongProgress[s.id]?.stars > 0).length;
 
         if (worldComplete >= WORLDS[selectedWorldId - 1].minSongsToUnlock) {
           if (!unlockedWorlds.includes(selectedWorldId + 1)) {
@@ -174,7 +187,14 @@ export default function App() {
         return (
           <HomeScreen
             profile={profile}
-            onNavigate={(screen) => navigate(screen as any)}
+            selectedSongId={homeSelectedSongId}
+            difficulty={homeDifficulty}
+            selectedBackgroundMusicId={selectedBackgroundMusicId}
+            error={error}
+            onPlay={() => navigate('world-select')}
+            onNavigate={(screen) => navigate(screen as Screen)}
+            onDifficultyChange={setHomeDifficulty}
+            onClearError={() => setError('')}
           />
         );
 
@@ -243,19 +263,43 @@ export default function App() {
         ) : null;
 
       case 'profile':
-        return <ProfileScreen profile={profile} onBack={() => navigate('home')} />;
+        return (
+          <ProfileScreen
+            profile={profile}
+            onBack={() => navigate('home')}
+            onProfileUpdate={(p) => setProfile(p)}
+          />
+        );
 
       case 'leaderboard':
-        return <LeaderboardScreen onBack={() => navigate('home')} />;
+        return <LeaderboardScreen profile={profile} onBack={() => navigate('home')} />;
 
       case 'training':
         return <TrainingScreen onBack={() => navigate('home')} />;
 
       case 'settings':
-        return <SettingsScreen onBack={() => navigate('home')} />;
+        return (
+          <SettingsScreen
+            selectedBackgroundMusicId={selectedBackgroundMusicId}
+            onBackgroundMusicChange={setSelectedBackgroundMusicId}
+            onBack={() => navigate('home')}
+          />
+        );
 
       default:
-        return <HomeScreen profile={profile} onNavigate={(screen) => navigate(screen as any)} />;
+        return (
+          <HomeScreen
+            profile={profile}
+            selectedSongId={homeSelectedSongId}
+            difficulty={homeDifficulty}
+            selectedBackgroundMusicId={selectedBackgroundMusicId}
+            error={error}
+            onPlay={() => navigate('world-select')}
+            onNavigate={(screen) => navigate(screen as Screen)}
+            onDifficultyChange={setHomeDifficulty}
+            onClearError={() => setError('')}
+          />
+        );
     }
   };
 
