@@ -1,9 +1,10 @@
 import React from 'react';
-import { RotateCcw, Home, ChevronRight, Trophy, Star, Zap, Target } from 'lucide-react';
+import { RotateCcw, Home, Trophy, Star, Zap, Target } from 'lucide-react';
 import { SONGS } from '../lib/songs';
 import { PlayerProfile } from '../lib/profile';
 import { PrimaryButton } from '../components/ui/PrimaryButton';
 import { SecondaryButton } from '../components/ui/SecondaryButton';
+import { ScoreDisplay } from '../components/ui/ScoreDisplay';
 
 interface ResultsScreenProps {
   score: number;
@@ -48,14 +49,14 @@ export function ResultsScreen({
 
   return (
     <div
-      className="game-screen flex flex-col items-center overflow-hidden anim-fade-in"
+      className="game-screen flex flex-col items-center overflow-hidden animate-fade-in"
       style={{
         background: isWin
-          ? 'radial-gradient(ellipse 80% 50% at 50% -5%, rgba(185,255,102,0.07) 0%, transparent 65%), #07090E'
-          : 'radial-gradient(ellipse 80% 50% at 50% -5%, rgba(255,107,107,0.07) 0%, transparent 65%), #07090E',
+          ? 'radial-gradient(ellipse 80% 50% at 50% -5%, rgba(185,255,102,0.08) 0%, transparent 65%), var(--bg-primary)'
+          : 'radial-gradient(ellipse 80% 50% at 50% -5%, rgba(255,107,107,0.08) 0%, transparent 65%), var(--bg-primary)',
       }}
     >
-      <div className="game-screen-scroll w-full max-w-sm mx-auto px-5 pb-8 flex flex-col items-center">
+      <div className="game-screen-scroll w-full max-w-lg mx-auto px-4 pb-8 flex flex-col items-center">
 
         {/* ── Status headline ── */}
         <div className="pt-10 pb-6 text-center">
@@ -84,76 +85,88 @@ export function ResultsScreen({
           </p>
         </div>
 
-        {/* ── Score card ── */}
+        {/* ── Professional Score Card ── */}
         <div
-          className="w-full rounded-3xl p-7 mb-5 relative overflow-hidden"
-          style={{ background: 'var(--bg-surface)', border: `1px solid ${isWin ? 'rgba(185,255,102,0.15)' : 'rgba(255,107,107,0.12)'}` }}
+          className={`w-full rounded-2xl p-8 mb-6 relative overflow-hidden card ${isWin ? 'surface-success' : 'surface-danger'}`}
+          style={{ borderColor: isWin ? 'rgba(185,255,102,0.3)' : 'rgba(255,107,107,0.3)' }}
         >
           {/* Decorative corner glow */}
           <div
-            className="absolute -top-10 -right-10 w-32 h-32 rounded-full pointer-events-none"
+            className="absolute -top-12 -right-12 w-32 h-32 rounded-full pointer-events-none"
             style={{ background: `radial-gradient(circle, ${statusGlow}, transparent 70%)` }}
           />
 
-          <div className="text-center mb-1">
-            <div className="text-[10px] font-black uppercase tracking-[0.25em] text-[#4A5068]">Final Score</div>
-          </div>
-          <div
-            className="font-display text-6xl font-black text-center leading-none mb-2 score-display"
-            style={{
-              color: '#F5F7FC',
-              textShadow: `0 0 40px ${statusGlow}`,
-            }}
-          >
-            {score.toLocaleString()}
+          {/* Final Score Display */}
+          <div className="text-center mb-6">
+            <div className="text-label text-text-tertiary mb-2">Final Score</div>
+            <div
+              className="font-display text-7xl font-black text-center leading-none score-display"
+              style={{
+                color: isWin ? 'var(--color-success)' : 'var(--color-danger)',
+                textShadow: `0 0 40px ${statusGlow}`,
+              }}
+            >
+              {score.toLocaleString()}
+            </div>
           </div>
 
-          {/* New best badge */}
+          {/* New Personal Best Badge */}
           {isNewBest && (
-            <div className="flex justify-center mb-3">
-              <span
-                className="text-[10px] font-black uppercase tracking-widest px-3 py-1.5 rounded-full flex items-center gap-1.5"
-                style={{ background: 'rgba(255,201,74,0.15)', color: '#FFC94A', border: '1px solid rgba(255,201,74,0.3)' }}
-              >
+            <div className="flex justify-center mb-4">
+              <span className="badge-warning text-xs font-black flex items-center gap-1.5">
                 <Star className="w-3 h-3" /> New Personal Best!
               </span>
             </div>
           )}
 
-          {/* Stats grid */}
-          <div
-            className="grid grid-cols-2 gap-3 pt-4 mt-1 border-t"
-            style={{ borderColor: 'rgba(255,255,255,0.06)' }}
-          >
+          {/* Professional Stats Grid */}
+          <div className="grid grid-cols-2 gap-3 pt-6 border-t border-[var(--border-subtle)]">
+            {/* Status */}
             <div className="text-center">
-              <div className="text-[10px] text-[#4A5068] font-black uppercase tracking-widest mb-1">Status</div>
+              <div className="text-label text-text-tertiary mb-2">Status</div>
               <div
-                className="text-sm font-black uppercase"
-                style={{ color: isWin ? '#B9FF66' : '#FF6B6B' }}
+                className="text-headline font-black uppercase"
+                style={{ color: isWin ? 'var(--color-success)' : 'var(--color-danger)' }}
               >
                 {isWin ? 'Clear' : 'Failed'}
               </div>
             </div>
+
+            {/* Difficulty */}
             <div className="text-center">
-              <div className="text-[10px] text-[#4A5068] font-black uppercase tracking-widest mb-1">Difficulty</div>
-              <div className="text-sm font-black uppercase" style={{ color: dc.text }}>{difficulty}</div>
+              <div className="text-label text-text-tertiary mb-2">Difficulty</div>
+              <div className="text-headline font-black uppercase" style={{ color: dc.text }}>
+                {difficulty}
+              </div>
             </div>
+
+            {/* Perfect Gates */}
             {lastGameStats && lastGameStats.perfectGates > 0 && (
               <div className="text-center">
-                <div className="text-[10px] text-[#4A5068] font-black uppercase tracking-widest mb-1">Perfects</div>
-                <div className="text-sm font-black text-[#43E7FF]">{lastGameStats.perfectGates}</div>
+                <div className="text-label text-text-tertiary mb-2">Perfect Notes</div>
+                <div className="text-headline font-black text-[var(--color-primary)]">
+                  {lastGameStats.perfectGates}
+                </div>
               </div>
             )}
+
+            {/* Best Combo */}
             {lastGameStats && lastGameStats.maxCombo > 0 && (
               <div className="text-center">
-                <div className="text-[10px] text-[#4A5068] font-black uppercase tracking-widest mb-1">Best Combo</div>
-                <div className="text-sm font-black text-[#7D5CFF]">x{lastGameStats.maxCombo}</div>
+                <div className="text-label text-text-tertiary mb-2">Max Combo</div>
+                <div className="text-headline font-black text-[var(--color-secondary)]">
+                  x{lastGameStats.maxCombo}
+                </div>
               </div>
             )}
+
+            {/* Personal Best */}
             {previousBest > 0 && (
               <div className="text-center col-span-2">
-                <div className="text-[10px] text-[#4A5068] font-black uppercase tracking-widest mb-1">Personal Best</div>
-                <div className="text-sm font-black text-[#A7B0C6] score-display">{previousBest.toLocaleString()}</div>
+                <div className="text-label text-text-tertiary mb-2">Personal Best</div>
+                <div className="text-headline font-black text-text-secondary score-display">
+                  {previousBest.toLocaleString()}
+                </div>
               </div>
             )}
           </div>
