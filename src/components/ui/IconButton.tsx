@@ -27,9 +27,9 @@ export function IconButton({
 
   const variantMap: Record<string, React.CSSProperties> = {
     white: {
-      background: 'rgba(255,255,255,0.88)',
+      background: 'linear-gradient(180deg, #ffffff 0%, #e8ecf5 60%, #d0d5e5 100%)',
       color: '#2A3080',
-      boxShadow: '0 3px 0 rgba(0,0,0,0.12), 0 4px 12px rgba(0,0,0,0.18)',
+      boxShadow: '0 4px 0 rgba(150,160,190,0.6), 0 6px 0 rgba(100,110,140,0.3), 0 7px 16px rgba(0,0,0,0.25), inset 0 1px 0 rgba(255,255,255,0.9)',
       border: 'none',
     },
     ghost: {

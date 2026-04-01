@@ -14,39 +14,39 @@ interface PrimaryButtonProps {
 
 const VARIANT_STYLES: Record<string, { bg: string; color: string; shadow: string; activeShadow: string }> = {
   gold: {
-    bg: 'linear-gradient(180deg, #FFE566 0%, #FFBF00 40%, #D4950A 100%)',
+    bg: 'linear-gradient(180deg, #FFE88A 0%, #FFD030 25%, #FFBF00 50%, #D4950A 85%, #AA7005 100%)',
     color: '#3D2000',
-    shadow: '0 4px 0 #8B6508, 0 6px 20px rgba(255,191,0,0.4), inset 0 2px 0 rgba(255,255,255,0.45), inset 0 -2px 4px rgba(0,0,0,0.15)',
+    shadow: '0 5px 0 #8B6508, 0 7px 0 #6B4D06, 0 8px 24px rgba(255,191,0,0.5), inset 0 2px 0 rgba(255,255,255,0.5), inset 0 -3px 6px rgba(0,0,0,0.2)',
     activeShadow: '0 1px 0 #8B6508, 0 2px 10px rgba(255,191,0,0.3), inset 0 2px 0 rgba(255,255,255,0.3)',
   },
   cyan: {
-    bg: 'linear-gradient(180deg, #70F5FF 0%, #43E7FF 40%, #1BB8D4 100%)',
+    bg: 'linear-gradient(180deg, #80F8FF 0%, #50EEFF 25%, #43E7FF 50%, #1BB8D4 85%, #0D96B0 100%)',
     color: '#07090E',
-    shadow: '0 4px 0 #0D7A8F, 0 6px 20px rgba(67,231,255,0.4), inset 0 2px 0 rgba(255,255,255,0.45), inset 0 -2px 4px rgba(0,0,0,0.15)',
+    shadow: '0 5px 0 #0D7A8F, 0 7px 0 #0A5E70, 0 8px 24px rgba(67,231,255,0.5), inset 0 2px 0 rgba(255,255,255,0.5), inset 0 -3px 6px rgba(0,0,0,0.2)',
     activeShadow: '0 1px 0 #0D7A8F, 0 2px 10px rgba(67,231,255,0.3), inset 0 2px 0 rgba(255,255,255,0.3)',
   },
   violet: {
-    bg: 'linear-gradient(180deg, #9B7FFF 0%, #7D5CFF 40%, #5A3FD9 100%)',
+    bg: 'linear-gradient(180deg, #B89FFF 0%, #9B7FFF 25%, #7D5CFF 50%, #5A3FD9 85%, #4530B0 100%)',
     color: '#ffffff',
-    shadow: '0 4px 0 #3D2A8A, 0 6px 20px rgba(125,92,255,0.4), inset 0 2px 0 rgba(255,255,255,0.25), inset 0 -2px 4px rgba(0,0,0,0.15)',
+    shadow: '0 5px 0 #3D2A8A, 0 7px 0 #2D1F68, 0 8px 24px rgba(125,92,255,0.5), inset 0 2px 0 rgba(255,255,255,0.3), inset 0 -3px 6px rgba(0,0,0,0.2)',
     activeShadow: '0 1px 0 #3D2A8A, 0 2px 10px rgba(125,92,255,0.3), inset 0 2px 0 rgba(255,255,255,0.2)',
   },
   success: {
-    bg: 'linear-gradient(180deg, #D4FF8C 0%, #B9FF66 40%, #8FCC40 100%)',
+    bg: 'linear-gradient(180deg, #E0FFA0 0%, #C8FF78 25%, #B9FF66 50%, #8FCC40 85%, #70A030 100%)',
     color: '#1A3000',
-    shadow: '0 4px 0 #5A8020, 0 6px 20px rgba(185,255,102,0.4), inset 0 2px 0 rgba(255,255,255,0.45), inset 0 -2px 4px rgba(0,0,0,0.15)',
+    shadow: '0 5px 0 #5A8020, 0 7px 0 #456018, 0 8px 24px rgba(185,255,102,0.5), inset 0 2px 0 rgba(255,255,255,0.5), inset 0 -3px 6px rgba(0,0,0,0.2)',
     activeShadow: '0 1px 0 #5A8020, 0 2px 10px rgba(185,255,102,0.3), inset 0 2px 0 rgba(255,255,255,0.3)',
   },
   fail: {
-    bg: 'linear-gradient(180deg, #FF8080 0%, #FF6B6B 40%, #E63B3B 100%)',
+    bg: 'linear-gradient(180deg, #FF9595 0%, #FF8080 25%, #FF6B6B 50%, #E63B3B 85%, #C02020 100%)',
     color: '#ffffff',
-    shadow: '0 4px 0 #A02020, 0 6px 20px rgba(255,107,107,0.4), inset 0 2px 0 rgba(255,255,255,0.3), inset 0 -2px 4px rgba(0,0,0,0.15)',
+    shadow: '0 5px 0 #A02020, 0 7px 0 #801818, 0 8px 24px rgba(255,107,107,0.5), inset 0 2px 0 rgba(255,255,255,0.35), inset 0 -3px 6px rgba(0,0,0,0.2)',
     activeShadow: '0 1px 0 #A02020, 0 2px 10px rgba(255,107,107,0.3), inset 0 2px 0 rgba(255,255,255,0.2)',
   },
   amber: {
-    bg: 'linear-gradient(180deg, #FFD468 0%, #FFC94A 40%, #D4A020 100%)',
+    bg: 'linear-gradient(180deg, #FFE088 0%, #FFD468 25%, #FFC94A 50%, #D4A020 85%, #AA8018 100%)',
     color: '#3D2000',
-    shadow: '0 4px 0 #8B6D08, 0 6px 20px rgba(255,201,74,0.4), inset 0 2px 0 rgba(255,255,255,0.45), inset 0 -2px 4px rgba(0,0,0,0.15)',
+    shadow: '0 5px 0 #8B6D08, 0 7px 0 #6B5506, 0 8px 24px rgba(255,201,74,0.5), inset 0 2px 0 rgba(255,255,255,0.5), inset 0 -3px 6px rgba(0,0,0,0.2)',
     activeShadow: '0 1px 0 #8B6D08, 0 2px 10px rgba(255,201,74,0.3), inset 0 2px 0 rgba(255,255,255,0.3)',
   },
 };
