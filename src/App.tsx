@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect, useCallback } from 'react';
+import React, { useState, useRef, useEffect, useCallback, Fragment } from 'react';
 import { AudioController } from './lib/audio';
 import { SONGS } from './lib/songs-extended';
 import { loadProfile, saveProfile, PlayerProfile, addXp, updateChallengeProgress } from './lib/profile';
@@ -50,9 +50,6 @@ export default function App() {
   const [selectedBackgroundMusicId, setSelectedBackgroundMusicId] = useState<string>('none');
 
   const audioControllerRef = useRef<AudioController | null>(null);
-
-  // Settings (ambient track selection — UI only until wired to audio engine)
-  const [selectedBackgroundMusicId, setSelectedBackgroundMusicId] = useState('none');
 
   // Error State
   const [error, setError] = useState('');
@@ -240,20 +237,21 @@ export default function App() {
 
       case 'game':
         return audioControllerRef.current && selectedSong ? (
-          <GameScreen
-            key={gameKey}
-            audioController={audioControllerRef.current}
-            song={selectedSong}
-            level={selectedLevel}
-            mode={selectedMode}
-            difficulty={selectedSong.difficulty}
-            isPaused={isPaused}
-            profile={profile}
-            demoMode={demoMode}
-            onPauseToggle={() => setIsPaused(p => !p)}
-            onGameOver={handleGameOver}
-            onAbort={handleHome}
-          />
+          <Fragment key={gameKey}>
+            <GameScreen
+              audioController={audioControllerRef.current}
+              song={selectedSong}
+              level={selectedLevel}
+              mode={selectedMode}
+              difficulty={selectedSong.difficulty}
+              isPaused={isPaused}
+              profile={profile}
+              demoMode={demoMode}
+              onPauseToggle={() => setIsPaused(p => !p)}
+              onGameOver={handleGameOver}
+              onAbort={handleHome}
+            />
+          </Fragment>
         ) : null;
 
       case 'results':

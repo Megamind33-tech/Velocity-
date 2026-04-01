@@ -1,5 +1,5 @@
 import React from 'react';
-import { Play, Star } from 'lucide-react';
+import { Play, Star, Eye } from 'lucide-react';
 import { getLevelInfo } from '../lib/progression';
 import { Song } from '../lib/songs-extended';
 import { PrimaryButton } from '../components/ui/PrimaryButton';
