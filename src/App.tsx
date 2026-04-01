@@ -206,32 +206,38 @@ export default function App() {
       case 'world-select':
         return (
           <WorldSelectScreen
+            profile={profile}
             unlockedWorlds={unlockedWorlds}
             currentWorldProgress={worldProgress}
             onSelectWorld={handleWorldSelect}
             onBack={() => navigate('home')}
+            onNavigate={navigate}
           />
         );
 
       case 'song-select':
         return selectedWorldId ? (
           <SongSelectScreen
+            profile={profile}
             worldId={selectedWorldId}
             completedSongs={songProgress}
             onSelectSong={handleSongSelect}
             onBack={() => navigate('world-select')}
+            onNavigate={navigate}
           />
         ) : null;
 
       case 'level-select':
         return selectedSong ? (
           <LevelSelectScreen
+            profile={profile}
             song={selectedSong}
             worldId={selectedWorldId || 1}
             levelProgress={levelProgress}
             onSelectLevel={handleLevelSelect}
             onDemoLevel={(lvl, m) => { setSelectedLevel(lvl); setSelectedMode(m); startGame(true); }}
             onBack={() => navigate('song-select')}
+            onNavigate={navigate}
           />
         ) : null;
 

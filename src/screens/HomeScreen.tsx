@@ -1,16 +1,12 @@
 import React from 'react';
-import {
-  Music,
-  User,
-  Trophy,
-  Dumbbell,
-  Settings,
-  Zap,
-  Target,
-  Play,
-} from 'lucide-react';
+import { Crown, Target } from 'lucide-react';
 import { PlayerProfile } from '../lib/profile';
 import type { Screen } from '../App';
+import {
+  FantasyGameShell,
+  mapFantasyNavToScreen,
+  type FantasyNavKey,
+} from '../components/layout/FantasyGameShell';
 
 interface HomeScreenProps {
   profile: PlayerProfile | null;
@@ -20,152 +16,111 @@ interface HomeScreenProps {
 export function HomeScreen({ profile, onNavigate }: HomeScreenProps) {
   const xpPct = profile ? Math.min(100, (profile.xp / (profile.level * 1000)) * 100) : 0;
 
+  const handleNav = (key: FantasyNavKey) => {
+    if (key === 'play') {
+      onNavigate('world-select');
+      return;
+    }
+    onNavigate(mapFantasyNavToScreen(key));
+  };
+
   return (
-    <div className="game-screen mg-stage flex flex-col">
-      <div className="mg-kit-layer mg-kit-layer--stage" aria-hidden />
-      <div className="mg-vignette" aria-hidden />
-      <div className="mg-scanlines" aria-hidden />
-
-      <header className="mg-topbar shrink-0">
-        <button
-          type="button"
-          onClick={() => onNavigate('profile')}
-          className="flex items-center gap-3 min-w-0 flex-1 text-left rounded-xl -m-1 p-1 active:opacity-90"
-        >
-          <div className="relative shrink-0">
-            <div
-              className="mg-hex w-11 h-12 text-sm"
-              style={{
-                background: 'linear-gradient(145deg, #9b7fff, #43e7ff)',
-                boxShadow: '0 0 22px rgba(125,92,255,0.55)',
-              }}
-            >
-              {profile?.username?.[0]?.toUpperCase() ?? 'V'}
-            </div>
-            <span
-              className="absolute -bottom-0.5 -right-1 text-[9px] font-black px-1.5 py-0.5 rounded-md"
-              style={{ background: '#FFC94A', color: '#05060c' }}
-            >
-              {profile?.level ?? 1}
-            </span>
+    <FantasyGameShell
+      profile={profile}
+      activeNav="play"
+      onNav={handleNav}
+      onOpenSettings={() => onNavigate('settings')}
+    >
+      <div className="fl-scroll">
+        <div className="fl-level-panel">
+          <div className="fl-panel-crest" aria-hidden>
+            <Crown className="w-7 h-7 text-[#f0d78c]" strokeWidth={1.8} />
           </div>
-          <div className="min-w-0 flex-1">
-            <div className="text-sm font-black text-[#F5F7FC] truncate tracking-tight">
-              {profile?.username ?? 'Performer'}
-            </div>
-            <div className="text-[10px] font-bold uppercase tracking-widest text-[#7A8399]">
-              XP {profile?.xp?.toLocaleString() ?? 0}
-            </div>
-            <div className="xp-bar-track w-full max-w-[140px] mt-1.5 h-1.5">
-              <div className="xp-bar-fill h-full rounded-full" style={{ width: `${xpPct}%` }} />
-            </div>
-          </div>
-        </button>
-        <button
-          type="button"
-          onClick={() => onNavigate('settings')}
-          className="mg-action-icon shrink-0 w-11 h-11 rounded-xl"
-          aria-label="Settings"
-        >
-          <Settings className="w-5 h-5" />
-        </button>
-      </header>
-
-      <div className="mg-scroll flex flex-col gap-5">
-        <div className="text-center pt-2">
-          <p className="mg-logo-tag mb-2">Vocal rhythm</p>
-          <h1 className="mg-logo">Velocity</h1>
-          <p className="text-xs text-[#A7B0C6] mt-3 max-w-[280px] mx-auto leading-relaxed">
-            Worlds, songs, and levels — tap Play to enter the campaign.
+          <h1 className="fl-panel-title">Velocity</h1>
+          <p className="fl-panel-sub">
+            Worlds, songs, and levels — enter the campaign and chase three-star clears across every track.
           </p>
-        </div>
-
-        <div className="mg-panel">
-          <div className="mg-panel-header flex items-center gap-2">
-            <Zap className="w-3.5 h-3.5" />
-            Campaign
-          </div>
-          <p className="mg-panel-body mb-4">
-            Progress through vocal worlds, unlock tracks, and chase three-star clears.
-          </p>
-          <button type="button" className="mg-cta" onClick={() => onNavigate('world-select')}>
-            <Play className="w-5 h-5 shrink-0" fill="currentColor" />
+          <button type="button" className="fl-play-btn" onClick={() => onNavigate('world-select')}>
             Play
           </button>
         </div>
 
-        <div className="mg-action-grid">
-          {[
-            { label: 'Train', icon: <Dumbbell className="w-5 h-5" />, screen: 'training' as Screen },
-            { label: 'Profile', icon: <User className="w-5 h-5" />, screen: 'profile' as Screen },
-            { label: 'Rank', icon: <Trophy className="w-5 h-5" />, screen: 'leaderboard' as Screen },
-            { label: 'Audio', icon: <Music className="w-5 h-5" />, screen: 'settings' as Screen },
-          ].map((item) => (
-            <button
-              key={item.label}
-              type="button"
-              onClick={() => onNavigate(item.screen)}
-              className="mg-action-tile"
-            >
-              <span className="mg-action-icon">{item.icon}</span>
-              <span className="mg-action-label">{item.label}</span>
-            </button>
-          ))}
-        </div>
-
-        {profile && profile.songsPlayed > 0 && (
-          <div className="grid grid-cols-3 gap-2">
-            {[
-              { v: profile.songsPlayed, l: 'Runs', c: '#43E7FF' },
-              { v: profile.perfectGates, l: 'Perfect', c: '#B9FF66' },
-              { v: profile.totalScore, l: 'Score', c: '#7D5CFF' },
-            ].map((s) => (
+        {profile && (
+          <div className="fl-card mb-4">
+            <div className="fl-card-title">Pilot</div>
+            <div className="flex items-center gap-3">
               <div
-                key={s.l}
-                className="rounded-2xl p-3 text-center border border-[rgba(255,255,255,0.08)]"
-                style={{ background: 'rgba(12,14,26,0.85)' }}
+                className="w-12 h-12 rounded-xl flex items-center justify-center shrink-0 font-black text-sm text-[#0d0618]"
+                style={{
+                  background: 'linear-gradient(145deg, #c9a227, #8b6914)',
+                  boxShadow: '0 0 20px rgba(201,162,39,0.35)',
+                }}
               >
-                <div className="score-display text-lg font-black tabular-nums" style={{ color: s.c }}>
-                  {s.v > 9999 ? `${(s.v / 1000).toFixed(1)}k` : s.v}
-                </div>
-                <div className="text-[9px] font-black uppercase tracking-widest text-[#7A8399] mt-1">{s.l}</div>
+                {profile.username?.[0]?.toUpperCase() ?? 'V'}
               </div>
-            ))}
+              <div className="min-w-0 flex-1">
+                <div className="font-bold text-[#fff8e8] truncate">{profile.username ?? 'Performer'}</div>
+                <div className="text-[11px] text-[rgba(220,210,245,0.65)] mt-0.5">
+                  Level {profile.level} · {profile.xp.toLocaleString()} XP
+                </div>
+                <div
+                  className="mt-2 h-1.5 rounded-full overflow-hidden"
+                  style={{ background: 'rgba(0,0,0,0.35)', border: '1px solid rgba(255,215,120,0.2)' }}
+                >
+                  <div
+                    className="h-full rounded-full transition-[width] duration-500"
+                    style={{
+                      width: `${xpPct}%`,
+                      background: 'linear-gradient(90deg, #22c55e, #4ade80)',
+                      boxShadow: '0 0 10px rgba(74,222,128,0.5)',
+                    }}
+                  />
+                </div>
+              </div>
+            </div>
           </div>
         )}
 
         {profile?.dailyChallenge && (
-          <div className="mg-panel" style={{ animation: 'none', boxShadow: '0 12px 40px rgba(0,0,0,0.45)' }}>
-            <div className="mg-panel-header flex items-center justify-between gap-2">
-              <span className="flex items-center gap-2">
-                <Target className="w-3.5 h-3.5" />
-                Daily op
-              </span>
-              {profile.dailyChallenge.completed && (
-                <span className="text-[9px] font-black uppercase text-[#B9FF66]">Done</span>
-              )}
+          <div className="fl-card">
+            <div className="fl-card-title flex items-center gap-2">
+              <Target className="w-3.5 h-3.5 text-[#f0d78c]" />
+              Daily quest
             </div>
-            <h3 className="font-display text-base font-black text-[#F5F7FC] mb-1">
-              {profile.dailyChallenge.title}
-            </h3>
-            <p className="text-xs text-[#A7B0C6] mb-3">{profile.dailyChallenge.description}</p>
-            <div className="xp-bar-track h-2">
-              <div
-                className="xp-bar-fill"
-                style={{
-                  width: `${Math.min(100, (profile.dailyChallenge.progress / profile.dailyChallenge.target) * 100)}%`,
-                }}
-              />
-            </div>
-            <div className="flex justify-between text-[10px] font-bold text-[#7A8399] mt-2">
-              <span>
-                {profile.dailyChallenge.progress} / {profile.dailyChallenge.target}
-              </span>
-              <span style={{ color: '#FFC94A' }}>+{profile.dailyChallenge.reward} XP</span>
-            </div>
+            <h3 className="font-semibold text-[#fff8e8] text-sm mb-1">{profile.dailyChallenge.title}</h3>
+            <p className="text-xs text-[rgba(220,210,245,0.7)] mb-3 leading-relaxed">
+              {profile.dailyChallenge.description}
+            </p>
+            {profile.dailyChallenge.completed ? (
+              <p className="text-[11px] font-bold uppercase tracking-wider text-[#4ade80]">Completed</p>
+            ) : (
+              <>
+                <div
+                  className="h-2 rounded-full overflow-hidden mb-2"
+                  style={{ background: 'rgba(0,0,0,0.35)' }}
+                >
+                  <div
+                    className="h-full rounded-full"
+                    style={{
+                      width: `${Math.min(
+                        100,
+                        (profile.dailyChallenge.progress / profile.dailyChallenge.target) * 100,
+                      )}%`,
+                      background: 'linear-gradient(90deg, #a78bfa, #c4b5fd)',
+                    }}
+                  />
+                </div>
+                <div className="flex justify-between text-[10px] text-[rgba(220,210,245,0.65)]">
+                  <span>
+                    {profile.dailyChallenge.progress} / {profile.dailyChallenge.target}
+                  </span>
+                  <span className="text-[#f0d78c] font-bold">+{profile.dailyChallenge.reward} XP</span>
+                </div>
+              </>
+            )}
           </div>
         )}
       </div>
-    </div>
+    </FantasyGameShell>
   );
 }
