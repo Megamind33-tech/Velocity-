@@ -1,12 +1,11 @@
 import React from 'react';
-import { Pause, Play, Home, Mic, Zap } from 'lucide-react';
+import { Pause, Play, Home, Mic } from 'lucide-react';
 import { GameCanvas } from '../components/GameCanvas';
 import { AudioController } from '../lib/audio';
 import { SONGS } from '../lib/songs';
 import { PlayerProfile } from '../lib/profile';
 import { PrimaryButton } from '../components/ui/PrimaryButton';
 import { SecondaryButton } from '../components/ui/SecondaryButton';
-import { StatBar } from '../components/ui/StatBar';
 
 interface GameScreenProps {
   audioController: AudioController;
