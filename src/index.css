@@ -35,7 +35,8 @@
   }
 
   body {
-    @apply bg-[#07090E] text-[#F5F7FC];
+    background-color: #07090E;
+    color: #F5F7FC;
     margin: 0;
     padding: 0;
     overflow: hidden;

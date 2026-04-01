@@ -201,7 +201,7 @@ export function HomeScreen({
               label="Progress"
               value={profile.dailyChallenge.progress}
               max={profile.dailyChallenge.target}
-              variant="tertiary"
+              variant="secondary"
               showBar
               compact={false}
             />
