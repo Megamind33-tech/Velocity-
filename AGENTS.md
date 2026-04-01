@@ -22,4 +22,11 @@ Standard commands are in `package.json`:
 
 ### Gameplay testing
 
-Core gameplay requires browser microphone access (`getUserMedia`). In headless/cloud environments the "PLAY NOW" button may not launch a game session because the microphone permission prompt cannot be granted. All other navigation and UI features work without a microphone.
+Core gameplay uses browser microphone access (`getUserMedia`). If the mic is unavailable (e.g. headless/cloud), the app automatically falls back to **Demo Mode** which auto-pilots the plane. Every level has a "Demo" button for mic-free play. The complete game loop (World → Song → Level → Gameplay → Results → Profile) works fully in demo mode.
+
+### Game architecture
+
+- `GameEngine.tsx`: Canvas-based game loop. Generates procedural note sequences per song/level, renders waypoints (Mode A) or contour lines (Mode C), handles hit detection, combo, scoring, particles, countdown, and demo auto-pilot.
+- `App.tsx`: Central state manager. Routes between screens, manages profile/XP/challenge updates after gameplay.
+- Songs data in `songs-extended.ts`: 150+ songs across 5 worlds, Zambian songs in every world.
+- Profile persisted to `localStorage` via `profile.ts`.
