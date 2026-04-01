@@ -4,6 +4,9 @@
    ============================================================ */
 
 :root {
+  /* Game UI display font (HUD, titles) */
+  --font-game: "Orbitron", ui-sans-serif, system-ui, sans-serif;
+
   /* --- Background layers --- */
   --bg-primary:  #07090E;
   --bg-surface:  #111624;

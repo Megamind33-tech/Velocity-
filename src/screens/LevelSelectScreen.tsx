@@ -1,5 +1,5 @@
 import React from 'react';
-import { Play, Star, Eye } from 'lucide-react';
+import { Play, Star } from 'lucide-react';
 import { getLevelInfo } from '../lib/progression';
 import { Song } from '../lib/songs-extended';
 import { PrimaryButton } from '../components/ui/PrimaryButton';
@@ -20,24 +20,31 @@ export function LevelSelectScreen({
   const maxLevelsInWorld = [10, 15, 15, 18, 20][worldId - 1];
 
   return (
-    <div className="game-screen stage-bg flex flex-col">
-      {/* Header */}
-      <div className="px-4 py-5 border-b border-[var(--border-subtle)]">
-        <h1 className="text-display-lg text-primary font-black mb-1">{song.title}</h1>
-        <p className="text-label text-secondary">{song.artist} · {song.duration}s · {song.difficulty}</p>
-      </div>
+    <div className="game-screen mg-stage flex flex-col">
+      <div className="mg-vignette" aria-hidden />
+      <div className="mg-scanlines" aria-hidden />
+      <header className="mg-topbar shrink-0 flex-col items-stretch !gap-1">
+        <h1 className="mg-topbar-title !normal-case !tracking-tight !text-base text-[#F5F7FC] line-clamp-2">
+          {song.title}
+        </h1>
+        <p className="mg-topbar-sub !normal-case !tracking-normal !text-xs !font-medium text-[#A7B0C6]">
+          {song.artist}
+        </p>
+      </header>
 
-      {/* Levels */}
-      <div className="flex-1 overflow-y-auto px-4 py-4">
-        <div className="space-y-2">
-          {Array.from({ length: maxLevelsInWorld }).map((_, index) => {
+      <div className="mg-scroll space-y-3">
+        <p className="text-[10px] font-black uppercase tracking-[0.2em] text-[#43E7FF] mb-1">Stage select</p>
+        {Array.from({ length: maxLevelsInWorld }).map((_, index) => {
             const level = index + 1;
             const challenge = getLevelInfo(level);
             const progress = levelProgress[level];
             const stars = progress?.stars || 0;
 
             return (
-              <div key={level} className="card-accent-secondary hover:border-[var(--color-secondary)] transition-all">
+              <div
+                key={level}
+                className="mg-panel !p-3 !animate-none hover:border-[rgba(125,92,255,0.4)] transition-colors"
+              >
                 <div className="flex items-center justify-between">
                   <div className="flex-1">
                     <div className="flex items-center gap-3 mb-1">
@@ -49,7 +56,8 @@ export function LevelSelectScreen({
                         <p className="text-caption text-tertiary">{challenge?.description}</p>
                       </div>
                     </div>
-                    <div className="flex gap-2 ml-13">
+
+                    <div className="flex gap-2 ml-[52px]">
                       {stars > 0 && (
                         <div className="flex gap-1">
                           {[1, 2, 3].map((s) => (
@@ -91,15 +99,14 @@ export function LevelSelectScreen({
                 </div>
               </div>
             );
-          })}
-        </div>
+        })}
       </div>
 
-      <div className="px-4 py-4 border-t border-[var(--border-subtle)]">
-        <button onClick={onBack} className="w-full py-3 rounded-xl border border-[var(--border-default)] text-secondary hover:bg-[var(--bg-surface-elevated)] transition-all">
-          Back to Songs
+      <footer className="mg-footer-bar shrink-0">
+        <button type="button" onClick={onBack} className="mg-btn-back">
+          ← Songs
         </button>
-      </div>
+      </footer>
     </div>
   );
 }

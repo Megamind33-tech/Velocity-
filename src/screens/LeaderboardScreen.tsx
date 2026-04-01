@@ -65,21 +65,23 @@ export function LeaderboardScreen({ profile, onBack }: LeaderboardScreenProps) {
   const rankLabels = ['gold', 'silver', 'bronze'];
 
   return (
-    <div className="game-screen stage-bg flex flex-col">
-      {/* ── Header ── */}
-      <header className="flex items-center gap-3 px-4 pt-4 pb-3 shrink-0 border-b border-[rgba(255,255,255,0.06)]">
+    <div className="game-screen mg-stage flex flex-col">
+      <div className="mg-vignette" aria-hidden />
+      <div className="mg-scanlines" aria-hidden />
+      <header className="mg-topbar shrink-0">
         <IconButton label="Back" variant="surface" onClick={onBack}>
           <ArrowLeft className="w-5 h-5" />
         </IconButton>
-        <div className="flex-1">
-          <h2 className="font-display text-lg font-black uppercase tracking-tight text-[#F5F7FC]">Rankings</h2>
-          <p className="text-[10px] text-[#4A5068] font-bold uppercase tracking-widest">Global Leaderboard</p>
+        <div className="flex-1 min-w-0">
+          <h2 className="mg-topbar-title !text-sm">Rankings</h2>
+          <p className="mg-topbar-sub !normal-case !tracking-normal !text-[11px] !font-medium text-[#A7B0C6]">
+            Global · Weekly · Personal
+          </p>
         </div>
-        <Trophy className="w-6 h-6 text-[#FFC94A]" style={{ filter: 'drop-shadow(0 0 8px rgba(255,201,74,0.5))' }} />
+        <Trophy className="w-7 h-7 text-[#FFC94A] shrink-0" style={{ filter: 'drop-shadow(0 0 8px rgba(255,201,74,0.5))' }} />
       </header>
 
-      {/* ── Category tabs ── */}
-      <div className="flex gap-1.5 px-4 py-3 shrink-0">
+      <div className="flex gap-1.5 px-4 py-3 shrink-0 border-b border-[rgba(255,255,255,0.06)] bg-[rgba(5,6,12,0.5)]">
         {CATEGORY_TABS.map(tab => (
           <button
             key={tab.key}
@@ -96,7 +98,7 @@ export function LeaderboardScreen({ profile, onBack }: LeaderboardScreenProps) {
       </div>
 
       {/* ── Entries ── */}
-      <div className="game-screen-scroll px-4 pb-6">
+      <div className="mg-scroll !pt-3">
 
         {/* Personal bests mode */}
         {category === 'personal' && (

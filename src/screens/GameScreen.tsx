@@ -46,7 +46,7 @@ export function GameScreen({
 
   return (
     <div
-      className="fixed inset-0 bg-[#07090E] flex flex-col overflow-hidden"
+      className="fixed inset-0 mg-stage flex flex-col overflow-hidden"
       style={{ paddingTop: 'var(--safe-top)', paddingBottom: 'var(--safe-bottom)' }}
     >
       <div className="flex-1 relative overflow-hidden">
@@ -61,27 +61,28 @@ export function GameScreen({
           onGameOver={onGameOver}
         />
 
-        {/* HUD OVERLAY */}
-        <div className="hud-overlay flex flex-col px-4 py-3">
+        {/* ── PROFESSIONAL GAMING HUD OVERLAY ── */}
+        <div className="hud-overlay flex flex-col px-3 py-3 z-[60]">
           <div className="flex items-center justify-between gap-3 pointer-events-none">
-            <div className="glass-sm flex items-center gap-2 px-3 py-2 rounded-lg pointer-events-auto transition-all hover:border-[var(--border-default)]">
-              <Mic className="w-3.5 h-3.5 text-[var(--color-primary)] shrink-0 animate-pulse" />
+            <div className="mg-hud-chip pointer-events-auto max-w-[min(72vw,280px)]">
+              <Mic className="w-4 h-4 text-[#43E7FF] shrink-0 animate-pulse" />
               <div className="min-w-0">
-                <div className="text-[11px] font-black text-primary truncate max-w-[140px] leading-tight">
+                <div className="text-[10px] font-black text-[#F5F7FC] truncate leading-tight">
                   {song?.title ?? 'Endless Run'}
                 </div>
                 <div
-                  className="text-[9px] font-bold uppercase tracking-wider mt-0.5 leading-none"
+                  className="mg-hud-label !text-[8px] !mt-0.5"
                   style={{ color: dc.text, textShadow: `0 0 8px ${dc.glow}` }}
                 >
-                  Lv{level} · {difficulty}
+                  {difficulty} · Lv {level} · {mode}
                 </div>
               </div>
             </div>
 
             <button
               onClick={onPauseToggle}
-              className="pointer-events-auto btn btn-ghost btn-icon-lg rounded-lg transition-all hover:bg-[var(--bg-surface-elevated)]"
+              className="pointer-events-auto mg-action-icon w-12 h-12 rounded-xl border-[rgba(255,255,255,0.12)]"
+              aria-label={isPaused ? 'Resume' : 'Pause'}
             >
               {isPaused
                 ? <Play className="w-5 h-5 text-[var(--color-primary)]" />
@@ -90,15 +91,22 @@ export function GameScreen({
             </button>
           </div>
 
-          <div className="mt-auto flex flex-col items-center gap-2 pointer-events-none">
-            <div className="glass-sm flex items-center gap-2 px-4 py-2.5 rounded-full">
+          {/* BOTTOM HUD: Vocal Status Indicator */}
+          <div className="mt-auto flex flex-col items-center gap-2 pointer-events-none pb-2">
+            <div className="mg-hud-chip rounded-full px-5 py-2">
               <div
-                className="w-2 h-2 rounded-full bg-[var(--color-primary)] animate-pulse"
+                className="w-2 h-2 rounded-full bg-[#43E7FF] animate-pulse"
                 style={{ boxShadow: '0 0 8px rgba(67,231,255,0.8)' }}
               />
-              <span className="text-[10px] font-black uppercase tracking-[0.2em] text-[var(--color-primary)]">
-                {isPaused ? 'Paused' : demoMode ? 'Demo Mode' : 'Singing...'}
+              <span
+                className="text-[9px] font-extrabold uppercase tracking-[0.25em] text-[#43E7FF]"
+                style={{ fontFamily: 'var(--font-game, Orbitron, sans-serif)' }}
+              >
+                {isPaused ? 'Paused' : 'Live'}
               </span>
+            </div>
+            <div className="text-[9px] text-[#7A8399] font-bold uppercase tracking-wider">
+              {isPaused ? 'Tap resume' : 'Nail perfect gates for bonus'}
             </div>
           </div>
         </div>
@@ -109,10 +117,8 @@ export function GameScreen({
             className="absolute inset-0 flex items-center justify-center z-40 animate-fade-in"
             style={{ background: 'rgba(7,9,14,0.92)', backdropFilter: 'blur(20px)' }}
           >
-            <div
-              className="w-full max-w-sm mx-4 rounded-2xl p-6 flex flex-col gap-5 animate-scale-in"
-              style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-default)' }}
-            >
+            <div className="w-full max-w-sm mx-4 mg-panel flex flex-col gap-5 !animate-none">
+              {/* Decorative glow orb */}
               <div
                 className="absolute -top-12 left-1/2 -translate-x-1/2 w-24 h-24 rounded-full pointer-events-none"
                 style={{ background: 'radial-gradient(circle, rgba(125,92,255,0.4), transparent 70%)' }}
