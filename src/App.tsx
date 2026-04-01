@@ -14,6 +14,7 @@ import { ProfileScreen } from './screens/ProfileScreen';
 import { LeaderboardScreen } from './screens/LeaderboardScreen';
 import { TrainingScreen } from './screens/TrainingScreen';
 import { SettingsScreen } from './screens/SettingsScreen';
+import { AircraftSelectScreen } from './screens/AircraftSelectScreen';
 import { GameStats } from './components/GameEngine';
 
 export type Screen =
@@ -26,7 +27,8 @@ export type Screen =
   | 'profile'
   | 'leaderboard'
   | 'training'
-  | 'settings';
+  | 'settings'
+  | 'aircraft-select';
 
 export default function App() {
   const [currentScreen, setCurrentScreen] = useState<Screen>('home');
@@ -48,13 +50,18 @@ export default function App() {
   const [songProgress, setSongProgress] = useState<{ [key: string]: { stars: number; score: number } }>({});
   const [levelProgress, setLevelProgress] = useState<{ [key: number]: { stars: number; score: number } }>({});
   const [selectedBackgroundMusicId, setSelectedBackgroundMusicId] = useState<string>('none');
+  const [selectedAircraftId, setSelectedAircraftId] = useState<string>('heli-classic');
 
   const audioControllerRef = useRef<AudioController | null>(null);
 
   // Error State
   const [error, setError] = useState('');
 
-  useEffect(() => { setProfile(loadProfile()); }, []);
+  useEffect(() => {
+    const p = loadProfile();
+    setProfile(p);
+    if (p.selectedAircraftId) setSelectedAircraftId(p.selectedAircraftId);
+  }, []);
   useEffect(() => { return () => { audioControllerRef.current?.stop(); }; }, []);
 
   const selectedSong = selectedSongId ? SONGS.find(s => s.id === selectedSongId) : null;
@@ -195,6 +202,15 @@ export default function App() {
     saveProfile(p);
   };
 
+  const handleAircraftSelect = (aircraftId: string) => {
+    setSelectedAircraftId(aircraftId);
+    if (profile) {
+      const p = { ...profile, selectedAircraftId: aircraftId };
+      setProfile(p);
+      saveProfile(p);
+    }
+  };
+
   // Render current screen
   const renderScreen = () => {
     switch (currentScreen) {
@@ -247,6 +263,7 @@ export default function App() {
               isPaused={isPaused}
               profile={profile}
               demoMode={demoMode}
+              aircraftId={selectedAircraftId}
               onPauseToggle={() => setIsPaused(p => !p)}
               onGameOver={handleGameOver}
               onAbort={handleHome}
@@ -293,6 +310,16 @@ export default function App() {
           <SettingsScreen
             selectedBackgroundMusicId={selectedBackgroundMusicId}
             onBackgroundMusicChange={setSelectedBackgroundMusicId}
+            onBack={() => navigate('home')}
+          />
+        );
+
+      case 'aircraft-select':
+        return (
+          <AircraftSelectScreen
+            selectedAircraftId={selectedAircraftId}
+            playerLevel={profile?.level ?? 1}
+            onSelect={handleAircraftSelect}
             onBack={() => navigate('home')}
           />
         );

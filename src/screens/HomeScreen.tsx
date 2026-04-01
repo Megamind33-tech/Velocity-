@@ -8,6 +8,7 @@ import {
   Zap,
   Target,
   Play,
+  Plane,
 } from 'lucide-react';
 import { PlayerProfile } from '../lib/profile';
 import type { Screen } from '../App';
@@ -97,6 +98,7 @@ export function HomeScreen({ profile, onNavigate }: HomeScreenProps) {
         <div className="mg-action-grid">
           {[
             { label: 'Train', icon: <Dumbbell className="w-5 h-5" />, screen: 'training' as Screen },
+            { label: 'Hangar', icon: <Plane className="w-5 h-5" />, screen: 'aircraft-select' as Screen },
             { label: 'Profile', icon: <User className="w-5 h-5" />, screen: 'profile' as Screen },
             { label: 'Rank', icon: <Trophy className="w-5 h-5" />, screen: 'leaderboard' as Screen },
             { label: 'Audio', icon: <Music className="w-5 h-5" />, screen: 'settings' as Screen },

@@ -16,6 +16,7 @@ interface GameScreenProps {
   isPaused: boolean;
   profile: PlayerProfile | null;
   demoMode?: boolean;
+  aircraftId?: string;
   onPauseToggle: () => void;
   onGameOver: (score: number, win: boolean, stats?: GameStats) => void;
   onAbort: () => void;
@@ -30,6 +31,7 @@ export function GameScreen({
   isPaused,
   profile,
   demoMode,
+  aircraftId,
   onPauseToggle,
   onGameOver,
   onAbort,
@@ -61,6 +63,7 @@ export function GameScreen({
           difficulty={difficulty}
           isPaused={isPaused}
           demoMode={demoMode}
+          aircraftId={aircraftId}
           onGameOver={onGameOver}
         />
 
