@@ -29,20 +29,22 @@
   content: "";
   position: absolute;
   inset: -40%;
+  z-index: 0;
   background:
-    radial-gradient(ellipse 90% 60% at 50% -20%, rgba(67, 231, 255, 0.14) 0%, transparent 55%),
-    radial-gradient(ellipse 70% 50% at 100% 80%, rgba(125, 92, 255, 0.12) 0%, transparent 50%),
-    radial-gradient(ellipse 50% 40% at 0% 60%, rgba(255, 79, 195, 0.08) 0%, transparent 45%),
-    linear-gradient(180deg, #0a0d18 0%, #05060c 45%, #080b14 100%);
+    radial-gradient(ellipse 90% 60% at 50% -20%, rgba(67, 231, 255, 0.2) 0%, transparent 55%),
+    radial-gradient(ellipse 70% 50% at 100% 80%, rgba(125, 92, 255, 0.16) 0%, transparent 50%),
+    radial-gradient(ellipse 50% 40% at 0% 60%, rgba(255, 79, 195, 0.1) 0%, transparent 45%),
+    linear-gradient(180deg, #0d1022 0%, #070914 45%, #0a0e1a 100%);
   animation: mg-bg-shift 18s ease-in-out infinite;
   pointer-events: none;
 }
 
 .mg-stage-violet::before {
+  z-index: 0;
   background:
-    radial-gradient(ellipse 90% 55% at 50% -15%, rgba(125, 92, 255, 0.18) 0%, transparent 55%),
-    radial-gradient(ellipse 60% 45% at 10% 100%, rgba(67, 231, 255, 0.08) 0%, transparent 50%),
-    linear-gradient(180deg, #0c0a18 0%, #05060c 50%, #0a0816 100%);
+    radial-gradient(ellipse 90% 55% at 50% -15%, rgba(125, 92, 255, 0.22) 0%, transparent 55%),
+    radial-gradient(ellipse 60% 45% at 10% 100%, rgba(67, 231, 255, 0.12) 0%, transparent 50%),
+    linear-gradient(180deg, #100e22 0%, #070814 50%, #0c0a1c 100%);
 }
 
 /* --- Purchased kit backdrops (Background group only from PSD — no mock UI text) --- */
@@ -84,20 +86,21 @@
   filter: saturate(1.08) contrast(1.02) brightness(1.08);
 }
 
+/* Softer vignette so bright kit PNGs stay visible at edges */
 .mg-vignette {
   position: absolute;
   inset: 0;
   pointer-events: none;
-  background: radial-gradient(ellipse 75% 70% at 50% 45%, transparent 0%, rgba(0, 0, 0, 0.55) 100%);
-  z-index: 0;
+  z-index: 1;
+  background: radial-gradient(ellipse 82% 75% at 50% 42%, transparent 0%, rgba(0, 0, 0, 0.34) 100%);
 }
 
 .mg-scanlines {
   position: absolute;
   inset: 0;
   pointer-events: none;
-  z-index: 1;
-  opacity: 0.04;
+  z-index: 2;
+  opacity: 0.035;
   background: repeating-linear-gradient(
     0deg,
     transparent,
@@ -110,16 +113,16 @@
 /* --- Top chrome bar --- */
 .mg-topbar {
   position: relative;
-  z-index: 2;
+  z-index: 3;
   display: flex;
   align-items: center;
   gap: 12px;
   padding: 12px 16px;
   padding-top: calc(12px + var(--safe-top));
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-  background: linear-gradient(180deg, rgba(8, 10, 20, 0.92) 0%, rgba(8, 10, 20, 0.65) 100%);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  background: linear-gradient(180deg, rgba(8, 10, 22, 0.82) 0%, rgba(8, 10, 22, 0.52) 100%);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
 }
 
 .mg-topbar-title {
@@ -168,11 +171,11 @@
 /* --- Framed game panels --- */
 .mg-panel {
   position: relative;
-  z-index: 2;
+  z-index: 0;
   border-radius: 20px;
   padding: 18px 18px 20px;
-  background: linear-gradient(145deg, rgba(22, 28, 48, 0.92) 0%, rgba(12, 14, 26, 0.96) 100%);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: linear-gradient(145deg, rgba(22, 28, 48, 0.82) 0%, rgba(12, 14, 26, 0.88) 100%);
+  border: 1px solid rgba(255, 255, 255, 0.12);
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.08),
     0 12px 40px rgba(0, 0, 0, 0.45),
@@ -235,7 +238,7 @@
 
 .mg-action-tile {
   position: relative;
-  z-index: 2;
+  z-index: 0;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -244,8 +247,8 @@
   padding: 14px 8px;
   min-height: 88px;
   border-radius: 16px;
-  background: linear-gradient(180deg, rgba(30, 36, 58, 0.9) 0%, rgba(14, 16, 28, 0.95) 100%);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: linear-gradient(180deg, rgba(30, 36, 58, 0.78) 0%, rgba(14, 16, 28, 0.88) 100%);
+  border: 1px solid rgba(255, 255, 255, 0.1);
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06);
   transition: transform 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
   -webkit-tap-highlight-color: transparent;
@@ -284,7 +287,7 @@
 /* --- Primary CTA (arcade) --- */
 .mg-cta {
   position: relative;
-  z-index: 2;
+  z-index: 0;
   width: 100%;
   display: flex;
   align-items: center;
@@ -307,6 +310,7 @@
     inset 0 1px 0 rgba(255, 255, 255, 0.5);
   transition: transform 0.12s ease, box-shadow 0.12s ease;
   -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
 }
 
 .mg-cta:active {
@@ -336,12 +340,13 @@
 /* --- Bottom bar / back --- */
 .mg-footer-bar {
   position: relative;
-  z-index: 2;
+  z-index: 3;
   padding: 14px 16px;
   padding-bottom: calc(14px + var(--safe-bottom));
-  border-top: 1px solid rgba(255, 255, 255, 0.08);
-  background: rgba(5, 6, 12, 0.88);
-  backdrop-filter: blur(12px);
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(5, 6, 14, 0.76);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
 }
 
 .mg-btn-back {
@@ -357,6 +362,7 @@
   background: rgba(255, 255, 255, 0.04);
   border: 1px solid rgba(255, 255, 255, 0.1);
   transition: background 0.15s ease, color 0.15s ease;
+  touch-action: manipulation;
 }
 
 .mg-btn-back:hover {
@@ -388,7 +394,7 @@
 /* --- Scroll region above footer --- */
 .mg-scroll {
   position: relative;
-  z-index: 2;
+  z-index: 3;
   flex: 1;
   overflow-y: auto;
   overflow-x: hidden;

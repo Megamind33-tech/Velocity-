@@ -50,7 +50,9 @@ export function GameScreen({
       style={{ paddingTop: 'var(--safe-top)', paddingBottom: 'var(--safe-bottom)' }}
     >
       <div className="mg-kit-layer mg-kit-layer--stage mg-kit-layer--subtle" aria-hidden />
-      <div className="flex-1 relative overflow-hidden">
+      <div className="mg-vignette" aria-hidden />
+      <div className="mg-scanlines" aria-hidden />
+      <div className="flex-1 relative overflow-hidden z-[3]">
         <GameEngine
           audioController={audioController}
           song={song}

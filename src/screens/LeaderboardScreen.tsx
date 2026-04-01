@@ -82,7 +82,7 @@ export function LeaderboardScreen({ profile, onBack }: LeaderboardScreenProps) {
         <Trophy className="w-7 h-7 text-[#FFC94A] shrink-0" style={{ filter: 'drop-shadow(0 0 8px rgba(255,201,74,0.5))' }} />
       </header>
 
-      <div className="flex gap-1.5 px-4 py-3 shrink-0 border-b border-[rgba(255,255,255,0.06)] bg-[rgba(5,6,12,0.5)]">
+      <div className="relative z-[3] flex gap-1.5 px-4 py-3 shrink-0 border-b border-[rgba(255,255,255,0.08)] bg-[rgba(5,6,14,0.55)] backdrop-blur-md">
         {CATEGORY_TABS.map(tab => (
           <button
             key={tab.key}
