@@ -2,6 +2,8 @@ import { Entity, World, System } from '../World';
 import { TransformComponent } from '../components/TransformComponent';
 import { VelocityComponent } from '../components/VelocityComponent';
 import { VoiceInputManager } from '../input/VoiceInputManager';
+import { GameState } from '../GameState';
+import { VOICE_FLIGHT } from '../../data/constants';
 import { Container, Graphics, Text, TextStyle } from 'pixi.js';
 
 /**
@@ -13,6 +15,7 @@ export class HUDSystem implements System {
     private voiceMeter: Graphics;
     private altitudeText: Text;
     private speedText: Text;
+    private pitchText: Text;
     private playerEntity: Entity | null = null;
 
     constructor(private app: any) {
@@ -34,31 +37,33 @@ export class HUDSystem implements System {
 
         // 1. Glassmorphism Background Panel
         const panel = new Graphics();
-        panel.roundRect(10, 10, 220, 120, 15);
+        panel.roundRect(10, 10, 220, 132, 15);
         panel.fill({ color: 0x000000, alpha: 0.4 });
         panel.stroke({ color: 0xffffff, width: 1, alpha: 0.2 });
         this.container.addChild(panel);
 
         // 2. Metrics
         this.altitudeText = new Text({ text: 'ALTITUDE: 000', style });
-        this.speedText = new Text({ text: 'VELOCITY: 000', style });
-        
+        this.speedText = new Text({ text: 'FORWARD: 000', style });
+        this.pitchText = new Text({ text: 'PITCH: --- Hz', style: { ...style, fontSize: 12 } });
+
         this.altitudeText.position.set(25, 25);
         this.speedText.position.set(25, 50);
-        this.container.addChild(this.altitudeText, this.speedText);
+        this.pitchText.position.set(25, 68);
+        this.container.addChild(this.altitudeText, this.speedText, this.pitchText);
 
         // 3. Voice Power Meter
         const labelStyle = new TextStyle({ ...style, fontSize: 10 });
-        const meterLabel = new Text({ 
-            text: 'VOICE INTAKE', 
-            style: labelStyle
+        const meterLabel = new Text({
+            text: 'VOCAL LEVEL (GATE)',
+            style: labelStyle,
         });
         meterLabel.alpha = 0.7;
-        meterLabel.position.set(25, 85);
+        meterLabel.position.set(25, 92);
         this.container.addChild(meterLabel);
 
         this.voiceMeter = new Graphics();
-        this.voiceMeter.position.set(25, 105);
+        this.voiceMeter.position.set(25, 112);
         this.container.addChild(this.voiceMeter);
     }
 
@@ -79,8 +84,17 @@ export class HUDSystem implements System {
         }
 
         if (velocity) {
-            const spd = Math.floor(Math.sqrt(velocity.vx * velocity.vx + velocity.vy * velocity.vy) / 5);
-            this.speedText.text = `VELOCITY: ${spd.toString().padStart(3, '0')}km/h`;
+            this.speedText.text = `FORWARD: ${Math.round(velocity.vx)} px/s`;
+        }
+
+        if (GameState.paused) {
+            this.pitchText.text = 'PITCH: (paused)';
+        } else if (voice.isSuspended) {
+            this.pitchText.text = 'PITCH: --- Hz';
+        } else if (voice.volume > VOICE_FLIGHT.VOLUME_GATE && voice.pitchHz > 0) {
+            this.pitchText.text = `PITCH: ${Math.round(voice.pitchHz)} Hz`;
+        } else {
+            this.pitchText.text = 'PITCH: (sing)';
         }
 
         // Render Premium Voice Meter
@@ -88,8 +102,9 @@ export class HUDSystem implements System {
         // Background rail
         this.voiceMeter.roundRect(0, 0, 190, 8, 4).fill({ color: 0x222222, alpha: 0.8 });
         // Glow layer
-        if (voice.volume > 0.05) {
-            this.voiceMeter.roundRect(0, 0, 190 * voice.volume, 8, 4)
+        const level = Math.min(1, voice.volume * 4);
+        if (!GameState.paused && !voice.isSuspended && level > 0.03) {
+            this.voiceMeter.roundRect(0, 0, 190 * level, 8, 4)
                 .fill({ color: 0x00ffcc, alpha: 0.8 })
                 .stroke({ color: 0xffffff, width: 1, alpha: 0.5 });
         }

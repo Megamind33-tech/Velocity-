@@ -2,12 +2,16 @@ import { Entity, World, System } from '../World';
 import { VelocityComponent } from '../components/VelocityComponent';
 import { FlightDynamicsComponent } from '../components/FlightDynamicsComponent';
 import { VoiceInputManager } from '../input/VoiceInputManager';
+import { GameState } from '../GameState';
+import { VOICE_FLIGHT } from '../../data/constants';
+import { DemoTouchFlight } from '../../debug/DemoTouchFlight';
 
 /**
- * System that bridges real-time voice input to ECS components.
+ * Vocal-only vertical steering: high pitch → up, low pitch → down.
+ * Horizontal speed is owned by AutoForwardSystem. No touch/joystick in production.
  */
 export class VoiceInputSystem implements System {
-    public readonly priority: number = 0; // Run first to capture input
+    public readonly priority: number = 0;
     private readonly voiceManager: VoiceInputManager;
     private readonly queryMask: number;
 
@@ -16,36 +20,39 @@ export class VoiceInputSystem implements System {
         this.queryMask = VelocityComponent.TYPE_ID | FlightDynamicsComponent.TYPE_ID;
     }
 
-    public update(entities: Entity[], world: World, delta: number): void {
+    public update(_entities: Entity[], world: World, delta: number): void {
+        if (GameState.paused) return;
+
         if (!this.voiceManager.isInitialized) return;
 
-        // Poll latest levels from audio context
         this.voiceManager.update();
-        
-        const volume = this.voiceManager.volume;
-        const frequency = this.voiceManager.frequency;
+
+        const vol = this.voiceManager.volume;
+        const hz = this.voiceManager.pitchHz;
 
         const matchingEntities = world.getEntities(this.queryMask);
 
         for (let i = 0; i < matchingEntities.length; i++) {
             const entity = matchingEntities[i];
             const velocity = world.getComponent<VelocityComponent>(entity, VelocityComponent.TYPE_ID)!;
-            const flight = world.getComponent<FlightDynamicsComponent>(entity, FlightDynamicsComponent.TYPE_ID)!;
 
-            // 1. Map Volume to Upward Thrust
-            // Noise floor threshold (e.g., ignore volume below 10%)
-            if (volume > 0.1) {
-                const thrustForce = (volume - 0.1) * flight.thrustPower;
-                velocity.vy -= thrustForce * delta;
+            let verticalAccel = 0;
+
+            if (vol > VOICE_FLIGHT.VOLUME_GATE && hz > 0) {
+                const { PITCH_HZ_MIN, PITCH_HZ_MAX } = VOICE_FLIGHT;
+                const t = Math.max(0, Math.min(1, (hz - PITCH_HZ_MIN) / (PITCH_HZ_MAX - PITCH_HZ_MIN)));
+                // High t (high pitch) → negative accel → upward on screen
+                verticalAccel = (0.5 - t) * 2 * VOICE_FLIGHT.PITCH_VERTICAL_STRENGTH;
             }
 
-            // 2. Map Frequency to Horizontal Speed Bias (Optional)
-            // Higher pitch = tilt forward? (For now just log for debug)
-            if (volume > 0.2) {
-                // If frequency > 0.5 (high pitch), slightly boost horizontal speed
-                const speedBoost = (frequency > 0.5) ? 50 : -20;
-                velocity.vx += speedBoost * delta;
+            // DEV-only: edge touch simulates pitch up/down for testing (strip wiring later)
+            const demo = DemoTouchFlight.getVertical();
+            if (demo !== 0) {
+                // demo -1 = up (negative vy accel), +1 = down
+                verticalAccel += demo * VOICE_FLIGHT.DEMO_TOUCH_STRENGTH;
             }
+
+            velocity.vy += verticalAccel * delta;
         }
     }
 }
