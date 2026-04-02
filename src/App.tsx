@@ -17,6 +17,7 @@ export default function App() {
   const [selectedBackgroundMusicId, setSelectedBackgroundMusicId] = useState<string>('none');
   const [isMusicDropdownOpen, setIsMusicDropdownOpen] = useState(false);
   const [isWin, setIsWin] = useState(false);
+  const [gameStats, setGameStats] = useState<{ perfectGates: number, maxCombo: number, totalGates: number } | null>(null);
   const [checkpoint, setCheckpoint] = useState<{ score: number, currentLyricIndex: number, obstaclesPassed: number } | null>(null);
   const [profile, setProfile] = useState<PlayerProfile | null>(null);
   const [activeTab, setActiveTab] = useState<'play' | 'profile' | 'leaderboard'>('play');
@@ -60,12 +61,13 @@ export default function App() {
     }
   };
 
-  const handleGameOver = (finalScore: number, win: boolean = false, stats?: { perfectGates: number, maxCombo: number }) => {
+  const handleGameOver = (finalScore: number, win: boolean = false, stats?: { perfectGates: number, maxCombo: number, totalGates: number }) => {
     if (audioControllerRef.current) {
       audioControllerRef.current.stopBackgroundMusic();
     }
     setScore(finalScore);
     setIsWin(win);
+    setGameStats(stats || null);
     setGameState('gameover');
     if (win) setCheckpoint(null);
 
@@ -558,7 +560,7 @@ export default function App() {
                 <p className="text-[#8E9299] text-xs md:text-sm uppercase tracking-[0.3em] font-black mb-2">Final Score</p>
                 <p className="text-7xl md:text-9xl font-mono text-white font-black tracking-tighter">{score.toLocaleString()}</p>
                 
-                <div className="mt-8 pt-8 border-t border-slate-800 grid grid-cols-2 gap-8">
+                <div className="mt-8 pt-8 border-t border-slate-800 grid grid-cols-2 md:grid-cols-4 gap-8">
                   <div>
                     <div className="text-[10px] text-[#8E9299] uppercase font-black tracking-widest mb-1">Status</div>
                     <div className={`text-sm font-black uppercase italic ${isWin ? 'text-green-500' : 'text-red-500'}`}>{isWin ? 'Success' : 'Failed'}</div>
@@ -566,6 +568,18 @@ export default function App() {
                   <div>
                     <div className="text-[10px] text-[#8E9299] uppercase font-black tracking-widest mb-1">Difficulty</div>
                     <div className="text-sm font-black uppercase italic text-white">{difficulty}</div>
+                  </div>
+                  <div>
+                    <div className="text-[10px] text-[#8E9299] uppercase font-black tracking-widest mb-1">Accuracy</div>
+                    <div className="text-sm font-black uppercase italic text-blue-500">
+                      {gameStats && gameStats.totalGates > 0 
+                        ? `${Math.round((gameStats.perfectGates / gameStats.totalGates) * 100)}%` 
+                        : '0%'}
+                    </div>
+                  </div>
+                  <div>
+                    <div className="text-[10px] text-[#8E9299] uppercase font-black tracking-widest mb-1">Max Combo</div>
+                    <div className="text-sm font-black uppercase italic text-amber-500">{gameStats?.maxCombo || 0}</div>
                   </div>
                 </div>
               </div>

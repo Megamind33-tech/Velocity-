@@ -1,12 +1,12 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { AudioController } from '../lib/audio';
 import { Song } from '../lib/songs';
+import { GameHUD } from './GameHUD';
 
 interface GameStats {
   perfectGates: number;
   maxCombo: number;
-  accuracyPercentage: number;
-  totalTimeSpent: number;
+  totalGates: number;
 }
 
 interface GameCanvasProps {
@@ -21,25 +21,20 @@ interface GameCanvasProps {
 }
 
 const DIFFICULTY_PARAMS = {
-  easy: { spawnRate: 200, gapSize: 220, baseWidth: 80, forgiveness: 1.8, scoreMultiplier: 0.7, breathPenaltyThreshold: null, speedMultiplier: 0.8 },
-  medium: { spawnRate: 140, gapSize: 180, baseWidth: 60, forgiveness: 1.2, scoreMultiplier: 1.0, breathPenaltyThreshold: null, speedMultiplier: 1.0 },
-  hard: { spawnRate: 90, gapSize: 130, baseWidth: 40, forgiveness: 0.6, scoreMultiplier: 1.8, breathPenaltyThreshold: 20, speedMultiplier: 1.3 },
+  easy: { spawnRate: 180, gapSize: 160, baseWidth: 120, forgiveness: 1.5, scoreMultiplier: 0.8, breathPenaltyThreshold: null },
+  medium: { spawnRate: 150, gapSize: 120, baseWidth: 80, forgiveness: 1.0, scoreMultiplier: 1.0, breathPenaltyThreshold: null },
+  hard: { spawnRate: 110, gapSize: 80, baseWidth: 60, forgiveness: 0.7, scoreMultiplier: 1.5, breathPenaltyThreshold: 30 },
 };
 
 interface Obstacle {
-  type: 'pitch' | 'volume' | 'bend' | 'wave' | 'zigzag';
+  type: 'pitch' | 'volume';
   x: number;
   width: number;
   gapTop: number;
   gapBottom: number;
-  gapSize?: number; // Added for dynamic gaps
   passed: boolean;
   targetNoteName?: string;
   targetY?: number;
-  endTargetY?: number; // For bend
-  waveAmplitude?: number; // For wave
-  waveFrequency?: number; // For wave
-  zigzagPoints?: { x: number, y: number }[]; // For zigzag
   requiredVolume?: number;
   volumeProgress?: number;
   lyricWord?: string;
@@ -76,251 +71,111 @@ interface Collectible {
 
 const THEMES = [
   {
-    name: 'Neon Synthwave',
-    sky: ['#0f0c29', '#302b63', '#24243e'],
-    grid: 'rgba(236, 72, 153, 0.5)', // pink
+    name: 'Midnight Horizon',
+    sky: ['#020617', '#0f172a', '#1e293b'],
+    grid: 'rgba(56, 189, 248, 0.2)',
     bgType: 'city',
     bgFront: '#0f172a', bgSide: '#020617', bgTop: '#1e293b',
-    gateFront: '#1e3a8a', gateSide: '#172554', gateTop: '#3b82f6',
+    gateFront: '#38bdf8', gateSide: '#0ea5e9', gateTop: '#7dd3fc',
     weather: 'none',
-    textColor: '#fdf2f8',
-    fogColor: '15, 12, 41',
-    fogDensity: 0.3
+    textColor: '#f8fafc',
+    fogColor: '15, 23, 42',
+    fogDensity: 0.4
   },
   {
-    name: 'Cyberpunk Rain',
-    sky: ['#020617', '#064e3b', '#000000'],
-    grid: 'rgba(6, 182, 212, 0.5)', // cyan
-    bgType: 'city',
-    bgFront: '#083344', bgSide: '#042f2e', bgTop: '#164e63',
-    gateFront: '#065f46', gateSide: '#022c22', gateTop: '#10b981',
-    weather: 'rain',
-    textColor: '#ecfeff',
-    fogColor: '2, 6, 23',
-    fogDensity: 0.5
-  },
-  {
-    name: 'Winter Peaks',
-    sky: ['#7dd3fc', '#bae6fd', '#e0f2fe'],
-    grid: 'rgba(255, 255, 255, 0.8)', // white
+    name: 'Cloud Nine',
+    sky: ['#0ea5e9', '#38bdf8', '#bae6fd'],
+    grid: 'rgba(255, 255, 255, 0.3)',
     bgType: 'mountains',
-    bgFront: '#cbd5e1', bgSide: '#94a3b8', bgTop: '#f8fafc',
+    bgFront: '#f1f5f9', bgSide: '#cbd5e1', bgTop: '#ffffff',
     gateFront: '#0284c7', gateSide: '#075985', gateTop: '#38bdf8',
-    weather: 'snow',
+    weather: 'none',
     textColor: '#0f172a',
     fogColor: '224, 242, 254',
-    fogDensity: 0.8
-  },
-  {
-    name: 'Martian Sunset',
-    sky: ['#4a044e', '#9f1239', '#f59e0b'],
-    grid: 'rgba(245, 158, 11, 0.5)', // amber
-    bgType: 'mountains',
-    bgFront: '#7c2d12', bgSide: '#431407', bgTop: '#b45309',
-    gateFront: '#9f1239', gateSide: '#4c0519', gateTop: '#e11d48',
-    weather: 'dust',
-    textColor: '#fffbeb',
-    fogColor: '245, 158, 11',
-    fogDensity: 0.85
-  },
-  {
-    name: 'Victoria Falls',
-    sky: ['#003366', '#006699', '#66ccff'],
-    grid: 'rgba(255, 255, 255, 0.3)',
-    bgType: 'waterfall',
-    landmark: 'victoria-falls',
-    bgFront: '#006699', bgSide: '#004466', bgTop: '#66ccff',
-    gateFront: '#0099cc', gateSide: '#006699', gateTop: '#ffffff',
-    weather: 'rain',
-    textColor: '#ffffff',
-    fogColor: '255, 255, 255',
-    fogDensity: 0.5
-  },
-  {
-    name: 'Mambilima Falls',
-    sky: ['#004d4d', '#008080', '#80e0e0'],
-    grid: 'rgba(255, 255, 255, 0.3)',
-    bgType: 'waterfall',
-    landmark: 'mambilima-falls',
-    bgFront: '#008080', bgSide: '#004d4d', bgTop: '#80e0e0',
-    gateFront: '#00a0a0', gateSide: '#008080', gateTop: '#ffffff',
-    weather: 'none',
-    textColor: '#ffffff',
-    fogColor: '255, 255, 255',
-    fogDensity: 0.4
-  },
-  {
-    name: 'Kundalila Falls',
-    sky: ['#2e8b57', '#3cb371', '#98fb98'],
-    grid: 'rgba(255, 255, 255, 0.3)',
-    bgType: 'waterfall',
-    landmark: 'kundalila-falls',
-    bgFront: '#3cb371', bgSide: '#2e8b57', bgTop: '#98fb98',
-    gateFront: '#2e8b57', gateSide: '#228b22', gateTop: '#ffffff',
-    weather: 'none',
-    textColor: '#ffffff',
-    fogColor: '255, 255, 255',
-    fogDensity: 0.4
-  },
-  {
-    name: 'Kalambo Falls',
-    sky: ['#4682b4', '#5f9ea0', '#add8e6'],
-    grid: 'rgba(255, 255, 255, 0.3)',
-    bgType: 'waterfall',
-    landmark: 'kalambo-falls',
-    bgFront: '#5f9ea0', bgSide: '#4682b4', bgTop: '#add8e6',
-    gateFront: '#4682b4', gateSide: '#4169e1', gateTop: '#ffffff',
-    weather: 'none',
-    textColor: '#ffffff',
-    fogColor: '255, 255, 255',
-    fogDensity: 0.4
-  },
-  {
-    name: 'Pyramids',
-    sky: ['#d2b48c', '#deb887', '#f5deb3'],
-    grid: 'rgba(139, 69, 19, 0.5)',
-    bgType: 'landmark',
-    landmark: 'pyramids',
-    bgFront: '#d2b48c', bgSide: '#bc8f8f', bgTop: '#f5deb3',
-    gateFront: '#8b4513', gateSide: '#a0522d', gateTop: '#d2691e',
-    weather: 'dust',
-    textColor: '#5d4037',
-    fogColor: '210, 180, 140',
     fogDensity: 0.6
   },
   {
-    name: 'Mount Kilimanjaro',
-    sky: ['#4682b4', '#87ceeb', '#f0f8ff'],
-    grid: 'rgba(255, 255, 255, 0.5)',
+    name: 'Deep Space',
+    sky: ['#000000', '#1e1b4b', '#312e81'],
+    grid: 'rgba(139, 92, 246, 0.2)',
     bgType: 'mountains',
-    landmark: 'kilimanjaro',
-    bgFront: '#708090', bgSide: '#2f4f4f', bgTop: '#ffffff',
-    gateFront: '#4682b4', gateSide: '#2f4f4f', gateTop: '#87ceeb',
-    weather: 'snow',
-    textColor: '#ffffff',
-    fogColor: '255, 255, 255',
-    fogDensity: 0.7
-  },
-  {
-    name: 'Mount Everest',
-    sky: ['#2f4f4f', '#708090', '#ffffff'],
-    grid: 'rgba(255, 255, 255, 0.5)',
-    bgType: 'mountains',
-    landmark: 'everest',
-    bgFront: '#708090', bgSide: '#2f4f4f', bgTop: '#ffffff',
-    gateFront: '#4682b4', gateSide: '#2f4f4f', gateTop: '#87ceeb',
-    weather: 'snow',
-    textColor: '#ffffff',
-    fogColor: '255, 255, 255',
-    fogDensity: 0.9
+    bgFront: '#1e1b4b', bgSide: '#0f172a', bgTop: '#4338ca',
+    gateFront: '#8b5cf6', gateSide: '#6d28d9', gateTop: '#a78bfa',
+    weather: 'none',
+    textColor: '#f5f3ff',
+    fogColor: '15, 23, 42',
+    fogDensity: 0.8
   }
 ];
 
-const drawNeonSign = (ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, frameCount: number) => {
-  const flicker = Math.sin(frameCount * 0.1 + x) > 0.8 ? 1 : 0.4 + Math.sin(frameCount * 0.5) * 0.2;
-  const colors = ['#ff00ff', '#00ffff', '#ffff00', '#ff0000'];
-  const color = colors[Math.floor(x % colors.length)];
+const drawEnergyRing = (ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, targetY: number, frameCount: number, color: string, passed: boolean) => {
+  const centerX = x + w / 2;
+  const centerY = targetY;
+  const radius = 60;
+  const pulse = Math.sin(frameCount * 0.1) * 5;
   
   ctx.save();
-  ctx.shadowBlur = 15 * flicker;
-  ctx.shadowColor = color;
-  ctx.strokeStyle = color;
+  ctx.translate(centerX, centerY);
+  
+  // Outer Glow
+  const glowGrad = ctx.createRadialGradient(0, 0, radius - 10, 0, 0, radius + 20);
+  glowGrad.addColorStop(0, 'transparent');
+  glowGrad.addColorStop(0.5, passed ? 'rgba(74, 222, 128, 0.3)' : `${color}44`);
+  glowGrad.addColorStop(1, 'transparent');
+  
+  ctx.fillStyle = glowGrad;
+  ctx.beginPath();
+  ctx.arc(0, 0, radius + 20 + pulse, 0, Math.PI * 2);
+  ctx.fill();
+  
+  // Main Ring
+  ctx.strokeStyle = passed ? '#4ade80' : color;
+  ctx.lineWidth = 8;
+  ctx.setLineDash([20, 10]);
+  ctx.lineDashOffset = -frameCount * 2;
+  ctx.beginPath();
+  ctx.arc(0, 0, radius + pulse, 0, Math.PI * 2);
+  ctx.stroke();
+  
+  // Inner Ring
+  ctx.setLineDash([]);
   ctx.lineWidth = 2;
-  ctx.globalAlpha = flicker;
+  ctx.strokeStyle = 'rgba(255, 255, 255, 0.5)';
+  ctx.beginPath();
+  ctx.arc(0, 0, radius - 5 + pulse, 0, Math.PI * 2);
+  ctx.stroke();
   
-  // Draw a simple geometric sign
-  ctx.strokeRect(x + w * 0.2, y + h * 0.1, w * 0.6, h * 0.2);
-  ctx.font = 'bold 10px sans-serif';
-  ctx.fillStyle = color;
-  ctx.textAlign = 'center';
-  ctx.fillText('NEON', x + w * 0.5, y + h * 0.25);
-  
-  ctx.restore();
-};
-
-const drawHeatHaze = (ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, frameCount: number) => {
-  ctx.save();
-  for (let i = 0; i < 3; i++) {
-    const offset = Math.sin(frameCount * 0.05 + i * 2) * 10;
-    const alpha = (0.1 + Math.sin(frameCount * 0.02 + i) * 0.05);
-    ctx.fillStyle = `rgba(255, 165, 0, ${alpha})`;
+  // Core Energy
+  if (!passed) {
+    const coreGrad = ctx.createRadialGradient(0, 0, 0, 0, 0, radius - 10);
+    coreGrad.addColorStop(0, `${color}22`);
+    coreGrad.addColorStop(1, 'transparent');
+    ctx.fillStyle = coreGrad;
     ctx.beginPath();
-    ctx.moveTo(x, y + h - i * 20 + offset);
-    ctx.quadraticCurveTo(x + w / 2, y + h - i * 20 - 30 + offset, x + w, y + h - i * 20 + offset);
-    ctx.stroke();
-  }
-  ctx.restore();
-};
-
-const drawWindSnow = (ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, frameCount: number) => {
-  ctx.save();
-  ctx.strokeStyle = 'rgba(255, 255, 255, 0.2)';
-  ctx.lineWidth = 1;
-  for (let i = 0; i < 5; i++) {
-    const lineX = (x + (frameCount * 10 + i * 50) % w);
-    const lineY = y + h * (0.2 + i * 0.15) + Math.sin(frameCount * 0.1 + i) * 5;
-    ctx.beginPath();
-    ctx.moveTo(lineX, lineY);
-    ctx.lineTo(lineX + 30, lineY - 5);
-    ctx.stroke();
-  }
-  ctx.restore();
-};
-
-const drawPalmTree = (ctx: CanvasRenderingContext2D, x: number, y: number, h: number, frameCount: number) => {
-  const sway = Math.sin(frameCount * 0.03 + x) * 0.1;
-  ctx.save();
-  ctx.translate(x, y);
-  ctx.rotate(sway);
-  
-  // Trunk
-  ctx.fillStyle = '#5d4037';
-  ctx.fillRect(-2, -h, 4, h);
-  
-  // Fronds
-  ctx.fillStyle = '#2e7d32';
-  for (let i = 0; i < 6; i++) {
-    ctx.save();
-    ctx.rotate((i * Math.PI * 2) / 6 + Math.sin(frameCount * 0.05 + i) * 0.1);
-    ctx.beginPath();
-    ctx.ellipse(15, 0, 15, 4, 0, 0, Math.PI * 2);
+    ctx.arc(0, 0, radius - 10, 0, Math.PI * 2);
     ctx.fill();
-    ctx.restore();
   }
+  
   ctx.restore();
 };
 
-const drawBuildingDetails = (ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, layer: number, frameCount: number, themeName: string = '') => {
-  // Only draw details on closer layers
-  if (layer < 1) return;
+const drawBuildingDetails = (ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, layer: number, frameCount: number, themeName: string) => {
+  if (layer < 1) return; // Too far back for details
 
-  const numWindowsX = Math.floor(w / 15);
-  const numWindowsY = Math.floor(h / 20);
+  const windowRows = Math.floor(h / 25);
+  const windowCols = Math.floor(w / 15);
   
-  for (let i = 0; i < numWindowsX; i++) {
-    for (let j = 0; j < numWindowsY; j++) {
-      // Subtle shimmering/flickering based on frameCount
-      const shimmer = Math.sin(frameCount * 0.05 + i * 0.5 + j * 0.3) * 0.5 + 0.5;
-      if (Math.sin(i * 10 + j * 5) > 0.3) { // Randomly lit windows
-        ctx.fillStyle = `rgba(255, 255, 255, ${0.05 + shimmer * 0.15})`;
-        ctx.fillRect(x + i * 15 + 2, y + j * 20 + 2, 10, 12);
+  ctx.fillStyle = 'rgba(255, 255, 255, 0.05)';
+  for (let i = 0; i < windowCols; i++) {
+    for (let j = 0; j < windowRows; j++) {
+      // Only draw some windows as "lit"
+      const isLit = Math.sin(i * 1.5 + j * 2.1 + x * 0.01) > 0.8;
+      if (isLit) {
+        const flicker = 0.7 + Math.sin(frameCount * 0.05 + i + j) * 0.3;
+        ctx.fillStyle = `rgba(255, 255, 200, ${0.3 * flicker})`;
+        ctx.fillRect(x + i * 15 + 4, y + j * 25 + 4, 7, 10);
       }
     }
-  }
-  
-  // Theme specific accents
-  if (themeName && (themeName.includes('Cyberpunk') || themeName.includes('Neon'))) {
-    const pulse = Math.sin(frameCount * 0.05 + x) * 0.5 + 0.5;
-    ctx.strokeStyle = `rgba(255, 0, 255, ${0.3 + pulse * 0.4})`;
-    ctx.lineWidth = 2;
-    ctx.strokeRect(x + 5, y + 5, w - 10, h - 10);
-  }
-
-  // Vents/Panels with subtle shimmer
-  if (Math.sin(x * 0.1) > 0.7) {
-    const ventShimmer = Math.sin(frameCount * 0.02 + x) * 0.1 + 0.2;
-    ctx.fillStyle = `rgba(0, 0, 0, ${ventShimmer})`;
-    ctx.fillRect(x + w * 0.2, y + h * 0.5, w * 0.6, h * 0.1);
   }
 };
 
@@ -331,6 +186,12 @@ const draw3DBox = (ctx: CanvasRenderingContext2D, x: number, y: number, w: numbe
   // Front
   ctx.fillStyle = front;
   ctx.fillRect(x, y, w, h);
+  
+  // Subtle highlight on front
+  ctx.strokeStyle = 'rgba(255, 255, 255, 0.1)';
+  ctx.lineWidth = 1;
+  ctx.strokeRect(x, y, w, h);
+
   // Side (right)
   ctx.fillStyle = side;
   ctx.beginPath();
@@ -339,6 +200,7 @@ const draw3DBox = (ctx: CanvasRenderingContext2D, x: number, y: number, w: numbe
   ctx.lineTo(x + w + depthX, y + h - depthY);
   ctx.lineTo(x + w, y + h);
   ctx.fill();
+  
   // Top
   ctx.fillStyle = top;
   ctx.beginPath();
@@ -349,154 +211,25 @@ const draw3DBox = (ctx: CanvasRenderingContext2D, x: number, y: number, w: numbe
   ctx.fill();
 };
 
-const drawEnergyBeam = (ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, color: string, frameCount: number, isTop: boolean, shape: string = 'default') => {
-  const pulse = Math.sin(frameCount * 0.1 + x * 0.01) * 0.2 + 0.8;
-  
-  ctx.save();
-  // Core beam gradient
-  const grad = ctx.createLinearGradient(x, 0, x + w, 0);
-  grad.addColorStop(0, 'rgba(255,255,255,0)');
-  
-  let coreColor = color;
-  if (shape === 'staccato') coreColor = '#ec4899'; // Pinkish for staccato
-  if (shape === 'long') coreColor = '#eab308'; // Yellowish for long
-  
-  grad.addColorStop(0.2, coreColor);
-  grad.addColorStop(0.5, '#ffffff');
-  grad.addColorStop(0.8, coreColor);
-  grad.addColorStop(1, 'rgba(255,255,255,0)');
-
-  ctx.fillStyle = grad;
-  ctx.globalAlpha = pulse;
-  
-  if (shape === 'staccato') {
-    // Pointy ends for staccato
-    ctx.beginPath();
-    if (isTop) {
-      ctx.moveTo(x, y);
-      ctx.lineTo(x + w, y);
-      ctx.lineTo(x + w / 2, y + h);
-    } else {
-      ctx.moveTo(x + w / 2, y);
-      ctx.lineTo(x + w, y + h);
-      ctx.lineTo(x, y + h);
-    }
-    ctx.fill();
-  } else {
-    ctx.fillRect(x, y, w, h);
-  }
-
-  // Outer glow
-  ctx.shadowColor = coreColor;
-  ctx.shadowBlur = 20;
-  ctx.fillStyle = coreColor;
-  ctx.globalAlpha = pulse * 0.4;
-  
-  if (shape !== 'staccato') {
-    ctx.fillRect(x + w * 0.2, y, w * 0.6, h);
-  }
-
-  // Base/Cap
-  ctx.globalAlpha = 1.0;
-  ctx.shadowBlur = 10;
-  ctx.shadowColor = '#ffffff';
-  ctx.fillStyle = '#ffffff';
-  if (shape !== 'staccato') {
-    if (isTop) {
-      ctx.fillRect(x + w * 0.1, y + h - 4, w * 0.8, 4);
-    } else {
-      ctx.fillRect(x + w * 0.1, y, w * 0.8, 4);
-    }
-  }
-  ctx.restore();
-};
-
-const drawDynamicEnergyBeam = (ctx: CanvasRenderingContext2D, obs: Obstacle, color: string, frameCount: number, theme: any) => {
-  const { x, width, targetY, endTargetY, waveAmplitude, waveFrequency, zigzagPoints, gapSize, type } = obs;
-  if (gapSize === undefined || targetY === undefined) return;
-
-  const pulse = Math.sin(frameCount * 0.1 + x * 0.01) * 0.2 + 0.8;
-  ctx.save();
-  ctx.globalAlpha = pulse;
-
-  const drawPart = (isTop: boolean) => {
-    ctx.beginPath();
-    const steps = type === 'zigzag' && zigzagPoints ? zigzagPoints.length - 1 : 20;
-    const stepW = width / steps;
-
-    for (let i = 0; i <= steps; i++) {
-      const curX = x + i * stepW;
-      let curY = targetY;
-      
-      if (type === 'bend' && endTargetY !== undefined) {
-        curY = targetY + (endTargetY - targetY) * (i / steps);
-      } else if (type === 'wave' && waveAmplitude !== undefined && waveFrequency !== undefined) {
-        curY = targetY + Math.sin(i * stepW * waveFrequency) * waveAmplitude;
-      } else if (type === 'zigzag' && zigzagPoints) {
-        curY = zigzagPoints[i].y;
-      }
-
-      const edgeY = isTop ? curY - gapSize / 2 : curY + gapSize / 2;
-      if (i === 0) {
-        ctx.moveTo(curX, isTop ? 0 : ctx.canvas.height);
-        ctx.lineTo(curX, edgeY);
-      } else {
-        ctx.lineTo(curX, edgeY);
-      }
-    }
-
-    ctx.lineTo(x + width, isTop ? 0 : ctx.canvas.height);
-    ctx.closePath();
-
-    const grad = ctx.createLinearGradient(x, 0, x + width, 0);
-    grad.addColorStop(0, 'rgba(255,255,255,0)');
-    grad.addColorStop(0.2, color);
-    grad.addColorStop(0.5, '#ffffff');
-    grad.addColorStop(0.8, color);
-    grad.addColorStop(1, 'rgba(255,255,255,0)');
-    
-    ctx.fillStyle = grad;
-    ctx.fill();
-
-    // Glow edge
-    ctx.strokeStyle = '#ffffff';
-    ctx.lineWidth = 4;
-    ctx.beginPath();
-    for (let i = 0; i <= steps; i++) {
-      const curX = x + i * stepW;
-      let curY = targetY;
-      if (type === 'bend' && endTargetY !== undefined) {
-        curY = targetY + (endTargetY - targetY) * (i / steps);
-      } else if (type === 'wave' && waveAmplitude !== undefined && waveFrequency !== undefined) {
-        curY = targetY + Math.sin(i * stepW * waveFrequency) * waveAmplitude;
-      } else if (type === 'zigzag' && zigzagPoints) {
-        curY = zigzagPoints[i].y;
-      }
-      const edgeY = isTop ? curY - gapSize / 2 : curY + gapSize / 2;
-      if (i === 0) ctx.moveTo(curX, edgeY);
-      else ctx.lineTo(curX, edgeY);
-    }
-    ctx.stroke();
-  };
-
-  drawPart(true);
-  drawPart(false);
-  ctx.restore();
-};
-
 const drawMountain = (ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, depth: number, front: string | CanvasGradient, side: string | CanvasGradient, top: string | CanvasGradient, frameCount: number) => {
   const depthX = depth * 0.6;
   const depthY = depth * 0.3;
 
-  // Front face
-  ctx.fillStyle = front;
+  // Front face with gradient
+  const grad = ctx.createLinearGradient(x, y - h, x, y);
+  grad.addColorStop(0, '#ffffff'); // Snow cap
+  grad.addColorStop(0.2, '#ffffff');
+  grad.addColorStop(0.5, front as string);
+  grad.addColorStop(1, '#1e293b');
+  
+  ctx.fillStyle = grad;
   ctx.beginPath();
   ctx.moveTo(x, y);
   ctx.lineTo(x + w / 2, y - h);
   ctx.lineTo(x + w, y);
   ctx.fill();
   
-  // Side/Highlight face (simulating 3D peak)
+  // Side/Highlight face
   ctx.fillStyle = side;
   ctx.beginPath();
   ctx.moveTo(x + w / 2, y - h);
@@ -504,20 +237,6 @@ const drawMountain = (ctx: CanvasRenderingContext2D, x: number, y: number, w: nu
   ctx.lineTo(x + w + depthX, y - depthY);
   ctx.lineTo(x + w / 2 + depthX, y - h - depthY);
   ctx.fill();
-
-  // Animated clouds around mountains
-  const numClouds = 2;
-  for (let i = 0; i < numClouds; i++) {
-    const cloudX = x + (Math.sin(frameCount * 0.01 + i * 2) * w * 0.4);
-    const cloudY = y - h * (0.3 + i * 0.3) + Math.cos(frameCount * 0.02 + i) * 10;
-    const cloudW = w * 0.3;
-    const cloudH = h * 0.1;
-    
-    ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
-    ctx.beginPath();
-    ctx.ellipse(cloudX + cloudW / 2, cloudY, cloudW / 2, cloudH / 2, 0, 0, Math.PI * 2);
-    ctx.fill();
-  }
 };
 
 const drawPitchMeter = (ctx: CanvasRenderingContext2D, audioController: any, currentObstacle: any) => {
@@ -558,161 +277,6 @@ const drawPitchMeter = (ctx: CanvasRenderingContext2D, audioController: any, cur
   ctx.restore();
 };
 
-const drawWaterfall = (ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, landmark: string, frameCount: number) => {
-  ctx.save();
-  
-  const waterOffset = (frameCount * 2) % 40;
-
-  if (landmark === 'mambilima-falls') {
-    // Mambilima is a series of rapids/steps
-    const steps = 4;
-    const stepH = h / steps;
-    for (let i = 0; i < steps; i++) {
-      const stepY = y + i * stepH;
-      const stepW = w * (1 - i * 0.1);
-      const stepX = x + (w - stepW) / 2;
-      
-      // Water
-      ctx.fillStyle = '#4db8ff';
-      ctx.fillRect(stepX, stepY, stepW, stepH);
-      
-      // Foam at each step with gentle movement
-      const foamPulse = Math.sin(frameCount * 0.1 + i) * 3;
-      ctx.fillStyle = '#ffffff';
-      ctx.fillRect(stepX - 5, stepY + stepH - 5 + foamPulse, stepW + 10, 10);
-      
-      // Flow lines
-      ctx.strokeStyle = 'rgba(255, 255, 255, 0.4)';
-      ctx.lineWidth = 1;
-      for (let j = 0; j < stepW; j += 8) {
-        const lineOffset = (waterOffset + j) % stepH;
-        ctx.beginPath();
-        ctx.moveTo(stepX + j, stepY + lineOffset);
-        ctx.lineTo(stepX + j, Math.min(stepY + stepH, stepY + lineOffset + 10));
-        ctx.stroke();
-      }
-    }
-  } else if (landmark === 'kalambo-falls') {
-    // Kalambo is a very high single drop
-    const narrowW = w * 0.4;
-    const narrowX = x + (w - narrowW) / 2;
-    
-    // Main drop with animated texture
-    const grad = ctx.createLinearGradient(narrowX, y, narrowX, y + h);
-    grad.addColorStop(0, '#00bfff');
-    grad.addColorStop(1, '#ffffff');
-    ctx.fillStyle = grad;
-    ctx.fillRect(narrowX, y, narrowW, h);
-
-    // Animated flow lines
-    ctx.strokeStyle = 'rgba(255, 255, 255, 0.5)';
-    ctx.lineWidth = 2;
-    for (let i = 0; i < narrowW; i += 6) {
-      const lineY = (y + (frameCount * 5 + i * 10) % h);
-      ctx.beginPath();
-      ctx.moveTo(narrowX + i, lineY);
-      ctx.lineTo(narrowX + i, Math.min(y + h, lineY + 20));
-      ctx.stroke();
-    }
-    
-    // Mist at bottom with pulsing
-    const mistPulse = Math.sin(frameCount * 0.05) * 0.2 + 0.8;
-    const mistGrad = ctx.createRadialGradient(narrowX + narrowW/2, y + h, 0, narrowX + narrowW/2, y + h, narrowW * 2 * mistPulse);
-    mistGrad.addColorStop(0, `rgba(255, 255, 255, ${0.6 * mistPulse})`);
-    mistGrad.addColorStop(1, 'rgba(255, 255, 255, 0)');
-    ctx.fillStyle = mistGrad;
-    ctx.fillRect(narrowX - narrowW, y + h - narrowW, narrowW * 3, narrowW * 2);
-  } else if (landmark === 'kundalila-falls') {
-    // Kundalila is a thin fall with rocks
-    const thinW = w * 0.3;
-    const thinX = x + (w - thinW) / 2;
-    
-    ctx.fillStyle = '#add8e6';
-    ctx.fillRect(thinX, y, thinW, h);
-
-    // Animated flow
-    ctx.strokeStyle = 'rgba(255, 255, 255, 0.6)';
-    for (let i = 0; i < thinW; i += 4) {
-      const lineY = (y + (frameCount * 4 + i * 15) % h);
-      ctx.beginPath();
-      ctx.moveTo(thinX + i, lineY);
-      ctx.lineTo(thinX + i, Math.min(y + h, lineY + 15));
-      ctx.stroke();
-    }
-    
-    // Rocks at bottom
-    ctx.fillStyle = '#4a4a4a';
-    for (let i = 0; i < 5; i++) {
-      const rockPulse = Math.sin(frameCount * 0.05 + i) * 2;
-      ctx.beginPath();
-      ctx.arc(thinX + (i * thinW / 4), y + h - 5 + rockPulse, 8 + i * 2, 0, Math.PI * 2);
-      ctx.fill();
-    }
-  } else {
-    // Default (Victoria Falls style)
-    ctx.fillStyle = '#66ccff';
-    ctx.fillRect(x, y, w, h);
-    
-    // Foam with movement
-    const foamOffset = Math.sin(frameCount * 0.1) * 5;
-    ctx.fillStyle = '#ffffff';
-    ctx.fillRect(x, y + h * 0.8 + foamOffset, w, h * 0.2);
-    
-    // Flow lines
-    ctx.strokeStyle = 'rgba(255, 255, 255, 0.3)';
-    ctx.lineWidth = 2;
-    for (let i = 0; i < w; i += 10) {
-      const lineY = (y + (frameCount * 6 + i * 5) % (h * 0.8));
-      ctx.beginPath();
-      ctx.moveTo(x + i, lineY);
-      ctx.lineTo(x + i, Math.min(y + h * 0.8, lineY + 30));
-      ctx.stroke();
-    }
-  }
-  ctx.restore();
-};
-
-const drawPyramid = (ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, frameCount: number) => {
-  const drawSingle = (px: number, py: number, pw: number, ph: number) => {
-    // Subtle shimmering for pyramids
-    const shimmer = Math.sin(frameCount * 0.05 + px * 0.1) * 10;
-    
-    // Front face
-    ctx.fillStyle = '#d2b48c';
-    ctx.beginPath();
-    ctx.moveTo(px + pw / 2, py);
-    ctx.lineTo(px, py + ph);
-    ctx.lineTo(px + pw, py + ph);
-    ctx.fill();
-    
-    // Shimmer overlay
-    ctx.fillStyle = `rgba(255, 255, 255, ${0.05 + Math.sin(frameCount * 0.02 + px) * 0.05})`;
-    ctx.fill();
-    
-    // Side face (shadow)
-    ctx.fillStyle = '#bc8f8f';
-    ctx.beginPath();
-    ctx.moveTo(px + pw / 2, py);
-    ctx.lineTo(px + pw, py + ph);
-    ctx.lineTo(px + pw + pw / 4, py + ph - ph / 4);
-    ctx.fill();
-  };
-
-  // Draw a cluster of pyramids
-  drawSingle(x, y + h * 0.2, w * 0.8, h * 0.8); // Main
-  drawSingle(x - w * 0.4, y + h * 0.4, w * 0.6, h * 0.6); // Left
-  drawSingle(x + w * 0.6, y + h * 0.5, w * 0.5, h * 0.5); // Right
-};
-
-const drawLandmark = (ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, landmark: string, frameCount: number) => {
-  if (landmark === 'pyramids') {
-    drawPyramid(ctx, x, y, w, h, frameCount);
-  } else if (landmark === 'kilimanjaro' || landmark === 'everest') {
-    // Reuse mountain drawing for mountains
-    drawMountain(ctx, x, y + h, w, h, 10, '#708090', '#2f4f4f', '#ffffff', frameCount);
-  }
-};
-
 export const GameCanvas: React.FC<GameCanvasProps> = ({ audioController, onGameOver, onCheckpointReached, difficulty: propDifficulty, song, level, isPaused, initialCheckpoint }) => {
   const difficulty = song ? song.difficulty : propDifficulty;
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -728,6 +292,26 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({ audioController, onGameO
 
   const [isMobile, setIsMobile] = useState(false);
   const [showOrientationWarning, setShowOrientationWarning] = useState(false);
+  const [hudData, setHudData] = useState({
+    score: 0,
+    highScore: 0,
+    combo: 0,
+    comboMultiplier: 1,
+    perfectStreak: 0,
+    currentNote: '--',
+    cents: 0,
+    isSinging: false,
+    isPerfect: false,
+    lyrics: [] as string[],
+    breathProgress: 0,
+    isDying: false,
+    trackTitle: '',
+    themeName: '',
+    pitchY: 0.5,
+    volume: 0,
+    dynamicDifficulty: 1.0,
+    feedbackMessage: undefined as string | undefined
+  });
   const isPausedRef = useRef(isPaused);
 
   useEffect(() => {
@@ -762,23 +346,7 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({ audioController, onGameO
     window.addEventListener('resize', updateCanvasSize);
 
     // Select theme based on level
-    let themeIndex = Math.max(0, (level - 1) % THEMES.length);
-    
-    // Override theme for Zambian songs
-    if (song) {
-      const zambianSongs = ['aweah', 'single', 'komando', 'blessings', 'pick-it-up', 'chilailai'];
-      if (zambianSongs.includes(song.id)) {
-        // Find indices of Zambian themes
-        const zambianLandmarks = ['victoria-falls', 'mambilima-falls', 'kundalila-falls', 'kalambo-falls'];
-        const zambianThemeIndices = THEMES.map((t, i) => zambianLandmarks.includes(t.landmark || '') ? i : -1).filter(i => i !== -1);
-        if (zambianThemeIndices.length > 0) {
-          // Pick a Zambian theme based on the song ID to be consistent
-          const hash = song.id.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
-          themeIndex = zambianThemeIndices[hash % zambianThemeIndices.length];
-        }
-      }
-    }
-
+    const themeIndex = Math.max(0, (level - 1) % THEMES.length);
     const theme = THEMES[themeIndex];
     if (!theme) {
       console.error('Invalid theme index:', themeIndex, 'for level:', level);
@@ -800,6 +368,7 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({ audioController, onGameO
     let particles: Particle[] = [];
     let weatherParticles: WeatherParticle[] = [];
     let obstaclesPassed = initialCheckpoint?.obstaclesPassed || 0;
+    let totalGates = initialCheckpoint?.obstaclesPassed || 0; // Initialize with passed count if starting from checkpoint
     
     // Initialize Weather (Larger pool for scaling)
     const maxWeatherParticles = 600;
@@ -820,7 +389,6 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({ audioController, onGameO
     
     // Song State
     let currentLyricIndex = initialCheckpoint?.currentLyricIndex || 0;
-    let lyricOffset = 0;
     let nextSpawnFrame = frameCount;
     let songCompleted = false;
 
@@ -921,9 +489,8 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({ audioController, onGameO
 
     let perfectGates = 0;
     let maxCombo = 0;
-    let totalNotes = 0;
-    let lastHapticMilestone = 0;
-    const startTime = performance.now();
+    let currentFeedback = "";
+    let feedbackTimer = 0;
 
     const triggerHaptic = (pattern: number | number[]) => {
       if (typeof navigator !== 'undefined' && navigator.vibrate) {
@@ -931,20 +498,15 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({ audioController, onGameO
       }
     };
 
-    let lastTouchY = -1;
-
     const loop = () => {
       if (isPausedRef.current) {
         animationFrameId = requestAnimationFrame(loop);
         return;
       }
       audioController.update();
-
-      // 1. Update Player Y based on pitch or touch
-      if (lastTouchY !== -1) {
-        targetY = lastTouchY;
-        playerY += (targetY - playerY) * 0.2; // Faster response for touch
-      } else if (audioController.isSinging && audioController.pitch > 0) {
+      
+      // 1. Update Player Y based on pitch
+      if (audioController.isSinging && audioController.pitch > 0) {
         const noteNum = 12 * Math.log2(audioController.pitch / 440) + 69;
         let normalized = (noteNum - minNote) / noteRange;
         normalized = Math.max(0, Math.min(1, normalized));
@@ -969,7 +531,6 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({ audioController, onGameO
             combo = 0;
             breathPenaltyApplied = true;
             penaltyVisualTimer = 60;
-            triggerHaptic([100, 50, 100]); // Warning haptic
           }
         } else if (audioController.isSinging) {
           silenceFrames = 0;
@@ -988,9 +549,7 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({ audioController, onGameO
             localStorage.setItem('highScore', finalScore.toString());
             setHighScore(finalScore);
           }
-          const totalTimeSpent = (performance.now() - startTime) / 1000;
-          const accuracyPercentage = totalNotes > 0 ? (perfectGates / totalNotes) * 100 : 0;
-          onGameOver(finalScore, false, { perfectGates, maxCombo, accuracyPercentage, totalTimeSpent });
+          onGameOver(finalScore, false, { perfectGates, maxCombo, totalGates: totalGates + (isDying ? 1 : 0) });
           return;
         }
       }
@@ -1015,7 +574,7 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({ audioController, onGameO
       
       const dynamicSpeedMultiplier = Math.max(0.7, 1 + scoreBonus + distanceBonus + streakBonus - strugglePenalty);
 
-      const gameSpeed = (distanceToTravel / arrivalFrames) * dynamicDifficulty * dynamicSpeedMultiplier * DIFFICULTY_PARAMS[difficulty].speedMultiplier;
+      const gameSpeed = (distanceToTravel / arrivalFrames) * dynamicDifficulty * dynamicSpeedMultiplier;
       const dynamicWidth = (difficulty === 'easy' ? 120 : difficulty === 'hard' ? 60 : 80) + Math.min(220, (score / 25) + (gameSpeed * 4));
 
       // 2. Spawn Obstacles
@@ -1024,109 +583,41 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({ audioController, onGameO
         
         // Dynamically adjust difficulty at phrase starts
         if (lyric.phraseStart) {
-          dynamicDifficulty = Math.min(1.2, dynamicDifficulty + 0.02);
+          dynamicDifficulty = Math.min(1.5, dynamicDifficulty + 0.05);
         }
 
+        // Calculate melodic contour offset (pitch change pressure)
+        let contourOffset = 0;
+        if (currentLyricIndex > 0) {
+          const prevNote = song.sequence[currentLyricIndex - 1].note;
+          const currentNote = lyric.note;
+          const diff = currentNote - prevNote;
+          // Apply a pressure factor based on the pitch difference
+          contourOffset = diff * 8; // Increased factor for more visible path shaping
+        }
+
+        const targetNote = lyric.note;
+        // Apply contourOffset to obsTargetY to shape the path, clamped to stay on screen
+        const rawY = canvas.height - ((targetNote - minNote) / noteRange) * canvas.height - contourOffset;
+        const obsTargetY = Math.max(50, Math.min(canvas.height - 50, rawY));
+        
         const durationInBeats = lyric.duration || 1;
         const baseWidth = DIFFICULTY_PARAMS[difficulty].baseWidth;
-        const dynamicWidth = baseWidth * durationInBeats + Math.min(150, (score / 50) + (gameSpeed * 2));
-        
-        // Randomly choose between pitch, volume, bend, and wave obstacles
-        const rand = Math.random();
-        const isVolumeGate = rand < 0.2; // 20% chance for voice gate
-        const isBend = rand >= 0.2 && rand < 0.35 && durationInBeats >= 1.5; // 15% chance for bend if long enough
-        const isWave = rand >= 0.35 && rand < 0.45 && durationInBeats >= 2; // 10% chance for wave if long enough
-        const isZigzag = rand >= 0.45 && rand < 0.55 && durationInBeats >= 2; // 10% chance for zigzag if long enough
+        const dynamicWidth = baseWidth * durationInBeats + Math.min(220, (score / 25) + (gameSpeed * 4));
 
-        if (isVolumeGate) {
-            obstacles.push({
-              type: 'volume', x: canvas.width, width: dynamicWidth,
-              gapTop: canvas.height / 2, gapBottom: canvas.height / 2,
-              gapSize: canvas.height, // Initial gap size for volume gate
-              passed: false, requiredVolume: 0.1 + Math.random() * 0.15, volumeProgress: 0, passedFrame: null
-            });
-        } else if (isBend) {
-            const targetNote = lyric.note;
-            const nextLyric = song.sequence[currentLyricIndex + 1];
-            const nextNote = nextLyric ? nextLyric.note : targetNote + (Math.random() > 0.5 ? 2 : -2);
-            
-            const rawY = canvas.height - ((targetNote - minNote) / noteRange) * canvas.height;
-            const endRawY = canvas.height - ((nextNote - minNote) / noteRange) * canvas.height;
-            
-            const obsTargetY = Math.max(50, Math.min(canvas.height - 50, rawY));
-            const endTargetY = Math.max(50, Math.min(canvas.height - 50, endRawY));
-            
-            const baseGapSize = DIFFICULTY_PARAMS[difficulty].gapSize;
-            const currentGapSize = Math.max(180, (baseGapSize - (score / 50)) / dynamicDifficulty);
+        const baseGapSize = DIFFICULTY_PARAMS[difficulty].gapSize;
+        // Tighten gap at phrase starts for added challenge
+        const gapMultiplier = lyric.phraseStart ? 0.8 : 1.0;
+        const currentGapSize = Math.max(35, (baseGapSize - (score / 15)) / dynamicDifficulty) * gapMultiplier;
 
-            obstacles.push({
-              type: 'bend', x: canvas.width, width: dynamicWidth,
-              gapTop: obsTargetY - currentGapSize / 2, gapBottom: obsTargetY + currentGapSize / 2,
-              gapSize: currentGapSize,
-              passed: false, targetNoteName: getNoteString(targetNote), targetY: obsTargetY, endTargetY, lyricWord: lyric.word, passedFrame: null
-            });
-        } else if (isWave) {
-            const targetNote = lyric.note;
-            const rawY = canvas.height - ((targetNote - minNote) / noteRange) * canvas.height;
-            const obsTargetY = Math.max(100, Math.min(canvas.height - 100, rawY));
-            
-            const baseGapSize = DIFFICULTY_PARAMS[difficulty].gapSize;
-            const currentGapSize = Math.max(180, (baseGapSize - (score / 50)) / dynamicDifficulty);
+        // Determine shape based on duration
+        const shape = durationInBeats >= 2 ? 'long' : durationInBeats < 1 ? 'staccato' : 'default';
 
-            obstacles.push({
-              type: 'wave', x: canvas.width, width: dynamicWidth,
-              gapTop: obsTargetY - currentGapSize / 2, gapBottom: obsTargetY + currentGapSize / 2,
-              gapSize: currentGapSize,
-              passed: false, targetNoteName: getNoteString(targetNote), targetY: obsTargetY,
-              waveAmplitude: 40 + Math.random() * 40,
-              waveFrequency: 0.05 + Math.random() * 0.05,
-              lyricWord: lyric.word, passedFrame: null
-            });
-        } else if (isZigzag) {
-            const targetNote = lyric.note;
-            const rawY = canvas.height - ((targetNote - minNote) / noteRange) * canvas.height;
-            const obsTargetY = Math.max(100, Math.min(canvas.height - 100, rawY));
-            
-            const baseGapSize = DIFFICULTY_PARAMS[difficulty].gapSize;
-            const currentGapSize = Math.max(180, (baseGapSize - (score / 50)) / dynamicDifficulty);
-
-            const points = [];
-            const numPoints = 4;
-            for (let p = 0; p <= numPoints; p++) {
-              points.push({
-                x: (p / numPoints) * dynamicWidth,
-                y: obsTargetY + (p % 2 === 0 ? -50 : 50)
-              });
-            }
-
-            obstacles.push({
-              type: 'zigzag', x: canvas.width, width: dynamicWidth,
-              gapTop: obsTargetY - currentGapSize / 2, gapBottom: obsTargetY + currentGapSize / 2,
-              gapSize: currentGapSize,
-              passed: false, targetNoteName: getNoteString(targetNote), targetY: obsTargetY,
-              zigzagPoints: points,
-              lyricWord: lyric.word, passedFrame: null
-            });
-        } else {
-            const targetNote = lyric.note;
-            const rawY = canvas.height - ((targetNote - minNote) / noteRange) * canvas.height;
-            const obsTargetY = Math.max(50, Math.min(canvas.height - 50, rawY));
-            
-            const baseGapSize = DIFFICULTY_PARAMS[difficulty].gapSize;
-            const gapMultiplier = lyric.phraseStart ? 0.95 : 1.0;
-            const currentGapSize = Math.max(180, (baseGapSize - (score / 50)) / dynamicDifficulty) * gapMultiplier;
-
-            const shape = durationInBeats >= 2 ? 'long' : durationInBeats < 1 ? 'staccato' : 'default';
-
-            if (shape !== 'staccato') {
-              obstacles.push({
-                type: 'pitch', x: canvas.width, width: dynamicWidth, shape,
-                gapTop: obsTargetY - currentGapSize / 2, gapBottom: obsTargetY + currentGapSize / 2,
-                gapSize: currentGapSize,
-                passed: false, targetNoteName: getNoteString(targetNote), targetY: obsTargetY, lyricWord: lyric.word, passedFrame: null
-              });
-            }
-        }
+        obstacles.push({
+          type: 'pitch', x: canvas.width, width: dynamicWidth, shape,
+          gapTop: obsTargetY - currentGapSize / 2, gapBottom: obsTargetY + currentGapSize / 2,
+          passed: false, targetNoteName: getNoteString(targetNote), targetY: obsTargetY, lyricWord: lyric.word, passedFrame: null
+        });
         
         const framesPerBeat = (60 * 60) / song.tempo;
         nextSpawnFrame = frameCount + (durationInBeats * framesPerBeat);
@@ -1135,27 +626,12 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({ audioController, onGameO
         const baseSpawnRate = DIFFICULTY_PARAMS[difficulty].spawnRate;
         const spawnRate = Math.max(40, baseSpawnRate / dynamicDifficulty);
         if (frameCount % Math.floor(spawnRate) === 0 && frameCount > 0) {
-          const rand = Math.random();
-          if (rand < 0.2) {
+          const isVolumeGate = Math.random() < 0.25;
+          if (isVolumeGate) {
             obstacles.push({
               type: 'volume', x: canvas.width, width: dynamicWidth,
               gapTop: canvas.height / 2, gapBottom: canvas.height / 2,
-              gapSize: canvas.height,
               passed: false, requiredVolume: 0.1 + Math.random() * 0.15, volumeProgress: 0, passedFrame: null
-            });
-          } else if (rand < 0.35) {
-            const targetNote = minNote + Math.floor(Math.random() * noteRange);
-            const endNote = targetNote + (Math.random() > 0.5 ? 4 : -4);
-            const obsTargetY = canvas.height - ((targetNote - minNote) / noteRange) * canvas.height;
-            const endTargetY = canvas.height - ((endNote - minNote) / noteRange) * canvas.height;
-            const baseGapSize = DIFFICULTY_PARAMS[difficulty].gapSize;
-            const currentGapSize = Math.max(150, (baseGapSize - (score / 15)) / dynamicDifficulty);
-
-            obstacles.push({
-              type: 'bend', x: canvas.width, width: dynamicWidth * 2,
-              gapTop: obsTargetY - currentGapSize / 2, gapBottom: obsTargetY + currentGapSize / 2,
-              gapSize: currentGapSize,
-              passed: false, targetNoteName: getNoteString(targetNote), targetY: obsTargetY, endTargetY, passedFrame: null
             });
           } else {
             const naturalNotes = [];
@@ -1165,12 +641,11 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({ audioController, onGameO
             const targetNote = naturalNotes[Math.floor(Math.random() * naturalNotes.length)];
             const obsTargetY = canvas.height - ((targetNote - minNote) / noteRange) * canvas.height;
             const baseGapSize = DIFFICULTY_PARAMS[difficulty].gapSize;
-            const currentGapSize = Math.max(150, (baseGapSize - (score / 15)) / dynamicDifficulty);
+            const currentGapSize = Math.max(35, (baseGapSize - (score / 15)) / dynamicDifficulty);
 
             obstacles.push({
               type: 'pitch', x: canvas.width, width: dynamicWidth,
               gapTop: obsTargetY - currentGapSize / 2, gapBottom: obsTargetY + currentGapSize / 2,
-              gapSize: currentGapSize,
               passed: false, targetNoteName: getNoteString(targetNote), targetY: obsTargetY, passedFrame: null
             });
           }
@@ -1199,9 +674,7 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({ audioController, onGameO
           localStorage.setItem('highScore', finalScore.toString());
           setHighScore(finalScore);
         }
-        const totalTimeSpent = (performance.now() - startTime) / 1000;
-        const accuracyPercentage = totalNotes > 0 ? (perfectGates / totalNotes) * 100 : 0;
-        onGameOver(finalScore, true, { perfectGates, maxCombo, accuracyPercentage, totalTimeSpent });
+        onGameOver(finalScore, true, { perfectGates, maxCombo, totalGates });
         return;
       }
 
@@ -1240,67 +713,15 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({ audioController, onGameO
           }
           obs.gapTop = (canvas.height / 2) * (1 - obs.volumeProgress!);
           obs.gapBottom = canvas.height - (canvas.height / 2) * (1 - obs.volumeProgress!);
-        } else if (obs.type === 'bend' && obs.endTargetY !== undefined && obs.targetY !== undefined && obs.gapSize !== undefined) {
-          const progress = Math.max(0, Math.min(1, (playerX - obs.x) / obs.width));
-          const currentY = obs.targetY + (obs.endTargetY - obs.targetY) * progress;
-          obs.gapTop = currentY - obs.gapSize / 2;
-          obs.gapBottom = currentY + obs.gapSize / 2;
-        } else if (obs.type === 'wave' && obs.targetY !== undefined && obs.waveAmplitude !== undefined && obs.waveFrequency !== undefined && obs.gapSize !== undefined) {
-          const currentY = obs.targetY + Math.sin((playerX - obs.x) * obs.waveFrequency) * obs.waveAmplitude;
-          obs.gapTop = currentY - obs.gapSize / 2;
-          obs.gapBottom = currentY + obs.gapSize / 2;
-        } else if (obs.type === 'zigzag' && obs.zigzagPoints && obs.gapSize !== undefined) {
-          const progressX = playerX - obs.x;
-          // Find the segment
-          let currentY = obs.targetY || canvas.height / 2;
-          for (let p = 0; p < obs.zigzagPoints.length - 1; p++) {
-            const p1 = obs.zigzagPoints[p];
-            const p2 = obs.zigzagPoints[p + 1];
-            if (progressX >= p1.x && progressX <= p2.x) {
-              const segmentProgress = (progressX - p1.x) / (p2.x - p1.x);
-              currentY = p1.y + (p2.y - p1.y) * segmentProgress;
-              break;
-            }
-          }
-          obs.gapTop = currentY - obs.gapSize / 2;
-          obs.gapBottom = currentY + obs.gapSize / 2;
         }
 
-        // Calculate player tilt for precise collision
-        const tilt = (targetY - playerY) * 0.05;
-        const playerWidth = 30;
-        const playerHeight = 20;
-        const corners = [
-          {x: -playerWidth/2, y: -playerHeight/2},
-          {x: playerWidth/2, y: -playerHeight/2},
-          {x: playerWidth/2, y: playerHeight/2},
-          {x: -playerWidth/2, y: playerHeight/2}
-        ];
-
-        // Rotate and translate corners
-        const rotatedCorners = corners.map(c => {
-          const rx = c.x * Math.cos(tilt) - c.y * Math.sin(tilt);
-          const ry = c.x * Math.sin(tilt) + c.y * Math.cos(tilt);
-          return {x: playerX + rx, y: playerY + ry};
-        });
-
-        // Check collision
-        let collision = false;
-        for (const corner of rotatedCorners) {
-          if (corner.x > obs.x && corner.x < obs.x + obs.width) {
-            if (corner.y < obs.gapTop || corner.y > obs.gapBottom) {
-              collision = true;
-              break;
-            }
-          }
-        }
-
-        if (collision) {
+        if (playerX + 15 > obs.x && playerX - 15 < obs.x + obs.width) {
+          if (playerY - 10 < obs.gapTop || playerY + 10 > obs.gapBottom) {
             if (!isDying) {
               isDying = true;
               shakeTimer = 60; // Increased duration for more impact
               playCrashSound();
-              triggerHaptic([200, 100, 200, 100, 300]); // Heavy crash haptic
+              triggerHaptic([100, 50, 100]);
               // Add explosion particles and debris
               for (let p = 0; p < 100; p++) {
                 const angle = Math.random() * Math.PI * 2;
@@ -1322,14 +743,15 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({ audioController, onGameO
               }
             }
             return;
+          }
         }
 
         if (!obs.passed && obs.x + obs.width < playerX) {
           obs.passed = true;
           obs.passedFrame = frameCount;
           combo++;
-          totalNotes++;
           obstaclesPassed++;
+          totalGates++;
           if (combo > maxCombo) maxCombo = combo;
           
           if (obs.type === 'volume') {
@@ -1424,7 +846,6 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({ audioController, onGameO
 
         if (!c.collected && Math.hypot(playerX - c.x, playerY - c.y) < 40) {
           c.collected = true;
-          triggerHaptic(20); // Light haptic for collection
           if (c.type === 'score') {
             score += 100 * comboMultiplier;
           } else {
@@ -1746,13 +1167,6 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({ audioController, onGameO
               const baseWinAlpha = 0.1 + layer * 0.15;
               
               const drawWindows = (x: number, y: number, w: number, h: number) => {
-                // Theme specific building additions
-                if (theme.name.includes('Neon') || theme.name.includes('Cyberpunk')) {
-                  if (layer === 2 && Math.sin(x) > 0.5) {
-                    drawNeonSign(ctx, x, y, w, h, frameCount);
-                  }
-                }
-
                 // Different window styles based on rand3
                 if (rand3 > 0.6) {
                   // Horizontal strips
@@ -1822,25 +1236,10 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({ audioController, onGameO
               if (hasSetback2) drawWindows(setX2, setbackY2, setW2, setH2);
               
               drawBuildingDetails(ctx, bX, drawY, bWidth, bHeight, layer, frameCount, theme.name);
-            } else if (theme.bgType === 'waterfall') {
-              drawWaterfall(ctx, bX, horizonY - layerYOffset, bWidth * 2.5, bHeight * 1.2, theme.landmark || '', frameCount);
-            } else if (theme.bgType === 'landmark') {
-              drawLandmark(ctx, bX, horizonY - layerYOffset, bWidth * 2.5, bHeight * 1.2, theme.landmark || '', frameCount);
             } else if (theme.bgType === 'mountains') {
               // Mountains
               drawMountain(ctx, bX, horizonY - layerYOffset, bWidth * 2.5, bHeight * 1.2, layerDepth * 2, theme.bgFront, theme.bgSide, theme.bgTop, frameCount);
               
-              // Theme specific mountain additions
-              if (theme.name.includes('Martian') || theme.name.includes('Desert')) {
-                drawHeatHaze(ctx, bX, horizonY - layerYOffset, bWidth * 2.5, bHeight * 1.2, frameCount);
-              } else if (theme.name.includes('Winter')) {
-                drawWindSnow(ctx, bX, horizonY - layerYOffset, bWidth * 2.5, bHeight * 1.2, frameCount);
-              } else if (theme.name.includes('Tropical')) {
-                if (layer === 2 && Math.sin(bX) > 0) {
-                  drawPalmTree(ctx, bX + bWidth, horizonY - layerYOffset, 40, frameCount);
-                }
-              }
-
               // Subtle shading for mountains too
               const mntGrad = ctx.createLinearGradient(0, horizonY - layerYOffset - bHeight * 1.2, 0, horizonY - layerYOffset);
               mntGrad.addColorStop(0, `rgba(255, 255, 255, ${rand1 * 0.1})`);
@@ -2013,12 +1412,6 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({ audioController, onGameO
       }
 
       // Milestone Markers
-      const currentMilestone = Math.floor(score / 1000) * 1000;
-      if (currentMilestone > lastHapticMilestone && currentMilestone > 0) {
-        triggerHaptic([50, 50, 100]); // Celebrate milestone
-        lastHapticMilestone = currentMilestone;
-      }
-
       for (let s = 1000; s <= score + 5000; s += 1000) {
         if (s > score && s < score + 2000) {
           const markerX = playerX + (s - score) * 2; // Simple mapping
@@ -2034,101 +1427,42 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({ audioController, onGameO
 
       // Obstacles (3D Gates)
       const currentObstacle = obstacles.find(o => !o.passed);
+      const isPerfectPitch = audioController.isSinging && currentObstacle && currentObstacle.type === 'pitch' && 
+                            audioController.currentNote === currentObstacle.targetNoteName && 
+                            Math.abs(audioController.currentCents) < 15;
+
       obstacles.forEach(obs => {
         ctx.save();
-        ctx.shadowColor = 'rgba(0, 0, 0, 0.6)';
-        ctx.shadowBlur = 15;
-        ctx.shadowOffsetX = -10;
-        ctx.shadowOffsetY = 10;
-
-        if (obs.type === 'pitch' || obs.type === 'bend' || obs.type === 'wave' || obs.type === 'zigzag') {
-          const color = obs.type === 'bend' ? '#38bdf8' : obs.type === 'wave' ? '#a855f7' : obs.type === 'zigzag' ? '#f97316' : (obs.shape === 'long' ? '#eab308' : theme.gateFront);
-
-          if (obs.type === 'bend' || obs.type === 'wave' || obs.type === 'zigzag') {
-            // Draw dynamic beam
-            drawDynamicEnergyBeam(ctx, obs, color, frameCount, theme);
-          } else {
-            drawEnergyBeam(ctx, obs.x, 0, obs.width, obs.gapTop, color, frameCount, true, obs.shape);
-            drawEnergyBeam(ctx, obs.x, obs.gapBottom, obs.width, canvas.height - obs.gapBottom, color, frameCount, false, obs.shape);
-          }
-          
-          ctx.restore();
-
-          const isPerfectPitch = audioController.isSinging && audioController.currentNote === obs.targetNoteName && Math.abs(audioController.currentCents) < 15;
-          const centsDiff = Math.abs(audioController.currentCents);
-          const isCorrectNote = audioController.currentNote === obs.targetNoteName;
-          const isNearPitch = audioController.isSinging && (isCorrectNote || centsDiff < 50);
-
-          if (isPerfectPitch) {
-            const pulse = Math.sin(frameCount * 0.15) * 0.5 + 0.5;
-            ctx.beginPath(); ctx.arc(obs.x + obs.width / 2, obs.targetY!, 25 + pulse * 15, 0, Math.PI * 2);
-            ctx.fillStyle = `rgba(74, 222, 128, ${0.1 + pulse * 0.2})`; ctx.fill();
-            ctx.beginPath(); ctx.arc(obs.x + obs.width / 2, obs.targetY!, 15 + pulse * 5, 0, Math.PI * 2);
-            ctx.fillStyle = `rgba(74, 222, 128, ${0.3 + pulse * 0.2})`; ctx.fill();
-            ctx.fillStyle = '#4ade80'; ctx.font = 'bold 26px sans-serif';
-          } else if (isNearPitch && obs === currentObstacle) {
-            const proximity = isCorrectNote ? Math.max(0, 1 - centsDiff / 50) : 0;
-            const pulse = Math.sin(frameCount * 0.2) * 0.5 + 0.5;
-            ctx.beginPath(); 
-            ctx.arc(obs.x + obs.width / 2, obs.targetY!, 20 + proximity * 10, 0, Math.PI * 2);
-            ctx.strokeStyle = `rgba(56, 189, 248, ${0.2 + pulse * 0.2})`;
-            ctx.setLineDash([5, 5]);
-            ctx.lineWidth = 2;
-            ctx.stroke();
-            ctx.setLineDash([]);
-            ctx.fillStyle = theme.textColor; ctx.font = 'bold 24px sans-serif';
-          } else {
-            ctx.fillStyle = theme.textColor; ctx.font = 'bold 24px sans-serif';
-          }
-          
-          ctx.textAlign = 'center';
-          ctx.fillText(obs.targetNoteName!, obs.x + obs.width / 2, obs.targetY!);
+        
+        if (obs.type === 'pitch') {
+          // Draw Energy Ring for pitch gates
+          drawEnergyRing(ctx, obs.x, 0, obs.width, canvas.height, obs.targetY!, frameCount, theme.gateFront, obs.passed);
           
           if (obs.lyricWord) {
-            const isCurrentGate = obs === currentObstacle;
-            if (isCurrentGate && isPerfectPitch) {
-              const pulse = Math.sin(frameCount * 0.15) * 0.5 + 0.5;
-              ctx.fillStyle = '#fef08a'; ctx.shadowColor = '#fde047'; ctx.shadowBlur = 10 + pulse * 10;
-              ctx.font = 'bold 28px sans-serif';
-            } else if (isCurrentGate) {
-              ctx.fillStyle = '#fde047'; ctx.shadowColor = 'transparent'; ctx.shadowBlur = 0;
-              ctx.font = 'bold 24px sans-serif';
-            } else {
-              ctx.fillStyle = theme.textColor; ctx.shadowColor = 'transparent'; ctx.shadowBlur = 0;
-              ctx.font = 'bold 22px sans-serif';
-            }
-            ctx.fillText(obs.lyricWord, obs.x + obs.width / 2, obs.targetY! - 35);
-            ctx.shadowColor = 'transparent'; ctx.shadowBlur = 0;
+            // Lyric words above gates removed from canvas as per UI overhaul
           }
-        } else {
+        } else if (obs.type === 'volume') {
+          // Volume gates - also use a modified energy ring or clean pillars
           const progress = obs.volumeProgress || 0;
-          const volumePulse = 1 + Math.sin(frameCount * 0.2) * (audioController.volume * 0.5);
+          const volumePulse = 1 + Math.sin(frameCount * 0.2) * (audioController.volume * 0.2);
           const gateColor = progress > 0.8 ? '#22c55e' : progress > 0.4 ? '#eab308' : '#ef4444';
+          const sideColor = progress > 0.8 ? '#166534' : progress > 0.4 ? '#a16207' : '#991b1b';
+          const topColor = progress > 0.8 ? '#4ade80' : progress > 0.4 ? '#facc15' : '#f87171';
           
-          ctx.shadowBlur = 10 * volumePulse;
-          drawEnergyBeam(ctx, obs.x, 0, obs.width, obs.gapTop * volumePulse, gateColor, frameCount, true);
-          drawEnergyBeam(ctx, obs.x, obs.gapBottom, obs.width, (canvas.height - obs.gapBottom) * volumePulse, gateColor, frameCount, false);
-          ctx.restore();
-
-          if (obs.passed && obs.passedFrame && frameCount - obs.passedFrame < 30) {
-            const alpha = 1 - (frameCount - obs.passedFrame) / 30;
-            ctx.save();
-            ctx.fillStyle = `rgba(34, 197, 94, ${alpha})`;
-            ctx.shadowColor = '#22c55e';
-            ctx.shadowBlur = 30;
-            ctx.font = 'bold 40px sans-serif';
-            ctx.textAlign = 'center';
-            ctx.fillText('SUCCESS!', obs.x + obs.width / 2, canvas.height / 2);
-            ctx.restore();
-          }
-
-          if (obs.volumeProgress! < 1) {
-            ctx.fillStyle = '#fca5a5'; ctx.font = 'bold 18px sans-serif'; ctx.textAlign = 'center';
-            ctx.fillText('SING LOUDER!', obs.x + obs.width / 2, canvas.height / 2 - 20);
-            ctx.fillStyle = 'rgba(0,0,0,0.5)'; ctx.fillRect(obs.x - 10, canvas.height / 2 - 5, obs.width + 20, 10);
-            ctx.fillStyle = progress > 0.8 ? '#22c55e' : '#fca5a5'; ctx.fillRect(obs.x - 10, canvas.height / 2 - 5, (obs.width + 20) * obs.volumeProgress!, 10);
+          const depth = 20;
+          draw3DBox(ctx, obs.x, 0, obs.width, obs.gapTop * volumePulse, depth, gateColor, sideColor, topColor);
+          draw3DBox(ctx, obs.x, obs.gapBottom, obs.width, (canvas.height - obs.gapBottom) * volumePulse, depth, gateColor, sideColor, topColor);
+          
+          if (!obs.passed && obs.volumeProgress! < 1) {
+            // "SING LOUDER" and progress bar removed from canvas as per UI overhaul
           }
         }
+        
+        if (obs.passed && obs.passedFrame && frameCount - obs.passedFrame < 30) {
+          // "PERFECT!" text removed from canvas as per UI overhaul
+        }
+        
+        ctx.restore();
       });
 
       // Collectibles (Glowing Orbs)
@@ -2226,16 +1560,82 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({ audioController, onGameO
       ctx.shadowOffsetX = -10;
       ctx.shadowOffsetY = 20;
 
-      // Plane Body (Low Poly Jet)
-      ctx.fillStyle = '#f8fafc';
+      // Plane Body (Sleek Jet)
+      const bodyGrad = ctx.createLinearGradient(0, -15, 0, 15);
+      bodyGrad.addColorStop(0, '#f8fafc');
+      bodyGrad.addColorStop(0.5, '#cbd5e1');
+      bodyGrad.addColorStop(1, '#94a3b8');
+      
+      ctx.fillStyle = bodyGrad;
       ctx.beginPath();
-      ctx.moveTo(25, 0); // Nose
-      ctx.lineTo(-5, -8); // Top
-      ctx.lineTo(-15, -15); // Tail top
-      ctx.lineTo(-10, 0); // Engine
-      ctx.lineTo(-15, 15); // Tail bottom
-      ctx.lineTo(-5, 8); // Bottom
+      ctx.moveTo(40, 0); // Pointy Nose
+      ctx.bezierCurveTo(20, -8, 0, -10, -20, -8); // Top curve
+      ctx.lineTo(-30, -15); // Tail fin top
+      ctx.lineTo(-25, 0); // Exhaust
+      ctx.lineTo(-30, 15); // Tail fin bottom
+      ctx.bezierCurveTo(-20, 8, 0, 10, 20, 8); // Bottom curve
       ctx.closePath();
+      ctx.fill();
+
+      // Cockpit Canopy
+      const canopyGrad = ctx.createLinearGradient(0, -8, 0, -2);
+      canopyGrad.addColorStop(0, '#0ea5e9');
+      canopyGrad.addColorStop(1, '#0369a1');
+      ctx.fillStyle = canopyGrad;
+      ctx.beginPath();
+      ctx.moveTo(15, -4);
+      ctx.bezierCurveTo(10, -10, -5, -10, -10, -4);
+      ctx.closePath();
+      ctx.fill();
+      
+      // Canopy highlight
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.4)';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(10, -6);
+      ctx.lineTo(0, -8);
+      ctx.stroke();
+
+      // Wings (Swept back)
+      const wingGrad = ctx.createLinearGradient(0, -30, 0, 30);
+      wingGrad.addColorStop(0, '#e2e8f0');
+      wingGrad.addColorStop(0.5, '#94a3b8');
+      wingGrad.addColorStop(1, '#e2e8f0');
+      ctx.fillStyle = wingGrad;
+      
+      // Top wing
+      ctx.beginPath();
+      ctx.moveTo(5, -2);
+      ctx.lineTo(-10, -35);
+      ctx.lineTo(-20, -35);
+      ctx.lineTo(-10, -2);
+      ctx.closePath();
+      ctx.fill();
+      
+      // Bottom wing
+      ctx.beginPath();
+      ctx.moveTo(5, 2);
+      ctx.lineTo(-10, 35);
+      ctx.lineTo(-20, 35);
+      ctx.lineTo(-10, 2);
+      ctx.closePath();
+      ctx.fill();
+
+      // Engine Glow (Clean blue)
+      const enginePulse = Math.sin(frameCount * 0.4) * 3;
+      const engineGrad = ctx.createRadialGradient(-25, 0, 0, -25, 0, 20 + enginePulse);
+      engineGrad.addColorStop(0, 'rgba(56, 189, 248, 0.8)');
+      engineGrad.addColorStop(0.4, 'rgba(56, 189, 248, 0.3)');
+      engineGrad.addColorStop(1, 'rgba(56, 189, 248, 0)');
+      ctx.fillStyle = engineGrad;
+      ctx.beginPath();
+      ctx.arc(-25, 0, 20 + enginePulse, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Engine Core
+      ctx.fillStyle = '#f0f9ff';
+      ctx.beginPath();
+      ctx.arc(-25, 0, 4 + enginePulse * 0.5, 0, Math.PI * 2);
       ctx.fill();
 
       // Plane Side Shading
@@ -2279,255 +1679,41 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({ audioController, onGameO
       }
       ctx.restore();
 
-      // UI
-      ctx.textAlign = 'center';
+      // UI drawing code removed from canvas as per UI overhaul
+      // All HUD elements are now rendered via the GameHUD React component
+
       const isPerfectOverall = audioController.isSinging && audioController.currentNote !== '--' && Math.abs(audioController.currentCents) < 15;
       
-      if (isPerfectOverall) {
-        const pulse = Math.sin(frameCount * 0.15) * 0.5 + 0.5;
-        ctx.beginPath(); ctx.arc(canvas.width / 2, 60, 40 + pulse * 15, 0, Math.PI * 2);
-        ctx.fillStyle = `rgba(74, 222, 128, ${0.1 + pulse * 0.15})`; ctx.fill();
-        ctx.beginPath(); ctx.arc(canvas.width / 2, 60, 30 + pulse * 5, 0, Math.PI * 2);
-        ctx.fillStyle = `rgba(74, 222, 128, ${0.2 + pulse * 0.2})`; ctx.fill();
+      if (feedbackTimer > 0) feedbackTimer--;
+
+      // Check for gate pass feedback
+      const lastPassedObstacle = obstacles.find(o => o.passed && o.passedFrame === frameCount);
+      if (lastPassedObstacle) {
+        currentFeedback = "PERFECT!";
+        feedbackTimer = 60;
       }
 
-      ctx.fillStyle = isPerfectOverall ? '#4ade80' : 'rgba(255, 255, 255, 0.9)';
-      ctx.font = 'bold 48px sans-serif';
-      ctx.fillText(audioController.currentNote, canvas.width / 2, 60);
-      
-      if (audioController.isSinging && audioController.currentNote !== '--') {
-        const cents = audioController.currentCents;
-        ctx.font = '16px sans-serif';
-        ctx.fillStyle = Math.abs(cents) < 15 ? '#4ade80' : '#f87171';
-        ctx.fillText(`${cents > 0 ? '+' : ''}${cents} cents`, canvas.width / 2, 90);
-      }
-
-      // --- Lyrics Display ---
-      if (song && !isDying) {
-        const currentIndex = currentLyricIndex;
-        const lyricsToShow = 6;
-        const centerY = canvas.height - 100;
-        const centerX = canvas.width / 2;
-
-        ctx.save();
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-
-        // Subtle background bar for lyrics readability
-        const lyricBgGrad = ctx.createLinearGradient(0, centerY - 50, 0, centerY + 50);
-        lyricBgGrad.addColorStop(0, 'rgba(0, 0, 0, 0)');
-        lyricBgGrad.addColorStop(0.5, 'rgba(0, 0, 0, 0.6)');
-        lyricBgGrad.addColorStop(1, 'rgba(0, 0, 0, 0)');
-        ctx.fillStyle = lyricBgGrad;
-        ctx.fillRect(0, centerY - 50, canvas.width, 100);
-
-        // Calculate starting X to center the current word
-        const currentWord = song.sequence[currentIndex]?.word || "";
-        ctx.font = 'bold 42px sans-serif';
-        const currentMetrics = ctx.measureText(currentWord);
-        let currentX = centerX - currentMetrics.width / 2;
-
-        for (let i = 0; i < lyricsToShow; i++) {
-          const index = currentIndex + i;
-          if (index >= song.sequence.length) break;
-
-          const word = song.sequence[index].word;
-          const isCurrent = i === 0;
-
-          // Style based on whether it's the current word
-          if (isCurrent) {
-            ctx.font = 'bold 42px sans-serif';
-            ctx.fillStyle = '#ffffff';
-            ctx.shadowColor = 'rgba(255, 255, 255, 0.8)';
-            ctx.shadowBlur = 20;
-          } else {
-            ctx.font = 'bold 28px sans-serif';
-            // Fade out words further in the future
-            // Current word is prominent (handled in isCurrent block), 
-            // future words start at 0.8 opacity and fade out
-            const opacity = Math.max(0.1, 0.8 - (i * 0.2));
-            ctx.fillStyle = `rgba(255, 255, 255, ${opacity})`;
-            ctx.shadowBlur = 0;
-          }
-
-          ctx.fillText(word, currentX, centerY);
-          
-          // Move X for the next word
-          const metrics = ctx.measureText(word);
-          currentX += metrics.width + 35; // Spacing between words
-          
-          // Stop if we go off screen
-          if (currentX > canvas.width) break;
-        }
-        ctx.restore();
-      }
-
-      // Breath Meter UI
-      if (DIFFICULTY_PARAMS[difficulty].breathPenaltyThreshold !== null) {
-        const penaltyThreshold = DIFFICULTY_PARAMS[difficulty].breathPenaltyThreshold!;
-        // Breath meter depletes as silenceFrames increases
-        const breathProgress = Math.max(0, 1 - (silenceFrames / penaltyThreshold));
-        
-        const meterWidth = 200;
-        const meterHeight = 12;
-        const meterX = canvas.width / 2 - meterWidth / 2;
-        const meterY = 110;
-
-        ctx.save();
-        
-        // Background
-        ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
-        ctx.strokeStyle = 'rgba(255, 255, 255, 0.2)';
-        ctx.lineWidth = 2;
-        ctx.fillRect(meterX, meterY, meterWidth, meterHeight);
-        ctx.strokeRect(meterX, meterY, meterWidth, meterHeight);
-
-        // Fill
-        if (breathProgress > 0) {
-          // Pulse effect when low breath
-          const isLow = breathProgress < 0.3;
-          const pulse = isLow ? Math.sin(frameCount * 0.2) * 0.5 + 0.5 : 1;
-          
-          // Color: Green to Red
-          const r = isLow ? 239 : 59;
-          const g = isLow ? 68 : 246;
-          const b = isLow ? 68 : 130;
-          
-          ctx.fillStyle = `rgba(${r}, ${g}, ${b}, ${0.5 + pulse * 0.5})`;
-          ctx.fillRect(meterX, meterY, meterWidth * breathProgress, meterHeight);
-          
-          if (isLow) {
-            ctx.shadowColor = `rgba(${r}, ${g}, ${b}, 1)`;
-            ctx.shadowBlur = 10;
-            ctx.fillRect(meterX, meterY, meterWidth * breathProgress, meterHeight);
-            ctx.shadowBlur = 0;
-            
-            // Warning text
-            ctx.fillStyle = '#ef4444';
-            ctx.font = 'bold 14px sans-serif';
-            ctx.textAlign = 'center';
-            ctx.fillText('LOW BREATH!', canvas.width / 2, meterY - 10);
-          }
-        }
-        
-        // Label
-        ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
-        ctx.font = 'bold 12px sans-serif';
-        ctx.textAlign = 'center';
-        ctx.fillText('BREATH', canvas.width / 2, meterY - 8);
-
-        ctx.restore();
-      }
-
-      // Danger indicator
-      if (isDying) {
-        ctx.fillStyle = 'rgba(255, 0, 0, 0.3)';
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
-      }
-
-      // UI
-      ctx.save();
-      ctx.textAlign = 'left';
-      ctx.fillStyle = 'white';
-      ctx.shadowColor = 'rgba(0, 0, 0, 0.8)';
-      ctx.shadowBlur = 10;
-      ctx.font = 'bold 32px monospace';
-      ctx.fillText(`SCORE: ${Math.floor(score).toString().padStart(6, '0')}`, 30, 45);
-      const savedHighScore = localStorage.getItem('highScore') || '0';
-      ctx.fillText(`HIGH SCORE: ${savedHighScore.padStart(6, '0')}`, 30, 80);
-      ctx.restore();
-
-      if (combo > 0) {
-        const baseScale = 1 + (comboMultiplier - 1) * 0.15;
-        const continuousPulse = Math.sin(frameCount * 0.25 * comboMultiplier) * (0.08 * comboMultiplier);
-        const hitPulse = (comboPulseTimer / 20) * 0.6;
-        const pulseScale = baseScale + continuousPulse + hitPulse;
-
-        ctx.save();
-        ctx.translate(30, 70);
-        ctx.scale(pulseScale, pulseScale);
-        
-        if (comboMultiplier >= 4) {
-          ctx.fillStyle = '#ff00ff'; ctx.shadowColor = '#ff00ff'; ctx.shadowBlur = 20 + Math.sin(frameCount * 0.3) * 10;
-        } else if (comboMultiplier >= 3) {
-          ctx.fillStyle = '#ffcc00'; ctx.shadowColor = '#ffcc00'; ctx.shadowBlur = 15 + Math.sin(frameCount * 0.2) * 8;
-        } else if (comboMultiplier >= 2) {
-          ctx.fillStyle = '#00ffff'; ctx.shadowColor = '#00ffff'; ctx.shadowBlur = 10;
-        } else {
-          ctx.fillStyle = '#ffffff'; ctx.shadowColor = 'transparent'; ctx.shadowBlur = 0;
-        }
-        
-        ctx.font = 'bold 24px sans-serif';
-        ctx.fillText(`${combo} Combo! (${comboMultiplier}x)`, 0, 0);
-        ctx.restore();
-
-        if (perfectStreak > 0) {
-          ctx.save();
-          ctx.translate(30, 100);
-          const streakPulse = 1 + Math.sin(frameCount * 0.3) * 0.1;
-          ctx.scale(streakPulse, streakPulse);
-          ctx.fillStyle = '#fde047';
-          ctx.shadowColor = '#fde047';
-          ctx.shadowBlur = 15;
-          ctx.font = 'italic bold 18px sans-serif';
-          ctx.fillText(`${perfectStreak} PERFECT STREAK!`, 0, 0);
-          ctx.restore();
-        }
-      }
-
-      if (song) {
-        ctx.fillStyle = 'rgba(255, 255, 255, 0.6)';
-        ctx.font = '16px sans-serif';
-        ctx.fillText(`Track: ${song.title}`, 30, combo > 0 ? 100 : 70);
-      }
-
-      // Theme UI
-      ctx.fillStyle = 'rgba(255, 255, 255, 0.4)';
-      ctx.font = '14px sans-serif';
-      ctx.textAlign = 'right';
-      ctx.fillText(`Theme: ${theme.name}`, canvas.width - 30, 40);
-
-      if (dynamicDifficulty !== 1.0) {
-        ctx.fillStyle = dynamicDifficulty > 1.0 ? '#f87171' : '#60a5fa';
-        ctx.font = 'bold 12px sans-serif';
-        ctx.fillText(`Dynamic Difficulty: ${dynamicDifficulty.toFixed(2)}x`, canvas.width - 30, 60);
-      }
-
-      if (penaltyVisualTimer > 0) {
-        ctx.save();
-        ctx.textAlign = 'center';
-        const scale = 1 + (1 - penaltyVisualTimer / 60) * 0.5;
-        ctx.translate(canvas.width / 2, canvas.height / 2 - 100);
-        ctx.scale(scale, scale);
-        ctx.fillStyle = `rgba(239, 68, 68, ${penaltyVisualTimer / 60})`;
-        ctx.shadowColor = '#ef4444';
-        ctx.shadowBlur = 20;
-        ctx.font = 'bold 36px sans-serif';
-        ctx.fillText('-50 BREATH PENALTY!', 0, 0);
-        ctx.restore();
-      }
-
-      if (checkpointVisualTimer > 0) {
-        ctx.save();
-        ctx.textAlign = 'center';
-        const scale = 1 + (1 - checkpointVisualTimer / 90) * 0.2;
-        ctx.translate(canvas.width / 2, canvas.height / 2);
-        ctx.scale(scale, scale);
-        ctx.fillStyle = `rgba(251, 191, 36, ${Math.min(1, checkpointVisualTimer / 30)})`;
-        ctx.shadowColor = '#fbbf24';
-        ctx.shadowBlur = 20;
-        ctx.font = 'bold italic 48px sans-serif';
-        ctx.fillText('CHECKPOINT REACHED', 0, 0);
-        ctx.restore();
-      }
-
-      frameCount++;
-      
-      if (shakeTimer > 0) {
-        ctx.restore();
-      }
-
-      drawPitchMeter(ctx, audioController, currentObstacle);
+      // Update HUD state once per frame
+      setHudData({
+        score,
+        highScore: parseInt(localStorage.getItem('highScore') || '0', 10),
+        combo,
+        comboMultiplier,
+        perfectStreak,
+        currentNote: audioController.currentNote,
+        cents: audioController.currentCents,
+        isSinging: audioController.isSinging,
+        isPerfect: isPerfectOverall,
+        lyrics: song ? song.sequence.slice(obstaclesPassed, obstaclesPassed + 6).map(s => s.word) : [],
+        breathProgress: DIFFICULTY_PARAMS[difficulty].breathPenaltyThreshold ? silenceFrames / DIFFICULTY_PARAMS[difficulty].breathPenaltyThreshold : 0,
+        isDying,
+        trackTitle: song ? song.title : '',
+        themeName: theme.name,
+        pitchY: (playerY / canvas.height),
+        volume: audioController.volume,
+        dynamicDifficulty,
+        feedbackMessage: feedbackTimer > 0 ? currentFeedback : undefined
+      });
 
       animationFrameId = requestAnimationFrame(loop);
     };
@@ -2536,17 +1722,13 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({ audioController, onGameO
 
     const handleTouch = (e: TouchEvent) => {
       if (isPausedRef.current) return;
-      const rect = canvas.getBoundingClientRect();
-      const touch = e.touches[0];
-      const scaleY = canvas.height / rect.height;
-      lastTouchY = (touch.clientY - rect.top) * scaleY;
       
       // Resume audio context on touch (required for some mobile browsers)
       audioController.resume();
     };
 
     const handleTouchEnd = () => {
-      lastTouchY = -1;
+      // No-op
     };
 
     canvas.addEventListener('touchstart', handleTouch, { passive: false });
@@ -2563,14 +1745,18 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({ audioController, onGameO
   }, [audioController, onGameOver, onCheckpointReached, difficulty, song, initialCheckpoint, level]);
 
   return (
-    <div className="fixed inset-0 z-50 flex flex-col bg-slate-950">
-      <div className="flex-1 relative">
+    <div className="fixed inset-0 z-50 flex flex-col bg-slate-950 overflow-hidden">
+      <div className="flex-1 relative overflow-hidden">
         <canvas
           ref={canvasRef}
           width={1280}
           height={720}
           className="w-full h-full object-contain touch-none"
         />
+        
+        {/* Modern React HUD Overlay */}
+        <GameHUD {...hudData} />
+
         {showOrientationWarning && (
           <div className="absolute inset-0 bg-slate-900/90 flex flex-col items-center justify-center text-white p-6 text-center z-50">
             <div className="animate-bounce mb-4">
@@ -2582,10 +1768,6 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({ audioController, onGameO
             <p className="text-slate-400">Vocal Flight is best played in landscape mode.</p>
           </div>
         )}
-      </div>
-      {/* Banner Ad Area */}
-      <div className="h-12 bg-slate-900 flex items-center justify-center text-slate-500 text-xs border-t border-slate-800">
-        Banner Ad Area
       </div>
     </div>
   );

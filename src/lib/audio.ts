@@ -6,6 +6,7 @@ export class AudioController {
   backgroundMusicSource: AudioBufferSourceNode | null = null;
 
   pitch: number = 0;
+  pitchHistory: number[] = [];
   volume: number = 0;
   isSinging: boolean = false;
   currentNote: string = '--';
@@ -63,6 +64,14 @@ export class AudioController {
     }
   }
 
+  private getMedian(values: number[]): number {
+    if (values.length === 0) return 0;
+    const sorted = [...values].sort((a, b) => a - b);
+    const half = Math.floor(sorted.length / 2);
+    if (sorted.length % 2) return sorted[half];
+    return (sorted[half - 1] + sorted[half]) / 2.0;
+  }
+
   update() {
     if (!this.analyser || !this.audioCtx) return;
 
@@ -81,12 +90,26 @@ export class AudioController {
     if (this.isSinging) {
       const detectedPitch = this.autoCorrelate(buffer, this.audioCtx.sampleRate);
       if (detectedPitch !== -1) {
-        this.pitch = detectedPitch;
-        this.updateNote(detectedPitch);
+        // Pitch outlier rejection
+        this.pitchHistory.push(detectedPitch);
+        if (this.pitchHistory.length > 5) {
+          this.pitchHistory.shift();
+        }
+
+        const medianPitch = this.getMedian(this.pitchHistory);
+        
+        // Only update if within a reasonable threshold (e.g., 30% of median)
+        // or if history is just starting
+        const threshold = medianPitch * 0.3;
+        if (this.pitchHistory.length < 3 || Math.abs(detectedPitch - medianPitch) < threshold) {
+          this.pitch = detectedPitch;
+          this.updateNote(detectedPitch);
+        }
       }
     } else {
       this.currentNote = '--';
       this.currentCents = 0;
+      this.pitchHistory = []; // Clear history when not singing
     }
   }
 
