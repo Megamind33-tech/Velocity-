@@ -1,36 +1,86 @@
-import { Application, Container, Graphics, Text, TextStyle } from 'pixi.js';
+import { Application, Container, FederatedPointerEvent, Graphics, Rectangle, Text, TextStyle } from 'pixi.js';
 
 interface LevelNode {
     id: number;
     x: number;
     y: number;
-    isUnlocked: boolean;
+}
+
+export interface WorldMapSceneOptions {
+    getMaxUnlockedLevel: () => number;
+    onSelectLevel: (levelId: number) => void;
 }
 
 /**
- * Procedural World Map Scene with vertical scrolling and Bezier paths.
+ * Procedural world map with paths between levels; tap an unlocked node to fly that track.
  */
-export class WorldMapScene {
-    private container: Container;
+export class WorldMapScene extends Container {
+    private readonly mapRoot: Container;
+    private readonly graphics: Graphics;
     private nodes: LevelNode[] = [];
-    private graphics: Graphics;
+    private readonly nodeGraphics: Graphics[] = [];
+    private readonly nodeLabels: Text[] = [];
+    private maxUnlocked: number;
+    private readonly getMaxUnlocked: () => number;
+    private readonly onSelectLevel: (levelId: number) => void;
+    private wheelHandler: ((e: WheelEvent) => void) | null = null;
 
-    constructor(private app: Application) {
-        this.container = new Container();
-        app.stage.addChild(this.container);
+    constructor(private readonly app: Application, options: WorldMapSceneOptions) {
+        super();
+        this.getMaxUnlocked = options.getMaxUnlockedLevel;
+        this.onSelectLevel = options.onSelectLevel;
+        this.maxUnlocked = this.getMaxUnlocked();
+
+        this.mapRoot = new Container();
+        this.addChild(this.mapRoot);
+
         this.graphics = new Graphics();
-        this.container.addChild(this.graphics);
-        
-        this.generateMap(20); // Generate 20 levels
-        this.drawPaths();
-        this.drawNodes();
-        
-        // Simple vertical scroll listener
-        window.addEventListener('wheel', (e) => {
-            this.container.y -= e.deltaY;
-            // Bound scrolling
-            this.container.y = Math.min(0, Math.max(this.container.y, -4000));
+        this.mapRoot.addChild(this.graphics);
+
+        this.eventMode = 'static';
+        this.hitArea = new Rectangle(0, 0, app.screen.width, app.screen.height);
+
+        this.generateMap(20);
+        this.redrawAll();
+
+        const title = new Text({
+            text: 'SECTOR MAP — tap a lit node to launch',
+            style: new TextStyle({
+                fill: '#00ffcc',
+                fontSize: 16,
+                fontWeight: 'bold',
+                fontFamily: 'Orbitron, Arial',
+            }),
         });
+        title.position.set(16, 12);
+        this.addChild(title);
+
+        this.wheelHandler = (e: WheelEvent) => {
+            if (!this.visible) return;
+            this.mapRoot.y -= e.deltaY;
+            const minY = Math.min(0, this.app.screen.height - this.mapContentHeight());
+            this.mapRoot.y = Math.min(0, Math.max(this.mapRoot.y, minY));
+        };
+        window.addEventListener('wheel', this.wheelHandler, { passive: true });
+    }
+
+    private mapContentHeight(): number {
+        if (this.nodes.length === 0) return 0;
+        const last = this.nodes[this.nodes.length - 1];
+        return 500 - last.y + 80;
+    }
+
+    public refreshUnlocks(): void {
+        this.maxUnlocked = this.getMaxUnlocked();
+        this.redrawNodesOnly();
+    }
+
+    public destroyMap(): void {
+        if (this.wheelHandler) {
+            window.removeEventListener('wheel', this.wheelHandler);
+            this.wheelHandler = null;
+        }
+        this.destroy({ children: true });
     }
 
     private generateMap(count: number): void {
@@ -40,55 +90,87 @@ export class WorldMapScene {
         for (let i = 0; i < count; i++) {
             this.nodes.push({
                 id: i + 1,
-                x: centerX + (Math.sin(i * 0.8) * 100), // S-curve layout
-                y: -(i * spacing) + 500, // Move up as levels increase
-                isUnlocked: i < 3 // First 3 unlocked by default
+                x: centerX + Math.sin(i * 0.8) * 100,
+                y: -(i * spacing) + 500,
             });
         }
     }
 
-    private drawPaths(): void {
+    private redrawAll(): void {
         this.graphics.clear();
         this.graphics.setStrokeStyle({ width: 4, color: 0x444444 });
 
         for (let i = 0; i < this.nodes.length - 1; i++) {
             const current = this.nodes[i];
             const next = this.nodes[i + 1];
-
-            // Use Bezier curve for path
             const cp1x = current.x;
             const cp1y = current.y - 150;
             const cp2x = next.x;
             const cp2y = next.y + 150;
-
             this.graphics.moveTo(current.x, current.y);
             this.graphics.bezierCurveTo(cp1x, cp1y, cp2x, cp2y, next.x, next.y);
             this.graphics.stroke();
         }
-    }
 
-    private drawNodes(): void {
+        for (const g of this.nodeGraphics) {
+            this.mapRoot.removeChild(g);
+            g.destroy();
+        }
+        for (const t of this.nodeLabels) {
+            this.mapRoot.removeChild(t);
+            t.destroy();
+        }
+        this.nodeGraphics.length = 0;
+        this.nodeLabels.length = 0;
+
         const style = new TextStyle({
             fill: '#ffffff',
             fontSize: 24,
-            fontWeight: 'bold'
+            fontWeight: 'bold',
         });
 
         for (const node of this.nodes) {
+            const unlocked = node.id <= this.maxUnlocked;
             const dot = new Graphics();
-            const color = node.isUnlocked ? 0x00ffcc : 0x333333;
-            
-            dot.circle(node.x, node.y, 30);
+            const color = unlocked ? 0x00ffcc : 0x333333;
+            dot.circle(0, 0, 30);
             dot.fill(color);
-            dot.setStrokeStyle({ width: 3, color: 0xffffff });
-            dot.stroke();
-            
+            dot.stroke({ width: 3, color: 0xffffff });
+            dot.position.set(node.x, node.y);
+            dot.eventMode = 'static';
+            dot.cursor = unlocked ? 'pointer' : 'default';
+            dot.on('pointerdown', (e: FederatedPointerEvent) => {
+                e.stopPropagation();
+                if (node.id <= this.maxUnlocked) {
+                    this.onSelectLevel(node.id);
+                }
+            });
+
             const txt = new Text({ text: node.id.toString(), style });
             txt.anchor.set(0.5);
             txt.position.set(node.x, node.y);
-            
-            this.container.addChild(dot);
-            this.container.addChild(txt);
+            txt.eventMode = 'none';
+
+            this.mapRoot.addChild(dot);
+            this.mapRoot.addChild(txt);
+            this.nodeGraphics.push(dot);
+            this.nodeLabels.push(txt);
+        }
+    }
+
+    private redrawNodesOnly(): void {
+        this.maxUnlocked = this.getMaxUnlocked();
+        for (let i = 0; i < this.nodes.length; i++) {
+            const node = this.nodes[i];
+            const dot = this.nodeGraphics[i];
+            if (!dot) continue;
+            const unlocked = node.id <= this.maxUnlocked;
+            dot.clear();
+            const color = unlocked ? 0x00ffcc : 0x333333;
+            dot.circle(0, 0, 30);
+            dot.fill(color);
+            dot.stroke({ width: 3, color: 0xffffff });
+            dot.cursor = unlocked ? 'pointer' : 'default';
         }
     }
 }

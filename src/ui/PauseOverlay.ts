@@ -16,9 +16,14 @@ export class PauseOverlay extends Container {
     private pauseBtn: Container;
     private pauseMenu: Container;
     private pausedLabel: Text;
+    private readonly onMap?: () => void;
 
-    constructor(private readonly app: Application) {
+    constructor(
+        private readonly app: Application,
+        options?: { onMap?: () => void }
+    ) {
         super();
+        this.onMap = options?.onMap;
 
         this.pauseBtn = this.makeButton('PAUSE', () => this.enterPause());
         this.pauseBtn.position.set(app.screen.width - 120, 16);
@@ -38,23 +43,40 @@ export class PauseOverlay extends Container {
         this.pauseMenu.addChild(this.pausedLabel);
 
         const resume = this.makeButton('RESUME', () => this.exitPause());
-        resume.position.set(app.screen.width / 2 - 50, app.screen.height / 2 + 20);
+        resume.position.set(app.screen.width / 2 - 110, app.screen.height / 2 + 20);
         this.pauseMenu.addChild(resume);
 
+        if (this.onMap) {
+            const mapBtn = this.makeButton('MAP', () => {
+                this.exitPause();
+                this.onMap!();
+            });
+            mapBtn.position.set(app.screen.width / 2 + 10, app.screen.height / 2 + 20);
+            this.pauseMenu.addChild(mapBtn);
+        }
+
         this.addChild(this.pauseMenu);
+    }
+
+    public setGameplayVisible(visible: boolean): void {
+        this.pauseBtn.visible = visible;
+        if (!visible) {
+            this.pauseMenu.visible = false;
+        }
     }
 
     private makeButton(label: string, onClick: () => void): Container {
         const c = new Container();
         c.eventMode = 'static';
         c.cursor = 'pointer';
+        const w = label.length > 6 ? 120 : 100;
         const bg = new Graphics();
-        bg.roundRect(0, 0, 100, 40, 8);
+        bg.roundRect(0, 0, w, 40, 8);
         bg.fill({ color: 0x111122, alpha: 0.95 });
         bg.stroke({ color: 0x00ffcc, width: 2 });
         const t = new Text({ text: label, style: btnStyle });
         t.anchor.set(0.5);
-        t.position.set(50, 20);
+        t.position.set(w / 2, 20);
         c.addChild(bg, t);
         c.on('pointerdown', (e) => {
             e.stopPropagation();

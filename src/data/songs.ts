@@ -30,3 +30,10 @@ export const SONGS: Song[] = [
         ]
     }
 ];
+
+export function getSongForLevel(levelId: number): Song {
+    if (SONGS.length === 0) {
+        throw new Error('No songs configured');
+    }
+    return SONGS[(Math.max(1, levelId) - 1) % SONGS.length];
+}

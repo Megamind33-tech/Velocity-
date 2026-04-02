@@ -23,7 +23,7 @@ export class Engine {
     private onTick(): void {
         const delta = Ticker.shared.elapsedMS / 1000;
 
-        if (!GameState.paused) {
+        if (GameState.gameplayActive && !GameState.paused) {
             this.accumulator += Math.min(delta, 0.25);
 
             while (this.accumulator >= this.fixedTimeStep) {
