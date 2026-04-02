@@ -1,5 +1,7 @@
 import { Application, Container, FederatedPointerEvent, Graphics, Rectangle, Text, TextStyle } from 'pixi.js';
 import { getUnlockedLevelIds } from '../data/localProgress';
+import { createGameButton } from '../ui/game/GameUIComponents';
+import { GAME_SIZES } from '../ui/game/GameUITheme';
 
 interface LevelNode {
     id: number;
@@ -58,6 +60,7 @@ export class WorldMapScene {
     constructor(
         private readonly app: Application,
         private readonly onSelectLevel: (levelId: number) => void,
+        private readonly onBack?: () => void,
         levelCount: number = 20
     ) {
         this.root = new Container();
@@ -91,8 +94,14 @@ export class WorldMapScene {
             style: new TextStyle({ fill: '#8899aa', fontSize: 12, fontFamily: 'system-ui, sans-serif' }),
         });
         hint.anchor.set(0.5, 1);
-        hint.position.set(app.screen.width / 2, app.screen.height - 20);
+        hint.position.set(app.screen.width / 2, app.screen.height - 56);
         this.root.addChild(hint);
+
+        if (this.onBack) {
+            const backBtn = createGameButton('BACK', () => this.onBack!(), 'secondary', 'medium');
+            backBtn.position.set(GAME_SIZES.spacing.md, GAME_SIZES.spacing.md);
+            this.root.addChild(backBtn);
+        }
 
         this.root.eventMode = 'static';
         this.root.hitArea = new Rectangle(0, 0, app.screen.width, app.screen.height);
@@ -195,6 +204,10 @@ export class WorldMapScene {
                 return;
             }
         }
+    }
+
+    getRoot(): Container {
+        return this.root;
     }
 
     destroy(): void {
