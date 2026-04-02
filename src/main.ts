@@ -1,5 +1,5 @@
 import './index.css';
-import { Application, Container, Sprite, Graphics, Text, TextStyle, Ticker } from 'pixi.js';
+import { Application, Container, Sprite, Graphics, Text, TextStyle, Texture, Ticker } from 'pixi.js';
 import { ResponsiveUIManager } from './ui/ResponsiveUIManager';
 import { WorldMapScene } from './scenes/WorldMapScene';
 import { EventBus } from './events/EventBus';
@@ -49,7 +49,7 @@ import {
     registerRunEndCallbacks,
     setLastRunSummary,
 } from './ui/game/gameFlowBridge';
-import { preloadVelocityUiTextures } from './ui/game/velocityUiArt';
+import { getVelocityUiTexture, preloadVelocityUiTextures } from './ui/game/velocityUiArt';
 
 function showInitFailure(message: string, detail?: string): void {
     const el = document.createElement('div');
@@ -329,13 +329,27 @@ async function init() {
 
     async function ensureParallax(): Promise<void> {
         if (parallaxReady) return;
-        const textures = [0x111122, 0x1a1a3a, 0x24244a].map((color) => {
-            const g = new Graphics().rect(0, 0, 512, 512).fill({ color });
-            for (let i = 0; i < 50; i++) {
-                g.circle(Math.random() * 512, Math.random() * 512, 1).fill({ color: 0xffffff, alpha: 0.5 });
+        const slide = getVelocityUiTexture('slide_track');
+        const fill = getVelocityUiTexture('panel_fill');
+        let textures: Texture[];
+        if (slide && fill) {
+            const t1 = slide;
+            const t2 = fill;
+            const g = new Graphics().rect(0, 0, 512, 512).fill({ color: 0x0a0a18 });
+            for (let i = 0; i < 80; i++) {
+                g.circle(Math.random() * 512, Math.random() * 512, 1).fill({ color: 0xffffff, alpha: 0.35 });
             }
-            return app.renderer.generateTexture(g);
-        });
+            const t3 = app.renderer.generateTexture(g);
+            textures = [t1, t2, t3];
+        } else {
+            textures = [0x111122, 0x1a1a3a, 0x24244a].map((color) => {
+                const gr = new Graphics().rect(0, 0, 512, 512).fill({ color });
+                for (let i = 0; i < 50; i++) {
+                    gr.circle(Math.random() * 512, Math.random() * 512, 1).fill({ color: 0xffffff, alpha: 0.5 });
+                }
+                return app.renderer.generateTexture(gr);
+            });
+        }
         await parallaxSystem.init(player, textures);
         parallaxReady = true;
     }

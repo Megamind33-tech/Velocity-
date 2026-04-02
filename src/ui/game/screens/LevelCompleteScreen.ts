@@ -1,10 +1,19 @@
 import { Application, Text, TextStyle } from 'pixi.js';
 import { BaseGameScreen } from '../GameUIManager';
-import { createGameButton, createStatDisplay, createGameLabel } from '../GameUIComponents';
+import { createStatDisplay, createGameLabel } from '../GameUIComponents';
 import { GAME_COLORS, GAME_FONTS, GAME_SIZES } from '../GameUITheme';
 import { gameFlow, getLastRunSummary, runEndActions } from '../gameFlowBridge';
+import {
+    buildVelocityModal,
+    repositionVelocityModal,
+    syncModalShellResize,
+    velocityModalInnerWidth,
+    type VelocityModalLayout,
+} from '../velocityModalLayout';
+import { createVelocityGameButton } from '../velocityUiButtons';
 
 export class LevelCompleteScreen extends BaseGameScreen {
+    private layout!: VelocityModalLayout;
     private scoreValueText!: Text;
     private starsLabel!: Text;
 
@@ -16,46 +25,55 @@ export class LevelCompleteScreen extends BaseGameScreen {
     private setupUI(): void {
         const width = this.app.screen.width;
         const height = this.app.screen.height;
+        const panelW = Math.min(360, width - 28);
+        const panelH = Math.min(440, height - 48);
 
-        const titleStyle = new TextStyle({
-            fill: GAME_COLORS.accent_green,
-            fontSize: GAME_SIZES.font.xxxl,
-            fontWeight: 'bold',
-            fontFamily: GAME_FONTS.arcade,
-        });
-        const title = new Text({ text: 'SECTOR CLEAR', style: titleStyle });
-        title.anchor.set(0.5);
-        title.position.set(width / 2, height / 4);
-        this.container.addChild(title);
+        this.layout = buildVelocityModal(
+            this.container,
+            this.app,
+            'SECTOR CLEAR',
+            panelW,
+            panelH,
+            GAME_COLORS.accent_green
+        );
+        const { body, innerW } = this.layout;
 
-        const statsY = height / 2 - 24;
         const scoreDisplay = createStatDisplay('RUN SCORE', '0', GAME_COLORS.accent_gold);
-        scoreDisplay.position.set(width / 2 - 100, statsY);
-        this.container.addChild(scoreDisplay);
+        scoreDisplay.position.set((innerW - 200) / 2, 0);
+        body.addChild(scoreDisplay);
         this.scoreValueText = scoreDisplay.children[1] as Text;
 
         const stars = createGameLabel('STARS: —', GAME_SIZES.font.lg, GAME_COLORS.primary, true);
-        stars.position.set(width / 2 - 100, statsY + 56);
-        this.container.addChild(stars);
+        stars.position.set((innerW - 200) / 2, 56);
+        body.addChild(stars);
         this.starsLabel = stars;
 
-        const nextBtn = createGameButton('NEXT LEVEL', () => {
-            runEndActions().onNextLevel();
-        }, 'success', 'large');
-        nextBtn.position.set(width / 2 - GAME_SIZES.button.large.width / 2, height * 0.7);
-        this.container.addChild(nextBtn);
+        const btnW = Math.min(268, innerW);
+        const btnH = 48;
+        let y = 120;
 
-        const retryBtn = createGameButton('RETRY', () => {
-            runEndActions().onRetryRun();
-        }, 'secondary', 'medium');
-        retryBtn.position.set(width / 2 - GAME_SIZES.button.medium.width / 2, height * 0.78);
-        this.container.addChild(retryBtn);
+        const nextBtn = createVelocityGameButton('NEXT LEVEL', 'success', () => runEndActions().onNextLevel(), {
+            width: btnW,
+            height: btnH,
+        });
+        nextBtn.position.set((innerW - btnW) / 2, y);
+        body.addChild(nextBtn);
+        y += btnH + 10;
 
-        const mapBtn = createGameButton('MISSION SELECT', () => {
-            gameFlow().openMissionSelect();
-        }, 'secondary', 'medium');
-        mapBtn.position.set(width / 2 - GAME_SIZES.button.medium.width / 2, height * 0.86);
-        this.container.addChild(mapBtn);
+        const retryBtn = createVelocityGameButton('RETRY', 'secondary', () => runEndActions().onRetryRun(), {
+            width: btnW,
+            height: btnH,
+        });
+        retryBtn.position.set((innerW - btnW) / 2, y);
+        body.addChild(retryBtn);
+        y += btnH + 10;
+
+        const mapBtn = createVelocityGameButton('MISSION SELECT', 'secondary', () => gameFlow().openMissionSelect(), {
+            width: btnW,
+            height: btnH,
+        });
+        mapBtn.position.set((innerW - btnW) / 2, y);
+        body.addChild(mapBtn);
     }
 
     refreshRunSummary(): void {
@@ -71,24 +89,12 @@ export class LevelCompleteScreen extends BaseGameScreen {
     }
 
     resize(width: number, height: number): void {
-        const children = this.container.children;
-        if (children.length > 0) {
-            children[0].position.set(width / 2, height / 4);
-        }
-        if (children.length > 1) {
-            children[1].position.set(width / 2 - 100, height / 2 - 24);
-        }
-        if (children.length > 2) {
-            children[2].position.set(width / 2 - 100, height / 2 + 32);
-        }
-        if (children.length > 3) {
-            children[3].position.set(width / 2 - GAME_SIZES.button.large.width / 2, height * 0.7);
-        }
-        if (children.length > 4) {
-            children[4].position.set(width / 2 - GAME_SIZES.button.medium.width / 2, height * 0.78);
-        }
-        if (children.length > 5) {
-            children[5].position.set(width / 2 - GAME_SIZES.button.medium.width / 2, height * 0.86);
-        }
+        syncModalShellResize(this.layout, this.container, width, height);
+        const panelW = Math.min(360, width - 28);
+        const panelH = Math.min(440, height - 48);
+        this.layout.panelW = panelW;
+        this.layout.panelH = panelH;
+        this.layout.innerW = velocityModalInnerWidth(panelW);
+        repositionVelocityModal(this.layout, width, height);
     }
 }

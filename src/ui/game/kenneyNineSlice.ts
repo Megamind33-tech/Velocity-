@@ -2,7 +2,7 @@
  * Nine-slice for Kenney UI Pack rectangles (192×64): buttons + input outline panel.
  */
 
-import { Container, FederatedPointerEvent, NineSliceSprite, Text, TextStyle } from 'pixi.js';
+import { Container, FederatedPointerEvent, NineSliceSprite, Text, TextStyle, TilingSprite } from 'pixi.js';
 import { getVelocityUiTexture, type VelocityUiTextureKey } from './velocityUiArt';
 import { GAME_COLORS, GAME_FONTS } from './GameUITheme';
 
@@ -104,4 +104,81 @@ export function createKenneyNineSliceButton(
     root.on('pointercancel', onUp);
 
     return root;
+}
+
+export function createKenneyFramedPanelWithContent(
+    width: number,
+    height: number
+): { root: Container; content: Container } | null {
+    const frameTex = getVelocityUiTexture('panel_frame');
+    const fillTex = getVelocityUiTexture('panel_fill');
+    if (!frameTex || !fillTex) return null;
+
+    const root = new Container();
+    const inset = 10;
+    const iw = Math.max(40, width - inset * 2);
+    const ih = Math.max(40, height - inset * 2);
+
+    const fill = new NineSliceSprite({
+        texture: fillTex,
+        leftWidth: SLICE_L,
+        rightWidth: SLICE_R,
+        topHeight: SLICE_T,
+        bottomHeight: SLICE_B,
+        width: iw,
+        height: ih,
+    });
+    fill.position.set(inset, inset);
+    fill.alpha = 0.88;
+
+    const frame = new NineSliceSprite({
+        texture: frameTex,
+        leftWidth: SLICE_L,
+        rightWidth: SLICE_R,
+        topHeight: SLICE_T,
+        bottomHeight: SLICE_B,
+        width,
+        height,
+    });
+
+    const content = new Container();
+    root.addChild(fill, frame, content);
+    content.position.set(inset + 12, inset + 14);
+    return { root, content };
+}
+
+export function createKenneyFramedPanel(width: number, height: number): Container | null {
+    return createKenneyFramedPanelWithContent(width, height)?.root ?? null;
+}
+
+/** Horizontal meter using Kenney slide strips (tiling). */
+export function createKenneyHProgressBar(
+    width: number,
+    height: number
+): (Container & { setProgress: (p01: number) => void }) | null {
+    const trackTex = getVelocityUiTexture('slide_track');
+    const fillTex = getVelocityUiTexture('slide_fill');
+    if (!trackTex || !fillTex) return null;
+
+    const root = new Container() as Container & { setProgress: (p01: number) => void };
+    const track = new TilingSprite({ texture: trackTex, width, height });
+    track.alpha = 0.85;
+    const fill = new TilingSprite({ texture: fillTex, width: 0, height });
+    fill.alpha = 0.95;
+    fill.height = height;
+    root.addChild(track, fill);
+
+    root.setProgress = (p01: number) => {
+        const p = Math.max(0, Math.min(1, p01));
+        fill.width = Math.max(0, width * p);
+    };
+    return root;
+}
+
+/** Stats / HUD plate: filled block + frame border. */
+export function createKenneyHudPlate(width: number, height: number): Container | null {
+    const framed = createKenneyFramedPanel(width, height);
+    if (!framed) return null;
+    framed.alpha = 0.92;
+    return framed;
 }
