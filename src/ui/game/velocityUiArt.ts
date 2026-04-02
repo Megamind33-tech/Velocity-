@@ -9,15 +9,21 @@ const BASE_ADV = `${import.meta.env.BASE_URL}kenney-ui-pack-adventure/PNG/Defaul
 
 export type VelocityUiTextureKey =
     | 'panel_blue'
+    | 'panel_brown'
     | 'button_grey'
     | 'button_red'
-    | 'progress_blue';
+    | 'button_brown'
+    | 'progress_blue'
+    | 'pattern_grid_blueprint';
 
 const MANIFEST: Record<VelocityUiTextureKey, string> = {
     panel_blue: `${BASE_ADV}panel_grey_bolts_blue.png`,
+    panel_brown: `${BASE_ADV}panel_brown.png`,
     button_grey: `${BASE_ADV}button_grey.png`,
     button_red: `${BASE_ADV}button_red.png`,
+    button_brown: `${BASE_ADV}button_brown.png`,
     progress_blue: `${BASE_ADV}progress_blue_small_border.png`,
+    pattern_grid_blueprint: `${BASE_ADV}pattern_grid_blueprint.png`,
 };
 
 const cache = new Map<VelocityUiTextureKey, Texture>();
