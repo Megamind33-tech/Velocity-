@@ -4,7 +4,7 @@ import { createGamePanel, createGameButton, createStatDisplay } from '../GameUIC
 import { GAME_COLORS, GAME_FONTS, GAME_SIZES } from '../GameUITheme';
 
 export class RewardsScreen extends BaseGameScreen {
-    private panel: Container & { content: Container };
+    private panel!: Container & { content: Container };
 
     constructor(app: Application) {
         super(app);

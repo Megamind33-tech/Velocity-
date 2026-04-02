@@ -4,7 +4,7 @@ import { createGamePanel, createGameButton } from '../GameUIComponents';
 import { GAME_SIZES } from '../GameUITheme';
 
 export class PauseMenuScreen extends BaseGameScreen {
-    private panel: Container & { content: Container };
+    private panel!: Container & { content: Container };
 
     constructor(app: Application) {
         super(app);
