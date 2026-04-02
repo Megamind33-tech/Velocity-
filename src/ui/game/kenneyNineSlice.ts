@@ -2,7 +2,7 @@
  * Nine-slice helpers for Kenney UI tiles (fixed 64×64 panels, 48×24 buttons).
  */
 
-import { Container, FederatedPointerEvent, NineSliceSprite, Text, TextStyle } from 'pixi.js';
+import { Container, FederatedPointerEvent, NineSliceSprite, Text, TextStyle, TilingSprite } from 'pixi.js';
 import { getVelocityUiTexture, type VelocityUiTextureKey } from './velocityUiArt';
 import { GAME_COLORS, GAME_FONTS } from './GameUITheme';
 
@@ -13,8 +13,14 @@ const PANEL_SLICE = 16;
 const BTN_SLICE_X = 12;
 const BTN_SLICE_Y = 8;
 
-export function createKenneyPanelNineSlice(width: number, height: number): NineSliceSprite | null {
-    const tex = getVelocityUiTexture('panel_blue');
+export type KenneyPanelKey = 'panel_blue' | 'panel_brown';
+
+export function createKenneyPanelNineSlice(
+    width: number,
+    height: number,
+    panelKey: KenneyPanelKey = 'panel_blue'
+): NineSliceSprite | null {
+    const tex = getVelocityUiTexture(panelKey);
     if (!tex) return null;
     return new NineSliceSprite({
         texture: tex,
@@ -27,7 +33,7 @@ export function createKenneyPanelNineSlice(width: number, height: number): NineS
     });
 }
 
-export type KenneyButtonVariant = 'primary' | 'neutral' | 'danger';
+export type KenneyButtonVariant = 'primary' | 'neutral' | 'danger' | 'accent';
 
 /**
  * Interactive button: nine-slice background + centered label.
@@ -39,7 +45,10 @@ export function createKenneyNineSliceButton(
     variant: KenneyButtonVariant,
     onClick: () => void
 ): Container | null {
-    const key: VelocityUiTextureKey = variant === 'danger' ? 'button_red' : 'button_grey';
+    let key: VelocityUiTextureKey;
+    if (variant === 'danger') key = 'button_red';
+    else if (variant === 'accent') key = 'button_brown';
+    else key = 'button_grey';
     const tex = getVelocityUiTexture(key);
     if (!tex) return null;
 
@@ -59,7 +68,13 @@ export function createKenneyNineSliceButton(
     root.addChild(bg);
 
     const textFill =
-        variant === 'danger' ? 0xffffff : variant === 'primary' ? GAME_COLORS.primary : GAME_COLORS.text_primary;
+        variant === 'danger'
+            ? 0xffffff
+            : variant === 'primary'
+              ? GAME_COLORS.primary
+              : variant === 'accent'
+                ? GAME_COLORS.accent_gold
+                : GAME_COLORS.text_primary;
     const style = new TextStyle({
         fill: textFill,
         fontSize: Math.min(15, Math.floor(height * 0.36)),
@@ -97,4 +112,17 @@ export function createKenneyNineSliceButton(
     root.on('pointercancel', onUp);
 
     return root;
+}
+
+/**
+ * Subtle tiled blueprint pattern over the menu (call after createMenuBackdrop).
+ */
+export function attachKenneyMenuPattern(parent: Container, screenW: number, screenH: number): void {
+    const tex = getVelocityUiTexture('pattern_grid_blueprint');
+    if (!tex) return;
+    const tile = new TilingSprite({ texture: tex, width: screenW, height: screenH });
+    tile.alpha = 0.14;
+    tile.position.set(0, 0);
+    const idx = Math.min(1, parent.children.length);
+    parent.addChildAt(tile, idx);
 }

@@ -1,15 +1,24 @@
 /**
- * MainMenuScreen: Game start menu with level selection
+ * MainMenuScreen: title + Kenney textured buttons when art is preloaded
  */
 
-import { Application, Container, Text, TextStyle } from 'pixi.js';
+import { Application, Container, Graphics, Text, TextStyle } from 'pixi.js';
 import { BaseGameScreen } from '../GameUIManager';
 import { createGameButton, createMenuBackdrop } from '../GameUIComponents';
 import { GAME_COLORS, GAME_FONTS, GAME_SIZES } from '../GameUITheme';
 import { gameFlow } from '../gameFlowBridge';
+import {
+    attachKenneyMenuPattern,
+    createKenneyNineSliceButton,
+    createKenneyPanelNineSlice,
+} from '../kenneyNineSlice';
+import { velocityUiArtReady } from '../velocityUiArt';
+
+const TITLE_PLATE_H = 112;
 
 export class MainMenuScreen extends BaseGameScreen {
     private backdrop!: Container;
+    private titlePlate!: Container;
     private titleText!: Text;
     private subtitleText!: Text;
     private buttonColumn!: Container;
@@ -25,6 +34,10 @@ export class MainMenuScreen extends BaseGameScreen {
 
         this.backdrop = createMenuBackdrop(width, height);
         this.container.addChild(this.backdrop);
+        attachKenneyMenuPattern(this.backdrop, width, height);
+
+        this.titlePlate = new Container();
+        this.container.addChild(this.titlePlate);
 
         const titleStyle = new TextStyle({
             fill: GAME_COLORS.primary,
@@ -56,14 +69,33 @@ export class MainMenuScreen extends BaseGameScreen {
         this.buttonColumn = new Container();
         this.container.addChild(this.buttonColumn);
 
-        this.layoutForSize(width, height);
+        this.layoutTitlePlate(width, height);
+        this.layoutTextAndButtons(width, height);
         this.buildButtons();
     }
 
-    private layoutForSize(width: number, height: number): void {
-        this.titleText.position.set(width / 2, height * 0.18);
-        this.subtitleText.position.set(width / 2, height * 0.18 + 52);
-        this.buttonColumn.position.set(width / 2, height * 0.42);
+    private layoutTitlePlate(width: number, height: number): void {
+        this.titlePlate.removeChildren();
+        const plateW = Math.min(340, width - 36);
+        const plate = createKenneyPanelNineSlice(plateW, TITLE_PLATE_H, 'panel_brown');
+        if (plate) {
+            this.titlePlate.addChild(plate);
+        } else {
+            const g = new Graphics();
+            g.roundRect(0, 0, plateW, TITLE_PLATE_H, 12);
+            g.fill({ color: GAME_COLORS.panel_bg, alpha: 0.92 });
+            g.stroke({ color: GAME_COLORS.primary, width: 2, alpha: 0.5 });
+            this.titlePlate.addChild(g);
+        }
+        this.titlePlate.position.set(width / 2 - plateW / 2, Math.max(16, height * 0.08));
+    }
+
+    private layoutTextAndButtons(width: number, height: number): void {
+        const plateTop = this.titlePlate.y;
+        this.titleText.position.set(width / 2, plateTop + 36);
+        this.subtitleText.position.set(width / 2, plateTop + 78);
+        const colY = plateTop + TITLE_PLATE_H + 28;
+        this.buttonColumn.position.set(width / 2, colY);
     }
 
     private buildButtons(): void {
@@ -72,9 +104,19 @@ export class MainMenuScreen extends BaseGameScreen {
         const btnW = Math.min(288, Math.max(200, width - 48));
         const btnH = 48;
         const gap = 12;
+        const useArt = velocityUiArtReady();
 
-        const addBtn = (label: string, type: 'primary' | 'secondary' | 'accent', onClick: () => void) => {
-            const b = createGameButton(label, onClick, type, 'large', { width: btnW, height: btnH });
+        const addBtn = (
+            label: string,
+            variant: 'primary' | 'secondary' | 'accent',
+            onClick: () => void
+        ) => {
+            const v =
+                variant === 'primary' ? 'primary' : variant === 'accent' ? 'accent' : 'neutral';
+            const kenney = useArt && createKenneyNineSliceButton(label, btnW, btnH, v, onClick);
+            const b =
+                kenney ||
+                createGameButton(label, onClick, variant, 'large', { width: btnW, height: btnH });
             b.position.set(-btnW / 2, this.buttonColumn.children.length * (btnH + gap));
             this.buttonColumn.addChild(b);
         };
@@ -95,7 +137,9 @@ export class MainMenuScreen extends BaseGameScreen {
         this.backdrop.destroy({ children: true });
         this.backdrop = createMenuBackdrop(width, height);
         this.container.addChildAt(this.backdrop, 0);
-        this.layoutForSize(width, height);
+        attachKenneyMenuPattern(this.backdrop, width, height);
+        this.layoutTitlePlate(width, height);
+        this.layoutTextAndButtons(width, height);
         this.buildButtons();
     }
 }
