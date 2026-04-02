@@ -1,0 +1,306 @@
+skills:
+  - skill_id: posture_ready
+    name: Alignment check
+    rationale: Neck and jaw tension destabilize pitch before other skills can settle.
+    prerequisites: []
+    typical_errors:
+      - raised shoulders
+      - jaw jut
+      - rigid neck
+    coach_fix: Use brief body-scan copy before singing starts.
+    in_game_proxies:
+      - stable first gate entry
+    gate_patterns:
+      - single centered hold
+    difficulty_knobs:
+      - shorter prep window
+
+  - skill_id: breath_phrase
+    name: Phrase planning
+    rationale: Sustainable phrases require planned airflow rather than late gasps.
+    prerequisites:
+      - posture_ready
+    typical_errors:
+      - clipping phrase endings
+      - inhaling too late
+      - losing pitch near long holds
+    coach_fix: Mark breath points before long lanes.
+    in_game_proxies:
+      - long-gate completion
+      - fewer misses on sustained notes
+    gate_patterns:
+      - long holds
+      - repeated sustain clusters
+    difficulty_knobs:
+      - longer gate duration
+      - tighter vertical band
+
+  - skill_id: onset_clean
+    name: Clean starts
+    rationale: Balanced onsets improve pitch lock and reduce harsh attacks.
+    prerequisites:
+      - breath_phrase
+    typical_errors:
+      - hard glottal onset
+      - breathy attack
+      - delayed pitch center
+    coach_fix: Ask for clear but easy starts at phrase boundaries.
+    in_game_proxies:
+      - stable entry into first gates
+    gate_patterns:
+      - phrase-start targets
+    difficulty_knobs:
+      - narrower first-gate tolerance
+
+  - skill_id: pitch_center
+    name: Steady target pitch
+    rationale: Accurate sustained pitch is the foundation for every later chart.
+    prerequisites:
+      - onset_clean
+    typical_errors:
+      - sagging flat
+      - creeping sharp
+      - wavering sustain
+    coach_fix: Sustain mid-range notes before adding leaps.
+    in_game_proxies:
+      - gate pass count
+      - stable hold gates
+    gate_patterns:
+      - repeated centered holds
+    difficulty_knobs:
+      - narrower gate height
+      - narrower gate width
+
+  - skill_id: interval_step
+    name: Stepwise motion
+    rationale: Small intervals build ear-voice coordination with low cognitive load.
+    prerequisites:
+      - pitch_center
+    typical_errors:
+      - overshooting by a semitone
+      - dragging transitions
+    coach_fix: Hear each adjacent step before moving.
+    in_game_proxies:
+      - success across staircase lanes
+    gate_patterns:
+      - ascending staircase
+      - descending staircase
+    difficulty_knobs:
+      - faster spacing
+      - denser note count
+
+  - skill_id: interval_skip
+    name: Leaps and skips
+    rationale: Larger intervals require pre-hearing the destination pitch.
+    prerequisites:
+      - interval_step
+    typical_errors:
+      - missing the landing pitch
+      - scooping into target
+      - overcorrecting after leap
+    coach_fix: Isolate leap pairs and commit to the landing note.
+    in_game_proxies:
+      - leap gate accuracy
+    gate_patterns:
+      - alternating high-low leaps
+      - expanding interval ladders
+    difficulty_knobs:
+      - larger vertical jumps
+      - shorter travel time
+
+  - skill_id: register_chest
+    name: Chest coordination
+    rationale: Lower and mid range stability supports later mix work.
+    prerequisites:
+      - pitch_center
+    typical_errors:
+      - carrying chest too high
+      - muddy low pitch center
+    coach_fix: Keep lower charts relaxed and not overly loud.
+    in_game_proxies:
+      - steady low-mid passes
+    gate_patterns:
+      - low and mid sustained lanes
+    difficulty_knobs:
+      - narrower lower gates
+
+  - skill_id: register_mix
+    name: Mix bridge
+    rationale: Smooth passaggio work helps singers cross middle range without forcing.
+    prerequisites:
+      - register_chest
+      - onset_clean
+    typical_errors:
+      - cracking
+      - shouting upward
+      - collapsing pitch near bridge
+    coach_fix: Lighten pressure and move through the middle range evenly.
+    in_game_proxies:
+      - consistent passes in mixed-range songs
+    gate_patterns:
+      - mid-high arcs
+      - bridge-focused climbs
+    difficulty_knobs:
+      - reduced gate height
+      - faster note spacing
+
+  - skill_id: register_head
+    name: Head coordination
+    rationale: Upper-range singing should stay easy rather than louder.
+    prerequisites:
+      - register_mix
+    typical_errors:
+      - pressing
+      - thinning out of tune
+      - losing confidence above bridge
+    coach_fix: Encourage tall, light singing on upper charts.
+    in_game_proxies:
+      - success in high sparse lanes
+    gate_patterns:
+      - upper-range holds
+      - gentle upper descents
+    difficulty_knobs:
+      - tighter upper tolerance
+
+  - skill_id: harmony_static
+    name: Static harmony hold
+    rationale: The easiest harmony task is resisting drift while a reference changes around you.
+    prerequisites:
+      - pitch_center
+      - breath_phrase
+    typical_errors:
+      - collapsing toward melody
+      - intonation drift on long holds
+    coach_fix: Use drone-like copy and recommend headphones.
+    in_game_proxies:
+      - long stable gates
+    gate_patterns:
+      - repeated same-pitch holds
+    difficulty_knobs:
+      - longer duration
+      - slightly narrower gate
+
+  - skill_id: harmony_chord_tone
+    name: Chord-tone choice
+    rationale: Root-third-fifth hearing prepares singers for moving harmony.
+    prerequisites:
+      - harmony_static
+      - interval_step
+    typical_errors:
+      - confusing major and minor third
+      - skipping chord tones
+    coach_fix: Treat each chord tone as its own landing pad.
+    in_game_proxies:
+      - ordered triad targets
+    gate_patterns:
+      - arpeggiated ladders
+    difficulty_knobs:
+      - faster tone changes
+
+  - skill_id: harmony_moving
+    name: Moving harmony line
+    rationale: Independent harmony requires tracking contour without merging with melody.
+    prerequisites:
+      - harmony_chord_tone
+      - rhythm_consonant
+    typical_errors:
+      - converging to unison
+      - late entries
+      - following the imaginary melody instead
+    coach_fix: Reinforce harmony contour copy and recommend headphone monitoring.
+    in_game_proxies:
+      - moving harmony chart completion
+    gate_patterns:
+      - offset contour lines
+      - counter-motion runs
+    difficulty_knobs:
+      - denser notes
+      - narrower gate size
+
+  - skill_id: rhythm_consonant
+    name: Rhythm lock
+    rationale: Pitch learning improves when entries happen at the intended time.
+    prerequisites:
+      - pitch_center
+    typical_errors:
+      - early entries
+      - late entries
+      - losing pitch under denser rhythms
+    coach_fix: Hit the lane on time before perfecting pitch.
+    in_game_proxies:
+      - success in shorter-width gates
+    gate_patterns:
+      - tightly spaced pulses
+      - syncopated clusters
+    difficulty_knobs:
+      - shorter gate width
+      - shorter inter-note spacing
+
+  - skill_id: recovery_reset
+    name: Recovery after miss
+    rationale: Players learn faster when a miss does not feel like total failure.
+    prerequisites:
+      - pitch_center
+    typical_errors:
+      - spiraling after one miss
+      - overcorrecting the next target
+    coach_fix: Emphasize immediate reset on the next lane.
+    in_game_proxies:
+      - later gate recovery after an early miss
+    gate_patterns:
+      - centered reset lanes after deviations
+    difficulty_knobs:
+      - shorter reset window
+
+  - skill_id: style_legato
+    name: Legato connection
+    rationale: Smooth transitions require even airflow and connected vowels.
+    prerequisites:
+      - onset_clean
+      - pitch_center
+    typical_errors:
+      - breaks between notes
+      - disconnected phrases
+    coach_fix: Encourage smooth line instead of note-by-note attacks.
+    in_game_proxies:
+      - success on closely spaced adjacent gates
+    gate_patterns:
+      - close contour motion
+    difficulty_knobs:
+      - faster adjacent steps
+
+  - skill_id: style_belt_safe
+    name: Safe intensity
+    rationale: High-energy singing should not be framed as louder equals better.
+    prerequisites:
+      - register_mix
+    typical_errors:
+      - shouting
+      - clipping the mic
+      - throat squeeze
+    coach_fix: Keep copy about intensity, never force or pain.
+    in_game_proxies:
+      - none today
+    gate_patterns:
+      - short energetic phrases
+    difficulty_knobs:
+      - future dynamic checks only
+
+  - skill_id: tour_review
+    name: Spiral review
+    rationale: Revisiting earlier skills under tighter spacing creates real progression.
+    prerequisites:
+      - interval_skip
+      - rhythm_consonant
+      - register_mix
+    typical_errors:
+      - fatigue across mixed drills
+      - reverting to old habits under speed
+    coach_fix: Present review charts as synthesis, not punishment.
+    in_game_proxies:
+      - high-tier chart completion
+    gate_patterns:
+      - mixed contour review runs
+    difficulty_knobs:
+      - denser spacing
+      - smaller gates

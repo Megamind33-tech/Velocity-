@@ -1,4 +1,5 @@
 import { Application, Container, Graphics, Text, TextStyle } from 'pixi.js';
+import { SONGS } from '../data/songs';
 
 interface LevelNode {
     id: number;
@@ -21,7 +22,7 @@ export class WorldMapScene {
         this.graphics = new Graphics();
         this.container.addChild(this.graphics);
         
-        this.generateMap(20); // Generate 20 levels
+        this.generateMap(SONGS.length);
         this.drawPaths();
         this.drawNodes();
         
@@ -34,15 +35,16 @@ export class WorldMapScene {
     }
 
     private generateMap(count: number): void {
-        const spacing = 300;
+        const spacing = 240;
         const centerX = this.app.screen.width / 2;
 
         for (let i = 0; i < count; i++) {
+            const song = SONGS[i];
             this.nodes.push({
                 id: i + 1,
-                x: centerX + (Math.sin(i * 0.8) * 100), // S-curve layout
-                y: -(i * spacing) + 500, // Move up as levels increase
-                isUnlocked: i < 3 // First 3 unlocked by default
+                x: centerX + (Math.sin(i * 0.75) * (song?.lessonType?.includes('harmony') ? 120 : 90)),
+                y: -(i * spacing) + 500,
+                isUnlocked: i < 5
             });
         }
     }
@@ -77,10 +79,11 @@ export class WorldMapScene {
         for (const node of this.nodes) {
             const dot = new Graphics();
             const color = node.isUnlocked ? 0x00ffcc : 0x333333;
+            const ringColor = node.id <= 3 ? 0x66ffcc : node.id <= 10 ? 0x66aaff : 0xffcc66;
             
             dot.circle(node.x, node.y, 30);
             dot.fill(color);
-            dot.setStrokeStyle({ width: 3, color: 0xffffff });
+            dot.setStrokeStyle({ width: 3, color: ringColor });
             dot.stroke();
             
             const txt = new Text({ text: node.id.toString(), style });

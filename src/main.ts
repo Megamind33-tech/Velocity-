@@ -128,6 +128,14 @@ async function init() {
     
     app.stage.addChild(startText, subText);
 
+    let currentLevelIndex = 0;
+    const totalLevels = SONGS.length;
+
+    const startLevel = (levelIndex: number): void => {
+        currentLevelIndex = levelIndex;
+        levelSystem.initLevel(levelIndex + 1, SONGS[levelIndex], player, world, totalLevels);
+    };
+
     overlay.on('pointerdown', async () => {
         const success = await VoiceInputManager.getInstance().init();
         if (success) {
@@ -135,8 +143,8 @@ async function init() {
             app.stage.removeChild(startText);
             app.stage.removeChild(subText);
             
-            // Initialize the level with the first song
-            levelSystem.initLevel(1, SONGS[0], player);
+            // Start the learning curriculum from level one.
+            startLevel(0);
             
             // Initialize visuals
             hudSystem.init(player);
@@ -178,14 +186,35 @@ async function init() {
     // 8. Setup Persistence Events
     const eventBus = EventBus.getInstance();
     
-    eventBus.on(GameEvents.LEVEL_START, async (levelId) => {
+    eventBus.on(GameEvents.LEVEL_START, async (payload?: { levelId: number }) => {
+        const levelId = payload?.levelId ?? 1;
         const uid = getPlayerIdForSync();
         console.log(`WorldMap: Syncing progress for level ${levelId}`);
         try {
-            await syncProfile(uid, Number(levelId), 100 * Number(levelId), 3);
+            await syncProfile(uid, levelId, 100 * levelId, 3);
         } catch (e) {
             console.warn('Velocity: profile sync skipped.', e);
         }
+    });
+
+    eventBus.on(GameEvents.LEVEL_COMPLETE, (payload?: {
+        levelId: number;
+        passedGates: number;
+        totalGates: number;
+    }) => {
+        if (!payload) return;
+
+        console.log(
+            `Velocity: Level ${payload.levelId} complete (${payload.passedGates}/${payload.totalGates} gates).`
+        );
+
+        if (currentLevelIndex < SONGS.length - 1) {
+            startLevel(currentLevelIndex + 1);
+            return;
+        }
+
+        console.log('Velocity: Curriculum complete. Restarting from level 1.');
+        startLevel(0);
     });
 
     // 9. Loop is started after user interaction (overlay.on('pointerdown'))
