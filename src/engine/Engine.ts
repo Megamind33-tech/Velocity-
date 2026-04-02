@@ -12,12 +12,11 @@ export class Engine {
 
     private readonly fixedTimeStep: number = 1 / 60;
     private accumulator: number = 0;
+    private tickerAttached = false;
 
     constructor(app: Application, world: World) {
         this.app = app;
         this.world = world;
-
-        Ticker.shared.add(this.onTick, this);
     }
 
     private onTick(): void {
@@ -41,11 +40,19 @@ export class Engine {
     }
 
     public start(): void {
+        if (!this.tickerAttached) {
+            Ticker.shared.add(this.onTick, this);
+            this.tickerAttached = true;
+        }
         Ticker.shared.start();
         console.log(`Velocity Engine: Loop started (Fixed: ${1 / this.fixedTimeStep}Hz)`);
     }
 
     public stop(): void {
+        if (this.tickerAttached) {
+            Ticker.shared.remove(this.onTick, this);
+            this.tickerAttached = false;
+        }
         Ticker.shared.stop();
     }
 }

@@ -15,7 +15,7 @@ export class AutoForwardSystem implements System {
     }
 
     public update(_entities: Entity[], world: World, _delta: number): void {
-        if (GameState.paused) return;
+        if (GameState.paused || !GameState.runActive) return;
 
         const list = world.getEntities(this.queryMask);
         for (let i = 0; i < list.length; i++) {

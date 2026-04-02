@@ -2,6 +2,7 @@ import { Entity, World, System } from '../World';
 import { TransformComponent } from '../components/TransformComponent';
 import { VelocityComponent } from '../components/VelocityComponent';
 import { FlightDynamicsComponent } from '../components/FlightDynamicsComponent';
+import { GameState } from '../GameState';
 
 /**
  * System that implements high-fidelity flight dynamics.
@@ -20,6 +21,8 @@ export class FlightDynamicsSystem implements System {
     }
 
     public update(entities: Entity[], world: World, delta: number): void {
+        if (GameState.paused || !GameState.runActive) return;
+
         const matchingEntities = world.getEntities(this.queryMask);
 
         for (let i = 0; i < matchingEntities.length; i++) {
