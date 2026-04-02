@@ -1,4 +1,6 @@
 import { Entity, EntityManager } from './Entity';
+export type { Entity };
+export { EntityManager };
 import { Component, ComponentRegistry } from './Component';
 
 /**
