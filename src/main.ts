@@ -11,6 +11,7 @@ import { MovementSystem } from './engine/systems/MovementSystem';
 import { SpriteSystem } from './engine/systems/SpriteSystem';
 import { FlightDynamicsSystem } from './engine/systems/FlightDynamicsSystem';
 import { VoiceInputSystem } from './engine/systems/VoiceInputSystem';
+import { LevelSystem } from './engine/systems/LevelSystem';
 import { VoiceInputManager } from './engine/input/VoiceInputManager';
 import { LeaderboardSystem } from './engine/systems/LeaderboardSystem';
 import { QuestSystem } from './engine/systems/QuestSystem';
@@ -18,7 +19,9 @@ import { TransformComponent } from './engine/components/TransformComponent';
 import { VelocityComponent } from './engine/components/VelocityComponent';
 import { SpriteComponent } from './engine/components/SpriteComponent';
 import { FlightDynamicsComponent } from './engine/components/FlightDynamicsComponent';
+import { GateComponent } from './engine/components/GateComponent';
 import { TaskOverlay } from './ui/TaskOverlay';
+import { SONGS } from './data/songs';
 
 async function init() {
     // 1. Initialize PixiJS Application
@@ -40,10 +43,12 @@ async function init() {
     const velocityEngine = new Engine(app, world);
 
     // 4. Register Systems
+    const levelSystem = new LevelSystem(app);
     world.addSystem(new VoiceInputSystem());
     world.addSystem(new FlightDynamicsSystem());
     world.addSystem(new MovementSystem());
     world.addSystem(new SpriteSystem());
+    world.addSystem(levelSystem);
     world.addSystem(new LeaderboardSystem());
     world.addSystem(new QuestSystem());
 
@@ -91,6 +96,9 @@ async function init() {
         if (success) {
             app.stage.removeChild(overlay);
             app.stage.removeChild(startText);
+            
+            // Initialize the level with the first song
+            levelSystem.initLevel(1, SONGS[0], player);
             
             // Start components and loop
             velocityEngine.start();
