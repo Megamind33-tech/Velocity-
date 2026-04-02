@@ -17,6 +17,7 @@
     "vite": "^6.2.0"
   },
   "devDependencies": {
+    "@assetpack/core": "^1.7.0",
     "@types/node": "^22.14.0",
     "tsx": "^4.21.0",
     "typescript": "~5.8.2"
