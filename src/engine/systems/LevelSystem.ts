@@ -2,6 +2,7 @@ import { Entity, World, System } from '../World';
 import { TransformComponent } from '../components/TransformComponent';
 import { SpriteComponent } from '../components/SpriteComponent';
 import { GateComponent } from '../components/GateComponent';
+import { GameState } from '../GameState';
 import { LevelGenerator, LevelGate } from '../../levels/LevelGenerator';
 import { ObjectPool } from '../utils/ObjectPool';
 import { Song } from '../../data/songs';
@@ -15,6 +16,8 @@ export class LevelSystem implements System {
     public readonly priority: number = 50;
     private generator: LevelGenerator;
     private gatesToSpawn: LevelGate[] = [];
+    /** Gates planned for the current run (before spawning). */
+    public lastInitializedGateCount = 0;
     private playerEntity: Entity | null = null;
     private spawnRange: number = 2000;
     private cleanupRange: number = 800;
@@ -39,7 +42,9 @@ export class LevelSystem implements System {
      */
     public initLevel(levelId: number, song: Song, player: Entity): void {
         this.playerEntity = player;
-        this.gatesToSpawn = this.generator.generate(levelId, song, this.app.screen.height);
+        const plan = this.generator.generate(levelId, song, this.app.screen.height);
+        this.lastInitializedGateCount = plan.length;
+        this.gatesToSpawn = plan;
         
         // Pre-create gate texture
         if (!this.gateTexture) {
@@ -52,7 +57,7 @@ export class LevelSystem implements System {
     }
 
     public update(entities: Entity[], world: World, delta: number): void {
-        if (!this.playerEntity) return;
+        if (!GameState.runActive || !this.playerEntity) return;
 
         const playerTransform = world.getComponent<TransformComponent>(this.playerEntity, TransformComponent.TYPE_ID);
         if (!playerTransform) return;
@@ -64,7 +69,7 @@ export class LevelSystem implements System {
         }
 
         // 2. Cleanup & Recycling
-        const existingGates = world.getEntities(GateComponent.TYPE_ID);
+        const existingGates = [...world.getEntities(GateComponent.TYPE_ID)];
         for (let i = 0; i < existingGates.length; i++) {
             const gate = existingGates[i];
             const transform = world.getComponent<TransformComponent>(gate, TransformComponent.TYPE_ID);
@@ -78,11 +83,28 @@ export class LevelSystem implements System {
         }
     }
 
+    /** Removes every gate entity and returns sprites to the pool. Call before a new run. */
+    public destroyAllGates(world: World): void {
+        const gates = [...world.getEntities(GateComponent.TYPE_ID)];
+        for (let i = 0; i < gates.length; i++) {
+            const gate = gates[i];
+            const spriteComp = world.getComponent<SpriteComponent>(gate, SpriteComponent.TYPE_ID);
+            if (spriteComp) {
+                spriteComp.sprite.scale.set(1, 1);
+                this.spritePool.release(spriteComp.sprite);
+            }
+            world.destroyEntity(gate);
+        }
+        this.gatesToSpawn = [];
+        this.lastInitializedGateCount = 0;
+    }
+
     private spawnGate(world: World, data: LevelGate): void {
         const entity = world.createEntity();
         
         const sprite = this.spritePool.acquire();
         sprite.texture = this.gateTexture!;
+        sprite.scale.set(data.width / 100, 1);
         sprite.visible = true;
         this.app.stage.addChild(sprite);
 

@@ -36,18 +36,22 @@ export class QuestSystem implements System {
     private setupListeners() {
         const bus = EventBus.getInstance();
 
-        bus.on(GameEvents.GATE_PASSED, () => this.increment('the_sky_is_falling'));
-        bus.on(GameEvents.OBSTACLE_DODGED, () => this.increment('velocity_junkie')); // Simplified for demo
+        bus.on(GameEvents.GATE_PASSED, () => this.increment('the_sky_is_falling', 1));
+        bus.on(GameEvents.OBSTACLE_DODGED, () => this.increment('velocity_junkie', 1));
+        bus.on(GameEvents.DISTANCE_DELTA, (payload?: { units?: number }) => {
+            const u = payload?.units ?? 0;
+            if (u > 0) this.increment('velocity_junkie', u);
+        });
     }
 
-    private increment(questId: string) {
+    private increment(questId: string, amount: number = 1) {
         const p = this.progress.get(questId);
         if (!p) return;
 
         const definition = QUEST_DEFINITIONS.find(q => q.id === questId);
         if (!definition) return;
 
-        p.currentValue++;
+        p.currentValue += amount;
         
         // Check for tier completions
         definition.tiers.forEach(tier => {

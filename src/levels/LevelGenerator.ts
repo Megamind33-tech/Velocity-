@@ -1,17 +1,5 @@
 import { Song } from '../data/songs';
-import { PHYSICS } from '../data/constants';
-
-/**
- * Deterministic PRNG using LCG algorithm.
- */
-class Random {
-    private seed: number;
-    constructor(seed: number) { this.seed = seed; }
-    next(): number {
-        this.seed = (this.seed * 1664525 + 1013904223) % 4294967296;
-        return this.seed / 4294967296;
-    }
-}
+import { DifficultyScaler } from './DifficultyScaler';
 
 export interface LevelGate {
     x: number;
@@ -27,9 +15,9 @@ export class LevelGenerator {
      * Generates a deterministic level from a seed and song data.
      */
     public generate(levelId: number, song: Song, worldHeight: number): LevelGate[] {
-        const rng = new Random(levelId);
         const gates: LevelGate[] = [];
         const baseSpeed = 300; // px per second
+        const diff = DifficultyScaler.getMultiplier(levelId);
 
         for (let i = 0; i < song.notes.length; i++) {
             const note = song.notes[i];
@@ -39,10 +27,11 @@ export class LevelGenerator {
             const padding = 100;
             const y = padding + (note.pitch * (worldHeight - padding * 2));
             
+            const baseW = 150 - levelId * 2;
             const gate: LevelGate = {
                 x,
                 y,
-                width: 150 - (levelId * 2) // Gates get smaller as level increases
+                width: Math.max(48, baseW / diff)
             };
 
             // Gap-checking: Ensure the gate is reachable from the previous one
@@ -54,7 +43,7 @@ export class LevelGenerator {
 
                 // Simple check: Can the plane move vertically (dy) in time (dt)?
                 // Max vertical speed is roughly dictated by PHYSICS.THRUST_POWER and GRAVITY
-                const maxVerticalSpeed = 400; 
+                const maxVerticalSpeed = 420 / diff;
                 if (dy / dt > maxVerticalSpeed) {
                     // Adjust y to be solvable
                     const direction = gate.y > prev.y ? 1 : -1;
