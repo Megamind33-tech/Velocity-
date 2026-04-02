@@ -1,66 +1,80 @@
 import { Application, Container, Graphics, Text, TextStyle } from 'pixi.js';
 import { GameState } from '../engine/GameState';
 import { VoiceInputManager } from '../engine/input/VoiceInputManager';
+import { GAME_UI } from './theme/GameUITheme';
+import { createMenuButton } from './gameUiPrimitives';
 
-const btnStyle = new TextStyle({
-    fill: '#00ffcc',
-    fontSize: 16,
-    fontWeight: 'bold',
-    fontFamily: 'Orbitron, Arial',
-});
+export interface PauseOverlayOptions {
+    onQuitToMenu?: () => void;
+}
 
 /**
- * Menu / pause controls only — does not steer the craft.
+ * In-run pause — menu controls only, matches arcade UI.
  */
 export class PauseOverlay extends Container {
     private pauseBtn: Container;
     private pauseMenu: Container;
     private pausedLabel: Text;
+    private btnRow: Container;
 
-    constructor(private readonly app: Application) {
+    constructor(
+        private readonly app: Application,
+        private readonly opts: PauseOverlayOptions = {}
+    ) {
         super();
 
-        this.pauseBtn = this.makeButton('PAUSE', () => this.enterPause());
-        this.pauseBtn.position.set(app.screen.width - 120, 16);
+        this.pauseBtn = createMenuButton('II', 52, 44, () => this.enterPause());
+        this.pauseBtn.position.set(app.screen.width - 64, 12);
         this.addChild(this.pauseBtn);
 
         this.pauseMenu = new Container();
         this.pauseMenu.visible = false;
         const dim = new Graphics();
-        dim.rect(0, 0, app.screen.width, app.screen.height);
-        dim.fill({ color: 0x000000, alpha: 0.75 });
         dim.eventMode = 'static';
         this.pauseMenu.addChild(dim);
 
-        this.pausedLabel = new Text({ text: 'PAUSED', style: new TextStyle({ ...btnStyle, fontSize: 36 }) });
+        this.pausedLabel = new Text({
+            text: 'PAUSED',
+            style: new TextStyle({
+                fontFamily: GAME_UI.fontTitle,
+                fontSize: 36,
+                fill: '#ffffff',
+                letterSpacing: 6,
+                dropShadow: { blur: 8, color: '#ff3d9a', distance: 0, alpha: 0.8 },
+            }),
+        });
         this.pausedLabel.anchor.set(0.5);
-        this.pausedLabel.position.set(app.screen.width / 2, app.screen.height / 2 - 60);
         this.pauseMenu.addChild(this.pausedLabel);
 
-        const resume = this.makeButton('RESUME', () => this.exitPause());
-        resume.position.set(app.screen.width / 2 - 50, app.screen.height / 2 + 20);
-        this.pauseMenu.addChild(resume);
+        this.btnRow = new Container();
+        const resume = createMenuButton('RESUME', 130, 48, () => this.exitPause(), { primary: true });
+        resume.position.set(0, 0);
+        this.btnRow.addChild(resume);
 
+        if (opts.onQuitToMenu) {
+            const menu = createMenuButton('MENU', 130, 48, () => {
+                GameState.setPaused(false);
+                VoiceInputManager.getInstance().pauseMic();
+                this.pauseMenu.visible = false;
+                this.pauseBtn.visible = true;
+                opts.onQuitToMenu!();
+            });
+            menu.position.set(146, 0);
+            this.btnRow.addChild(menu);
+        }
+
+        this.pauseMenu.addChild(this.btnRow);
         this.addChild(this.pauseMenu);
     }
 
-    private makeButton(label: string, onClick: () => void): Container {
-        const c = new Container();
-        c.eventMode = 'static';
-        c.cursor = 'pointer';
-        const bg = new Graphics();
-        bg.roundRect(0, 0, 100, 40, 8);
-        bg.fill({ color: 0x111122, alpha: 0.95 });
-        bg.stroke({ color: 0x00ffcc, width: 2 });
-        const t = new Text({ text: label, style: btnStyle });
-        t.anchor.set(0.5);
-        t.position.set(50, 20);
-        c.addChild(bg, t);
-        c.on('pointerdown', (e) => {
-            e.stopPropagation();
-            onClick();
-        });
-        return c;
+    layout(width: number, height: number): void {
+        this.pauseBtn.position.set(width - 64, 12);
+        const dim = this.pauseMenu.children[0] as Graphics;
+        dim.clear();
+        dim.rect(0, 0, width, height);
+        dim.fill({ color: GAME_UI.bgDeep, alpha: 0.82 });
+        this.pausedLabel.position.set(width / 2, height * 0.38);
+        this.btnRow.position.set(width / 2 - (this.opts.onQuitToMenu ? 138 : 65), height * 0.52);
     }
 
     private enterPause(): void {

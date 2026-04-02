@@ -5,7 +5,7 @@ import { GateComponent } from '../components/GateComponent';
 import { LevelGenerator, LevelGate } from '../../levels/LevelGenerator';
 import { ObjectPool } from '../utils/ObjectPool';
 import { Song } from '../../data/songs';
-import { Sprite, Graphics, Texture } from 'pixi.js';
+import { Container, Sprite, Graphics, Texture } from 'pixi.js';
 
 /**
  * System that manages the procedural generation and cleanup of level entities.
@@ -23,7 +23,10 @@ export class LevelSystem implements System {
     // Object Pool for recycling Gate sprites
     private spritePool: ObjectPool<Sprite>;
 
-    constructor(private app: any) {
+    constructor(
+        private app: any,
+        private readonly stageLayer: Container
+    ) {
         this.generator = new LevelGenerator();
         this.spritePool = new ObjectPool<Sprite>(
             () => new Sprite(),
@@ -49,6 +52,20 @@ export class LevelSystem implements System {
             gfx.stroke({ color: 0x00ffcc, width: 4 });
             this.gateTexture = this.app.renderer.generateTexture(gfx);
         }
+    }
+
+    /** Clear gates between runs (returns sprites to pool). */
+    public reset(world: World): void {
+        const gates = [...world.getEntities(GateComponent.TYPE_ID)];
+        for (let i = 0; i < gates.length; i++) {
+            const spriteComp = world.getComponent<SpriteComponent>(gates[i], SpriteComponent.TYPE_ID);
+            if (spriteComp) {
+                this.spritePool.release(spriteComp.sprite);
+            }
+            world.destroyEntity(gates[i]);
+        }
+        this.gatesToSpawn = [];
+        this.playerEntity = null;
     }
 
     public update(entities: Entity[], world: World, delta: number): void {
@@ -84,7 +101,7 @@ export class LevelSystem implements System {
         const sprite = this.spritePool.acquire();
         sprite.texture = this.gateTexture!;
         sprite.visible = true;
-        this.app.stage.addChild(sprite);
+        this.stageLayer.addChild(sprite);
 
         world.addComponent(entity, new TransformComponent(data.x, data.y));
         world.addComponent(entity, new SpriteComponent(sprite));

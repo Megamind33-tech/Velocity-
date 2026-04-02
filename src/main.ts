@@ -1,6 +1,5 @@
 import './index.css';
-import { Application, Assets, Sprite, Texture, Graphics, Text, TextStyle } from 'pixi.js';
-import { WorldMapScene } from './scenes/WorldMapScene';
+import { Application, Container, Sprite, Graphics, Texture } from 'pixi.js';
 import { EventBus } from './events/EventBus';
 import { GameEvents } from './events/GameEvents';
 import { getPlayerIdForSync, startAuthInBackground } from './firebase/auth';
@@ -22,26 +21,30 @@ import { TransformComponent } from './engine/components/TransformComponent';
 import { VelocityComponent } from './engine/components/VelocityComponent';
 import { SpriteComponent } from './engine/components/SpriteComponent';
 import { FlightDynamicsComponent } from './engine/components/FlightDynamicsComponent';
-import { GateComponent } from './engine/components/GateComponent';
 import { TaskOverlay } from './ui/TaskOverlay';
 import { PauseOverlay } from './ui/PauseOverlay';
+import { MainMenuRoot } from './ui/MainMenuRoot';
+import { PlayerStatsRoot } from './ui/PlayerStatsRoot';
+import { MicGateOverlay } from './ui/MicGateOverlay';
 import { createDemoTouchZones } from './debug/DemoTouchZones';
+import { getSafeAreaInsets } from './ui/safeArea';
 import { SONGS } from './data/songs';
+import { LocalPlayerStats } from './player/LocalPlayerStats';
+import { VOICE_FLIGHT } from './data/constants';
 
 function showInitFailure(message: string, detail?: string): void {
     const el = document.createElement('div');
     el.setAttribute('role', 'alert');
     el.style.cssText =
-        'position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px;background:#0a0a1a;color:#00ffcc;font-family:system-ui,sans-serif;text-align:center;z-index:99999;';
+        'position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px;background:#050510;color:#00f0ff;font-family:system-ui,sans-serif;text-align:center;z-index:99999;';
     el.innerHTML = `<h1 style="margin:0 0 12px;font-size:1.1rem">Velocity</h1><p style="margin:0;opacity:.9;max-width:320px">${message}</p>${detail ? `<pre style="margin-top:16px;font-size:11px;opacity:.6;white-space:pre-wrap;max-width:100%">${detail}</pre>` : ''}`;
     document.body.appendChild(el);
 }
 
 async function init() {
-    // 1. Initialize PixiJS Application (must never be blocked by Firebase)
     const app = new Application();
     await app.init({
-        background: '#0a0a1a',
+        background: '#050510',
         resizeTo: window,
         resolution: window.devicePixelRatio || 1,
         autoDensity: true,
@@ -53,17 +56,20 @@ async function init() {
     canvas.style.height = '100%';
     document.body.appendChild(canvas);
 
-    // 2. Firebase in background only — broken keys on Vercel no longer blank the screen
     startAuthInBackground();
 
-    // 3. Initialize ECS World
     const world = new World();
     const velocityEngine = new Engine(app, world);
+    velocityEngine.start();
+    velocityEngine.setSimulationEnabled(false);
 
-    // 4. Register Systems
-    const levelSystem = new LevelSystem(app);
-    const parallaxSystem = new ParallaxSystem(app);
-    const hudSystem = new HUDSystem(app);
+    const gameLayer = new Container();
+    gameLayer.visible = false;
+    app.stage.addChild(gameLayer);
+
+    const levelSystem = new LevelSystem(app, gameLayer);
+    const parallaxSystem = new ParallaxSystem(app, gameLayer);
+    const hudSystem = new HUDSystem(app, gameLayer);
 
     world.addSystem(new VoiceInputSystem());
     world.addSystem(new AutoForwardSystem());
@@ -76,111 +82,152 @@ async function init() {
     world.addSystem(new LeaderboardSystem());
     world.addSystem(new QuestSystem());
 
-    // 5. Create a "Premium Drone" Entity
     const droneGfx = new Graphics();
-    
-    // Body (Pentagon shape)
     droneGfx.poly([-25, 0, -10, -15, 15, -15, 30, 0, 15, 15, -10, 15]);
     droneGfx.fill({ color: 0x222233 });
-    droneGfx.stroke({ color: 0x00ffcc, width: 2 });
-    
-    // Thruster glow
-    droneGfx.circle(-20, 0, 8).fill({ color: 0xff3300, alpha: 0.6 });
-    droneGfx.circle(-20, 0, 4).fill({ color: 0xffcc00 });
+    droneGfx.stroke({ color: 0x00f0ff, width: 2 });
+    droneGfx.circle(-20, 0, 8).fill({ color: 0xff3d9a, alpha: 0.55 });
+    droneGfx.circle(-20, 0, 4).fill({ color: 0xffdd44 });
 
     const texture = app.renderer.generateTexture(droneGfx);
     const playerSprite = new Sprite(texture);
     playerSprite.anchor.set(0.5);
-    app.stage.addChild(playerSprite);
+    gameLayer.addChild(playerSprite);
 
     const player = world.createEntity();
     world.addComponent(player, new TransformComponent(app.screen.width / 4, app.screen.height / 2));
-    world.addComponent(player, new VelocityComponent(200, 0)); 
+    world.addComponent(player, new VelocityComponent(VOICE_FLIGHT.CRUISE_SPEED_X, 0));
     world.addComponent(player, new FlightDynamicsComponent(1.0, 0.05, 3000));
     world.addComponent(player, new SpriteComponent(playerSprite));
 
-    // 6. Mobile Voice Start Interaction (Premium Glassmorphism Style)
-    const overlay = new Graphics();
-    overlay.rect(0, 0, app.screen.width, app.screen.height);
-    overlay.fill({ color: 0x000000, alpha: 0.85 });
-    overlay.eventMode = 'static';
-    app.stage.addChild(overlay);
-
-    const startStyle = new TextStyle({
-        fill: '#00ffcc',
-        fontSize: 28,
-        fontWeight: 'bold',
-        fontFamily: 'Orbitron, Arial',
-        dropShadow: { blur: 10, color: '#00ffcc', distance: 0 }
-    });
-
-    const startText = new Text({ text: 'VELOCITY: VOICE-FLIGHT', style: startStyle });
-    const subText = new Text({
-        text: 'TAP SCREEN TO INITIALIZE MIC',
-        style: new TextStyle({ ...startStyle, fontSize: 14 }),
-    });
-    subText.alpha = 0.7;
-
-    startText.anchor.set(0.5);
-    subText.anchor.set(0.5);
-    startText.position.set(app.screen.width / 2, app.screen.height / 2 - 20);
-    subText.position.set(app.screen.width / 2, app.screen.height / 2 + 30);
-    
-    app.stage.addChild(startText, subText);
-
-    overlay.on('pointerdown', async () => {
-        const success = await VoiceInputManager.getInstance().init();
-        if (success) {
-            app.stage.removeChild(overlay);
-            app.stage.removeChild(startText);
-            app.stage.removeChild(subText);
-            
-            // Initialize the level with the first song
-            levelSystem.initLevel(1, SONGS[0], player);
-            
-            // Initialize visuals
-            hudSystem.init(player);
-            
-            // Generate placeholder parallax textures
-            const textures = [0x111122, 0x1a1a3a, 0x24244a].map(color => {
-                const g = new Graphics().rect(0, 0, 512, 512).fill({ color });
-                // Add some "stars" or noise
-                for(let i=0; i<50; i++) g.circle(Math.random()*512, Math.random()*512, 1).fill({ color: 0xffffff, alpha: 0.5 });
-                return app.renderer.generateTexture(g);
-            });
-            await parallaxSystem.init(player, textures);
-
-            const demoZones = createDemoTouchZones(app.screen.width, app.screen.height);
-            if (demoZones) {
-                app.stage.addChild(demoZones);
-                console.warn('[DEV] Demo touch strips active (left=up, right=down). Remove for production.');
-            }
-
-            const pauseOverlay = new PauseOverlay(app);
-            app.stage.addChild(pauseOverlay);
-
-            // Start components and loop
-            velocityEngine.start();
-            console.log('Velocity Engine: Voice loop started.');
-        } else {
-            startText.text = 'MIC PERMISSION DENIED';
-            startText.style.fill = '#ff0000';
-        }
-    });
-
-    // 7. Initialize UI
     const taskOverlay = new TaskOverlay();
     app.stage.addChild(taskOverlay);
 
-    // 7. Initialize World Map (Hidden by default or starts here)
-    // const worldMap = new WorldMapScene(app);
+    let pauseOverlay: PauseOverlay | null = null;
+    let demoZones: Container | null = null;
+    let runPrepared = false;
 
-    // 8. Setup Persistence Events
+    const mainMenu = new MainMenuRoot(app, {
+        onPlay: () => beginPlayFlow(),
+        onStats: () => showStatsScreen(),
+    });
+    app.stage.addChild(mainMenu);
+
+    const statsRoot = new PlayerStatsRoot(app, () => showMainMenu());
+    statsRoot.visible = false;
+    app.stage.addChild(statsRoot);
+
+    const micGate = new MicGateOverlay(app, {
+        onEnableMic: async () => {
+            const ok = await VoiceInputManager.getInstance().init();
+            if (ok) {
+                await startRun();
+            } else {
+                micGate.showDenied();
+            }
+        },
+        onBack: () => showMainMenu(),
+    });
+    micGate.visible = false;
+    app.stage.addChild(micGate);
+
+    function layoutAll(): void {
+        const { top } = getSafeAreaInsets();
+        const w = app.screen.width;
+        const h = app.screen.height;
+        mainMenu.layout(w, h, top);
+        statsRoot.layout(w, h, top);
+        micGate.layout(w, h, top);
+        pauseOverlay?.layout(w, h);
+    }
+
+    function showMainMenu(): void {
+        mainMenu.show();
+        statsRoot.hide();
+        micGate.visible = false;
+        gameLayer.visible = false;
+        velocityEngine.setSimulationEnabled(false);
+        if (pauseOverlay) {
+            app.stage.removeChild(pauseOverlay);
+            pauseOverlay.destroy();
+            pauseOverlay = null;
+        }
+        if (demoZones) {
+            app.stage.removeChild(demoZones);
+            demoZones.destroy();
+            demoZones = null;
+        }
+        levelSystem.reset(world);
+        const tr = world.getComponent<TransformComponent>(player, TransformComponent.TYPE_ID)!;
+        const vel = world.getComponent<VelocityComponent>(player, VelocityComponent.TYPE_ID)!;
+        tr.x = app.screen.width / 4;
+        tr.y = app.screen.height / 2;
+        vel.vx = VOICE_FLIGHT.CRUISE_SPEED_X;
+        vel.vy = 0;
+        runPrepared = false;
+        layoutAll();
+    }
+
+    function showStatsScreen(): void {
+        mainMenu.hide();
+        statsRoot.show();
+        layoutAll();
+    }
+
+    function beginPlayFlow(): void {
+        mainMenu.hide();
+        statsRoot.hide();
+        gameLayer.visible = true;
+        micGate.visible = true;
+        micGate.clearDenied();
+        layoutAll();
+    }
+
+    async function startRun(): Promise<void> {
+        micGate.visible = false;
+        LocalPlayerStats.recordRunStarted();
+
+        if (!runPrepared) {
+            levelSystem.initLevel(1, SONGS[0], player);
+            hudSystem.init(player);
+            const textures = [0x111122, 0x1a1a3a, 0x24244a].map((color) => {
+                const g = new Graphics().rect(0, 0, 512, 512).fill({ color });
+                for (let i = 0; i < 50; i++) {
+                    g.circle(Math.random() * 512, Math.random() * 512, 1).fill({ color: 0xffffff, alpha: 0.5 });
+                }
+                return app.renderer.generateTexture(g);
+            });
+            await parallaxSystem.init(player, textures);
+            runPrepared = true;
+        }
+
+        if (!demoZones) {
+            const dz = createDemoTouchZones(app.screen.width, app.screen.height);
+            if (dz) {
+                demoZones = dz;
+                app.stage.addChild(dz);
+                console.warn('[DEV] Demo touch strips active.');
+            }
+        }
+
+        if (!pauseOverlay) {
+            pauseOverlay = new PauseOverlay(app, {
+                onQuitToMenu: () => showMainMenu(),
+            });
+            app.stage.addChild(pauseOverlay);
+        }
+        pauseOverlay.layout(app.screen.width, app.screen.height);
+
+        velocityEngine.setSimulationEnabled(true);
+        VoiceInputManager.getInstance().resumeMic();
+        EventBus.getInstance().emit(GameEvents.LEVEL_START, 1);
+    }
+
+    window.addEventListener('resize', () => layoutAll());
+
     const eventBus = EventBus.getInstance();
-    
     eventBus.on(GameEvents.LEVEL_START, async (levelId) => {
         const uid = getPlayerIdForSync();
-        console.log(`WorldMap: Syncing progress for level ${levelId}`);
         try {
             await syncProfile(uid, Number(levelId), 100 * Number(levelId), 3);
         } catch (e) {
@@ -188,10 +235,8 @@ async function init() {
         }
     });
 
-    // 9. Loop is started after user interaction (overlay.on('pointerdown'))
-    // velocityEngine.start();
-
-    console.log('Velocity Engine: Full ECS Loop active with test entity.');
+    showMainMenu();
+    console.log('Velocity: menu ready');
 }
 
 init().catch((err) => {

@@ -4,6 +4,7 @@ import { VelocityComponent } from '../components/VelocityComponent';
 import { VoiceInputManager } from '../input/VoiceInputManager';
 import { GameState } from '../GameState';
 import { VOICE_FLIGHT } from '../../data/constants';
+import { GAME_UI } from '../../ui/theme/GameUITheme';
 import { Container, Graphics, Text, TextStyle } from 'pixi.js';
 
 /**
@@ -18,15 +19,15 @@ export class HUDSystem implements System {
     private pitchText: Text;
     private playerEntity: Entity | null = null;
 
-    constructor(private app: any) {
+    constructor(private app: any, parent: Container) {
         this.container = new Container();
-        this.app.stage.addChild(this.container);
+        parent.addChild(this.container);
 
         const style = new TextStyle({
-            fill: '#00ffcc',
-            fontSize: 14,
-            fontWeight: 'bold',
-            fontFamily: 'Orbitron, Arial',
+            fill: '#00f0ff',
+            fontSize: 13,
+            fontWeight: '700',
+            fontFamily: GAME_UI.fontBody,
             dropShadow: {
                 alpha: 0.8,
                 blur: 4,
@@ -37,9 +38,9 @@ export class HUDSystem implements System {
 
         // 1. Glassmorphism Background Panel
         const panel = new Graphics();
-        panel.roundRect(10, 10, 220, 132, 15);
-        panel.fill({ color: 0x000000, alpha: 0.4 });
-        panel.stroke({ color: 0xffffff, width: 1, alpha: 0.2 });
+        panel.roundRect(10, 10, 220, 132, 14);
+        panel.fill({ color: GAME_UI.bgPanel, alpha: 0.88 });
+        panel.stroke({ color: GAME_UI.strokeNeon, width: 2, alpha: 0.65 });
         this.container.addChild(panel);
 
         // 2. Metrics
@@ -100,13 +101,13 @@ export class HUDSystem implements System {
         // Render Premium Voice Meter
         this.voiceMeter.clear();
         // Background rail
-        this.voiceMeter.roundRect(0, 0, 190, 8, 4).fill({ color: 0x222222, alpha: 0.8 });
+        this.voiceMeter.roundRect(0, 0, 190, 8, 4).fill({ color: 0x1a1035, alpha: 0.9 });
         // Glow layer
         const level = Math.min(1, voice.volume * 4);
         if (!GameState.paused && !voice.isSuspended && level > 0.03) {
             this.voiceMeter.roundRect(0, 0, 190 * level, 8, 4)
-                .fill({ color: 0x00ffcc, alpha: 0.8 })
-                .stroke({ color: 0xffffff, width: 1, alpha: 0.5 });
+                .fill({ color: GAME_UI.accentCool, alpha: 0.85 })
+                .stroke({ color: GAME_UI.accentHot, width: 1, alpha: 0.6 });
         }
     }
 }

@@ -1,6 +1,7 @@
 import { Application, Ticker } from 'pixi.js';
 import { World } from './World';
 import { GameState } from './GameState';
+import { LocalPlayerStats } from '../player/LocalPlayerStats';
 
 /**
  * The Engine manages the PixiJS Application and the high-stability game loop.
@@ -12,6 +13,8 @@ export class Engine {
 
     private readonly fixedTimeStep: number = 1 / 60;
     private accumulator: number = 0;
+    /** When false, menu / front-end is shown — no ECS update or render (saves work). */
+    private simulationEnabled = false;
 
     constructor(app: Application, world: World) {
         this.app = app;
@@ -20,20 +23,30 @@ export class Engine {
         Ticker.shared.add(this.onTick, this);
     }
 
+    public setSimulationEnabled(on: boolean): void {
+        this.simulationEnabled = on;
+        if (!on) {
+            this.accumulator = 0;
+        }
+    }
+
     private onTick(): void {
         const delta = Ticker.shared.elapsedMS / 1000;
 
-        if (!GameState.paused) {
+        if (this.simulationEnabled && !GameState.paused) {
             this.accumulator += Math.min(delta, 0.25);
 
             while (this.accumulator >= this.fixedTimeStep) {
                 this.world.update(this.fixedTimeStep);
+                LocalPlayerStats.addPlaySeconds(this.fixedTimeStep);
                 this.accumulator -= this.fixedTimeStep;
             }
         }
 
-        const interpolation = this.accumulator / this.fixedTimeStep;
-        this.render(interpolation);
+        if (this.simulationEnabled) {
+            const interpolation = this.accumulator / this.fixedTimeStep;
+            this.render(interpolation);
+        }
     }
 
     private render(interpolation: number): void {

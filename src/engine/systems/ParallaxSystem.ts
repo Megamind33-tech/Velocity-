@@ -13,17 +13,27 @@ export class ParallaxSystem implements System {
     private container: Container;
     private playerEntity: Entity | null = null;
 
-    constructor(app: Application) {
+    constructor(_app: Application, parent: Container) {
         this.container = new Container();
-        app.stage.addChildAt(this.container, 0); // Background layer
+        parent.addChildAt(this.container, 0);
     }
 
     /**
      * Initializes parallax textures and player reference.
      */
+    public reset(): void {
+        for (const layer of this.layers) {
+            layer.destroy();
+        }
+        this.layers = [];
+        this.container.removeChildren();
+        this.playerEntity = null;
+    }
+
     public async init(player: Entity, textures: Texture[]): Promise<void> {
+        this.reset();
         this.playerEntity = player;
-        
+
         for (let i = 0; i < textures.length; i++) {
             const config = RENDERING.PARALLAX_LAYERS[i] || { speed: 0.1, offset: 0 };
             const tilingSprite = new TilingSprite({
