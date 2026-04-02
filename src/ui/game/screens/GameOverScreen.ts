@@ -1,4 +1,4 @@
-import { Application, Text, TextStyle } from 'pixi.js';
+import { Application, Container, Text, TextStyle } from 'pixi.js';
 import { BaseGameScreen } from '../GameUIManager';
 import { createGameButton, createStatDisplay } from '../GameUIComponents';
 import { GAME_COLORS, GAME_FONTS, GAME_SIZES } from '../GameUITheme';
@@ -24,7 +24,7 @@ export class GameOverScreen extends BaseGameScreen {
         title.position.set(width / 2, height / 4);
         this.container.addChild(title);
 
-        const statsContainer = new (require('pixi.js').Container)();
+        const statsContainer = new Container();
         statsContainer.position.set(width / 2 - 100, height / 2);
         this.container.addChild(statsContainer);
 
@@ -48,5 +48,26 @@ export class GameOverScreen extends BaseGameScreen {
     show(): void {
         super.show();
         console.log('💀 Game Over');
+    }
+
+    resize(width: number, height: number): void {
+        // Update positioned elements for responsive layout
+        const children = this.container.children;
+        if (children.length > 0) {
+            const title = children[0];
+            title.position.set(width / 2, height / 4);
+        }
+        if (children.length > 1) {
+            const statsContainer = children[1];
+            statsContainer.position.set(width / 2 - 100, height / 2);
+        }
+        if (children.length > 2) {
+            const restartBtn = children[2];
+            restartBtn.position.set(width / 2 - GAME_SIZES.button.large.width / 2, height * 0.7);
+        }
+        if (children.length > 3) {
+            const menuBtn = children[3];
+            menuBtn.position.set(width / 2 - GAME_SIZES.button.medium.width / 2, height * 0.8);
+        }
     }
 }

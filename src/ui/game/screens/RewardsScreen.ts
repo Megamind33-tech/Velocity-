@@ -1,9 +1,11 @@
-import { Application, Text, TextStyle } from 'pixi.js';
+import { Application, Container, Text, TextStyle } from 'pixi.js';
 import { BaseGameScreen } from '../GameUIManager';
 import { createGamePanel, createGameButton, createStatDisplay } from '../GameUIComponents';
 import { GAME_COLORS, GAME_FONTS, GAME_SIZES } from '../GameUITheme';
 
 export class RewardsScreen extends BaseGameScreen {
+    private panel: Container & { content: Container };
+
     constructor(app: Application) {
         super(app);
         this.setupUI();
@@ -13,11 +15,11 @@ export class RewardsScreen extends BaseGameScreen {
         const width = this.app.screen.width;
         const height = this.app.screen.height;
 
-        const panel = createGamePanel(450, 400, 'modal', 'DAILY REWARDS');
-        panel.position.set(width / 2 - 225, height / 2 - 200);
-        this.container.addChild(panel);
+        this.panel = createGamePanel(450, 400, 'modal', 'DAILY REWARDS');
+        this.panel.position.set(width / 2 - 225, height / 2 - 200);
+        this.container.addChild(this.panel);
 
-        const content = (panel).content;
+        const content = this.panel.content;
 
         const titleStyle = new TextStyle({
             fill: GAME_COLORS.accent_gold,
@@ -27,8 +29,8 @@ export class RewardsScreen extends BaseGameScreen {
         });
         const subtitle = new Text({ text: 'Come back tomorrow!', style: titleStyle });
         subtitle.anchor.set(0.5);
-        subtitle.position.set(200, 30);
-        panel.addChild(subtitle);
+        subtitle.position.set(225, 0);
+        content.addChild(subtitle);
 
         let y = GAME_SIZES.spacing.xxl;
         const rewards = [
@@ -48,12 +50,18 @@ export class RewardsScreen extends BaseGameScreen {
             console.log('Reward claimed!');
             this.uiManager.goBack();
         }, 'success', 'large');
-        claimBtn.position.set(width / 2 - 225 + 50, 320);
-        panel.addChild(claimBtn);
+        claimBtn.position.set((450 - GAME_SIZES.button.large.width) / 2, y);
+        content.addChild(claimBtn);
     }
 
     show(): void {
         super.show();
         console.log('🎁 Rewards opened');
+    }
+
+    resize(width: number, height: number): void {
+        if (this.panel) {
+            this.panel.position.set(width / 2 - 225, height / 2 - 200);
+        }
     }
 }

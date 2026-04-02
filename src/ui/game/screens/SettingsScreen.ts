@@ -1,9 +1,11 @@
-import { Application, Text, TextStyle } from 'pixi.js';
+import { Application, Container, Text, TextStyle } from 'pixi.js';
 import { BaseGameScreen } from '../GameUIManager';
 import { createGamePanel, createGameButton, createGameLabel } from '../GameUIComponents';
 import { GAME_COLORS, GAME_FONTS, GAME_SIZES } from '../GameUITheme';
 
 export class SettingsScreen extends BaseGameScreen {
+    private panel: Container & { content: Container };
+
     constructor(app: Application) {
         super(app);
         this.setupUI();
@@ -13,11 +15,11 @@ export class SettingsScreen extends BaseGameScreen {
         const width = this.app.screen.width;
         const height = this.app.screen.height;
 
-        const panel = createGamePanel(450, 400, 'modal', 'SETTINGS');
-        panel.position.set(width / 2 - 225, height / 2 - 200);
-        this.container.addChild(panel);
+        this.panel = createGamePanel(450, 400, 'modal', 'SETTINGS');
+        this.panel.position.set(width / 2 - 225, height / 2 - 200);
+        this.container.addChild(this.panel);
 
-        const content = (panel).content;
+        const content = this.panel.content;
         let y = 0;
 
         const musicLabel = createGameLabel('MUSIC VOLUME', GAME_SIZES.font.base, GAME_COLORS.text_primary);
@@ -38,12 +40,18 @@ export class SettingsScreen extends BaseGameScreen {
         const backBtn = createGameButton('BACK', () => {
             this.uiManager.goBack();
         }, 'secondary', 'medium');
-        backBtn.position.set(150, y);
-        panel.addChild(backBtn);
+        backBtn.position.set((450 - GAME_SIZES.button.medium.width) / 2, y);
+        content.addChild(backBtn);
     }
 
     show(): void {
         super.show();
         console.log('⚙️  Settings opened');
+    }
+
+    resize(width: number, height: number): void {
+        if (this.panel) {
+            this.panel.position.set(width / 2 - 225, height / 2 - 200);
+        }
     }
 }

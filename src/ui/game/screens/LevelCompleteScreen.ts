@@ -46,4 +46,25 @@ export class LevelCompleteScreen extends BaseGameScreen {
         super.show();
         console.log('✅ Level Complete');
     }
+
+    resize(width: number, height: number): void {
+        // Update positioned elements for responsive layout
+        const children = this.container.children;
+        if (children.length > 0) {
+            const title = children[0];
+            title.position.set(width / 2, height / 4);
+        }
+        if (children.length > 1) {
+            const scoreDisplay = children[1];
+            scoreDisplay.position.set(width / 2 - 100, height / 2);
+        }
+        if (children.length > 2) {
+            const nextBtn = children[2];
+            nextBtn.position.set(width / 2 - GAME_SIZES.button.large.width / 2, height * 0.7);
+        }
+        if (children.length > 3) {
+            const retryBtn = children[3];
+            retryBtn.position.set(width / 2 - GAME_SIZES.button.medium.width / 2, height * 0.8);
+        }
+    }
 }

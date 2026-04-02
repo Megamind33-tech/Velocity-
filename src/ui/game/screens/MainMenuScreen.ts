@@ -89,4 +89,35 @@ export class MainMenuScreen extends BaseGameScreen {
     hide(): void {
         super.hide();
     }
+
+    resize(width: number, height: number): void {
+        // Update positioned elements for responsive layout
+        const children = this.container.children;
+        if (children.length > 0) {
+            const title = children[0];
+            title.position.set(width / 2, height / 4);
+        }
+        if (children.length > 1) {
+            const subtitle = children[1];
+            subtitle.position.set(width / 2, height / 4 + 60);
+        }
+        const buttonY = height / 2;
+        const buttonSpacing = GAME_SIZES.spacing.xl;
+        if (children.length > 2) {
+            const startBtn = children[2];
+            startBtn.position.set(width / 2 - GAME_SIZES.button.large.width / 2, buttonY);
+        }
+        if (children.length > 3) {
+            const leaderboardBtn = children[3];
+            leaderboardBtn.position.set(width / 2 - GAME_SIZES.button.medium.width / 2, buttonY + buttonSpacing + 20);
+        }
+        if (children.length > 4) {
+            const achievementsBtn = children[4];
+            achievementsBtn.position.set(width / 2 - GAME_SIZES.button.medium.width / 2, buttonY + buttonSpacing * 2 + 40);
+        }
+        if (children.length > 5) {
+            const settingsBtn = children[5];
+            settingsBtn.position.set(width / 2 - GAME_SIZES.button.medium.width / 2, buttonY + buttonSpacing * 3 + 60);
+        }
+    }
 }
