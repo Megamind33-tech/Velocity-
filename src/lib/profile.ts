@@ -14,13 +14,15 @@ export interface PlayerProfile {
   level: number;
   xp: number;
   totalScore: number;
+  currency: number;
+  ownedPlanes: string[];
+  selectedPlane: string;
   songsPlayed: number;
   perfectGates: number;
   highScores: Record<string, number>; // songId_difficulty -> score
   challenges: Challenge[];
   dailyChallenge?: Challenge;
   lastDailyChallengeDate?: string;
-  selectedAircraftId?: string;
 }
 
 import { ACHIEVEMENTS } from './achievements';
@@ -64,6 +66,9 @@ export const loadProfile = (): PlayerProfile => {
       if (!profile.highScores) profile.highScores = {};
       if (profile.xp === undefined) profile.xp = 0;
       if (profile.level === undefined) profile.level = 1;
+      if (profile.currency === undefined) profile.currency = 0;
+      if (!profile.ownedPlanes) profile.ownedPlanes = ['default'];
+      if (!profile.selectedPlane) profile.selectedPlane = 'default';
       
       // Merge new challenges if any
       const existingChallengeIds = new Set(profile.challenges.map((c: Challenge) => c.id));
@@ -95,6 +100,9 @@ const createDefaultProfile = (): PlayerProfile => ({
   level: 1,
   xp: 0,
   totalScore: 0,
+  currency: 0,
+  ownedPlanes: ['default'],
+  selectedPlane: 'default',
   songsPlayed: 0,
   perfectGates: 0,
   highScores: {},

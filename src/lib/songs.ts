@@ -874,5 +874,102 @@ export const SONGS: Song[] = [
       { word: '-lai-', note: 67, duration: 0.5 },
       { word: '-lai', note: 69, duration: 1 }
     ]
+  },
+  {
+    id: 'rolling-in-the-deep',
+    title: 'Rolling in the Deep',
+    artist: 'Adele',
+    type: 'hard',
+    difficulty: 'hard',
+    tempo: 105,
+    sequence: [
+      { word: 'There\'s', note: 60, duration: 1, phraseStart: true },
+      { word: 'a', note: 62, duration: 1 },
+      { word: 'fi-', note: 64, duration: 1 },
+      { word: '-re', note: 65, duration: 1 },
+      { word: 'star-', note: 67, duration: 1 },
+      { word: '-ting', note: 69, duration: 1 },
+      { word: 'in', note: 72, duration: 1 },
+      { word: 'my', note: 71, duration: 1 },
+      { word: 'heart', note: 69, duration: 2 }
+    ]
+  },
+  {
+    id: 'blinding-lights',
+    title: 'Blinding Lights',
+    artist: 'The Weeknd',
+    type: 'medium',
+    difficulty: 'medium',
+    tempo: 171,
+    sequence: [
+      { word: 'I', note: 60, duration: 0.5, phraseStart: true },
+      { word: 'said', note: 62, duration: 0.5 },
+      { word: 'ooh', note: 64, duration: 1 },
+      { word: 'I\'m', note: 65, duration: 0.5 },
+      { word: 'blind-', note: 67, duration: 0.5 },
+      { word: '-ed', note: 69, duration: 1 },
+      { word: 'by', note: 72, duration: 0.5 },
+      { word: 'the', note: 71, duration: 0.5 },
+      { word: 'lights', note: 69, duration: 1 }
+    ]
+  },
+  {
+    id: 'havana',
+    title: 'Havana',
+    artist: 'Camila Cabello',
+    type: 'medium',
+    difficulty: 'medium',
+    tempo: 105,
+    sequence: [
+      { word: 'Ha-', note: 60, duration: 1, phraseStart: true },
+      { word: '-va-', note: 62, duration: 1 },
+      { word: '-na', note: 64, duration: 1 },
+      { word: 'ooh', note: 65, duration: 1 },
+      { word: 'na', note: 67, duration: 1 },
+      { word: 'na', note: 69, duration: 2 },
+      { word: 'half', note: 72, duration: 1 },
+      { word: 'of', note: 71, duration: 1 },
+      { word: 'my', note: 69, duration: 1 },
+      { word: 'heart', note: 67, duration: 2 }
+    ]
+  },
+  {
+    id: 'bad-guy',
+    title: 'Bad Guy',
+    artist: 'Billie Eilish',
+    type: 'hard',
+    difficulty: 'hard',
+    tempo: 135,
+    sequence: [
+      { word: 'So', note: 60, duration: 0.5, phraseStart: true },
+      { word: 'you\'re', note: 60, duration: 0.5 },
+      { word: 'a', note: 62, duration: 0.5 },
+      { word: 'tough', note: 62, duration: 0.5 },
+      { word: 'guy', note: 64, duration: 1 },
+      { word: 'like', note: 65, duration: 0.5 },
+      { word: 'it', note: 65, duration: 0.5 },
+      { word: 'real', note: 67, duration: 1 },
+      { word: 'rough', note: 69, duration: 1 }
+    ]
+  },
+  {
+    id: 'uprising',
+    title: 'Uprising',
+    artist: 'Muse',
+    type: 'hard',
+    difficulty: 'hard',
+    tempo: 128,
+    sequence: [
+      { word: 'Pa-', note: 60, duration: 0.5, phraseStart: true },
+      { word: '-ra-', note: 62, duration: 0.5 },
+      { word: '-no-', note: 64, duration: 0.5 },
+      { word: '-ia', note: 65, duration: 0.5 },
+      { word: 'is', note: 67, duration: 0.5 },
+      { word: 'com-', note: 69, duration: 0.5 },
+      { word: '-ing', note: 72, duration: 1 },
+      { word: 'to', note: 71, duration: 0.5 },
+      { word: 'your', note: 69, duration: 0.5 },
+      { word: 'door', note: 67, duration: 1 },
+    ]
   }
 ];

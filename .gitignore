@@ -1,11 +1,8 @@
 node_modules/
 build/
 dist/
-tmp-ui-kit/
 coverage/
 .DS_Store
 *.log
 .env*
 !.env.example
-ui-design/
-ui-design.zip

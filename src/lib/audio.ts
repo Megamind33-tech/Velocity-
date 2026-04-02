@@ -12,12 +12,14 @@ export class AudioController {
   currentCents: number = 0;
 
   async init() {
-    this.audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
-    this.analyser = this.audioCtx.createAnalyser();
-    this.analyser.fftSize = 2048;
-
+    if (this.audioCtx && this.mediaStream) return;
+    
     try {
       this.mediaStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      this.audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
+      this.analyser = this.audioCtx.createAnalyser();
+      this.analyser.fftSize = 2048;
+      
       this.source = this.audioCtx.createMediaStreamSource(this.mediaStream);
       this.source.connect(this.analyser);
       if (this.audioCtx.state === 'suspended') {

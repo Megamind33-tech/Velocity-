@@ -5,6 +5,8 @@ import { Song } from '../lib/songs';
 interface GameStats {
   perfectGates: number;
   maxCombo: number;
+  accuracyPercentage: number;
+  totalTimeSpent: number;
 }
 
 interface GameCanvasProps {
@@ -19,20 +21,25 @@ interface GameCanvasProps {
 }
 
 const DIFFICULTY_PARAMS = {
-  easy: { spawnRate: 180, gapSize: 160, baseWidth: 120, forgiveness: 1.5, scoreMultiplier: 0.8, breathPenaltyThreshold: null },
-  medium: { spawnRate: 150, gapSize: 120, baseWidth: 80, forgiveness: 1.0, scoreMultiplier: 1.0, breathPenaltyThreshold: null },
-  hard: { spawnRate: 110, gapSize: 80, baseWidth: 60, forgiveness: 0.7, scoreMultiplier: 1.5, breathPenaltyThreshold: 30 },
+  easy: { spawnRate: 200, gapSize: 220, baseWidth: 80, forgiveness: 1.8, scoreMultiplier: 0.7, breathPenaltyThreshold: null, speedMultiplier: 0.8 },
+  medium: { spawnRate: 140, gapSize: 180, baseWidth: 60, forgiveness: 1.2, scoreMultiplier: 1.0, breathPenaltyThreshold: null, speedMultiplier: 1.0 },
+  hard: { spawnRate: 90, gapSize: 130, baseWidth: 40, forgiveness: 0.6, scoreMultiplier: 1.8, breathPenaltyThreshold: 20, speedMultiplier: 1.3 },
 };
 
 interface Obstacle {
-  type: 'pitch' | 'volume';
+  type: 'pitch' | 'volume' | 'bend' | 'wave' | 'zigzag';
   x: number;
   width: number;
   gapTop: number;
   gapBottom: number;
+  gapSize?: number; // Added for dynamic gaps
   passed: boolean;
   targetNoteName?: string;
   targetY?: number;
+  endTargetY?: number; // For bend
+  waveAmplitude?: number; // For wave
+  waveFrequency?: number; // For wave
+  zigzagPoints?: { x: number, y: number }[]; // For zigzag
   requiredVolume?: number;
   volumeProgress?: number;
   lyricWord?: string;
@@ -404,6 +411,79 @@ const drawEnergyBeam = (ctx: CanvasRenderingContext2D, x: number, y: number, w: 
   ctx.restore();
 };
 
+const drawDynamicEnergyBeam = (ctx: CanvasRenderingContext2D, obs: Obstacle, color: string, frameCount: number, theme: any) => {
+  const { x, width, targetY, endTargetY, waveAmplitude, waveFrequency, zigzagPoints, gapSize, type } = obs;
+  if (gapSize === undefined || targetY === undefined) return;
+
+  const pulse = Math.sin(frameCount * 0.1 + x * 0.01) * 0.2 + 0.8;
+  ctx.save();
+  ctx.globalAlpha = pulse;
+
+  const drawPart = (isTop: boolean) => {
+    ctx.beginPath();
+    const steps = type === 'zigzag' && zigzagPoints ? zigzagPoints.length - 1 : 20;
+    const stepW = width / steps;
+
+    for (let i = 0; i <= steps; i++) {
+      const curX = x + i * stepW;
+      let curY = targetY;
+      
+      if (type === 'bend' && endTargetY !== undefined) {
+        curY = targetY + (endTargetY - targetY) * (i / steps);
+      } else if (type === 'wave' && waveAmplitude !== undefined && waveFrequency !== undefined) {
+        curY = targetY + Math.sin(i * stepW * waveFrequency) * waveAmplitude;
+      } else if (type === 'zigzag' && zigzagPoints) {
+        curY = zigzagPoints[i].y;
+      }
+
+      const edgeY = isTop ? curY - gapSize / 2 : curY + gapSize / 2;
+      if (i === 0) {
+        ctx.moveTo(curX, isTop ? 0 : ctx.canvas.height);
+        ctx.lineTo(curX, edgeY);
+      } else {
+        ctx.lineTo(curX, edgeY);
+      }
+    }
+
+    ctx.lineTo(x + width, isTop ? 0 : ctx.canvas.height);
+    ctx.closePath();
+
+    const grad = ctx.createLinearGradient(x, 0, x + width, 0);
+    grad.addColorStop(0, 'rgba(255,255,255,0)');
+    grad.addColorStop(0.2, color);
+    grad.addColorStop(0.5, '#ffffff');
+    grad.addColorStop(0.8, color);
+    grad.addColorStop(1, 'rgba(255,255,255,0)');
+    
+    ctx.fillStyle = grad;
+    ctx.fill();
+
+    // Glow edge
+    ctx.strokeStyle = '#ffffff';
+    ctx.lineWidth = 4;
+    ctx.beginPath();
+    for (let i = 0; i <= steps; i++) {
+      const curX = x + i * stepW;
+      let curY = targetY;
+      if (type === 'bend' && endTargetY !== undefined) {
+        curY = targetY + (endTargetY - targetY) * (i / steps);
+      } else if (type === 'wave' && waveAmplitude !== undefined && waveFrequency !== undefined) {
+        curY = targetY + Math.sin(i * stepW * waveFrequency) * waveAmplitude;
+      } else if (type === 'zigzag' && zigzagPoints) {
+        curY = zigzagPoints[i].y;
+      }
+      const edgeY = isTop ? curY - gapSize / 2 : curY + gapSize / 2;
+      if (i === 0) ctx.moveTo(curX, edgeY);
+      else ctx.lineTo(curX, edgeY);
+    }
+    ctx.stroke();
+  };
+
+  drawPart(true);
+  drawPart(false);
+  ctx.restore();
+};
+
 const drawMountain = (ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, depth: number, front: string | CanvasGradient, side: string | CanvasGradient, top: string | CanvasGradient, frameCount: number) => {
   const depthX = depth * 0.6;
   const depthY = depth * 0.3;
@@ -740,6 +820,7 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({ audioController, onGameO
     
     // Song State
     let currentLyricIndex = initialCheckpoint?.currentLyricIndex || 0;
+    let lyricOffset = 0;
     let nextSpawnFrame = frameCount;
     let songCompleted = false;
 
@@ -840,7 +921,9 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({ audioController, onGameO
 
     let perfectGates = 0;
     let maxCombo = 0;
+    let totalNotes = 0;
     let lastHapticMilestone = 0;
+    const startTime = performance.now();
 
     const triggerHaptic = (pattern: number | number[]) => {
       if (typeof navigator !== 'undefined' && navigator.vibrate) {
@@ -905,7 +988,9 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({ audioController, onGameO
             localStorage.setItem('highScore', finalScore.toString());
             setHighScore(finalScore);
           }
-          onGameOver(finalScore, false, { perfectGates, maxCombo });
+          const totalTimeSpent = (performance.now() - startTime) / 1000;
+          const accuracyPercentage = totalNotes > 0 ? (perfectGates / totalNotes) * 100 : 0;
+          onGameOver(finalScore, false, { perfectGates, maxCombo, accuracyPercentage, totalTimeSpent });
           return;
         }
       }
@@ -930,7 +1015,7 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({ audioController, onGameO
       
       const dynamicSpeedMultiplier = Math.max(0.7, 1 + scoreBonus + distanceBonus + streakBonus - strugglePenalty);
 
-      const gameSpeed = (distanceToTravel / arrivalFrames) * dynamicDifficulty * dynamicSpeedMultiplier;
+      const gameSpeed = (distanceToTravel / arrivalFrames) * dynamicDifficulty * dynamicSpeedMultiplier * DIFFICULTY_PARAMS[difficulty].speedMultiplier;
       const dynamicWidth = (difficulty === 'easy' ? 120 : difficulty === 'hard' ? 60 : 80) + Math.min(220, (score / 25) + (gameSpeed * 4));
 
       // 2. Spawn Obstacles
@@ -939,41 +1024,109 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({ audioController, onGameO
         
         // Dynamically adjust difficulty at phrase starts
         if (lyric.phraseStart) {
-          dynamicDifficulty = Math.min(1.5, dynamicDifficulty + 0.05);
+          dynamicDifficulty = Math.min(1.2, dynamicDifficulty + 0.02);
         }
 
-        // Calculate melodic contour offset (pitch change pressure)
-        let contourOffset = 0;
-        if (currentLyricIndex > 0) {
-          const prevNote = song.sequence[currentLyricIndex - 1].note;
-          const currentNote = lyric.note;
-          const diff = currentNote - prevNote;
-          // Apply a pressure factor based on the pitch difference
-          contourOffset = diff * 8; // Increased factor for more visible path shaping
-        }
-
-        const targetNote = lyric.note;
-        // Apply contourOffset to obsTargetY to shape the path, clamped to stay on screen
-        const rawY = canvas.height - ((targetNote - minNote) / noteRange) * canvas.height - contourOffset;
-        const obsTargetY = Math.max(50, Math.min(canvas.height - 50, rawY));
-        
         const durationInBeats = lyric.duration || 1;
         const baseWidth = DIFFICULTY_PARAMS[difficulty].baseWidth;
-        const dynamicWidth = baseWidth * durationInBeats + Math.min(220, (score / 25) + (gameSpeed * 4));
+        const dynamicWidth = baseWidth * durationInBeats + Math.min(150, (score / 50) + (gameSpeed * 2));
+        
+        // Randomly choose between pitch, volume, bend, and wave obstacles
+        const rand = Math.random();
+        const isVolumeGate = rand < 0.2; // 20% chance for voice gate
+        const isBend = rand >= 0.2 && rand < 0.35 && durationInBeats >= 1.5; // 15% chance for bend if long enough
+        const isWave = rand >= 0.35 && rand < 0.45 && durationInBeats >= 2; // 10% chance for wave if long enough
+        const isZigzag = rand >= 0.45 && rand < 0.55 && durationInBeats >= 2; // 10% chance for zigzag if long enough
 
-        const baseGapSize = DIFFICULTY_PARAMS[difficulty].gapSize;
-        // Tighten gap at phrase starts for added challenge
-        const gapMultiplier = lyric.phraseStart ? 0.8 : 1.0;
-        const currentGapSize = Math.max(35, (baseGapSize - (score / 15)) / dynamicDifficulty) * gapMultiplier;
+        if (isVolumeGate) {
+            obstacles.push({
+              type: 'volume', x: canvas.width, width: dynamicWidth,
+              gapTop: canvas.height / 2, gapBottom: canvas.height / 2,
+              gapSize: canvas.height, // Initial gap size for volume gate
+              passed: false, requiredVolume: 0.1 + Math.random() * 0.15, volumeProgress: 0, passedFrame: null
+            });
+        } else if (isBend) {
+            const targetNote = lyric.note;
+            const nextLyric = song.sequence[currentLyricIndex + 1];
+            const nextNote = nextLyric ? nextLyric.note : targetNote + (Math.random() > 0.5 ? 2 : -2);
+            
+            const rawY = canvas.height - ((targetNote - minNote) / noteRange) * canvas.height;
+            const endRawY = canvas.height - ((nextNote - minNote) / noteRange) * canvas.height;
+            
+            const obsTargetY = Math.max(50, Math.min(canvas.height - 50, rawY));
+            const endTargetY = Math.max(50, Math.min(canvas.height - 50, endRawY));
+            
+            const baseGapSize = DIFFICULTY_PARAMS[difficulty].gapSize;
+            const currentGapSize = Math.max(180, (baseGapSize - (score / 50)) / dynamicDifficulty);
 
-        // Determine shape based on duration
-        const shape = durationInBeats >= 2 ? 'long' : durationInBeats < 1 ? 'staccato' : 'default';
+            obstacles.push({
+              type: 'bend', x: canvas.width, width: dynamicWidth,
+              gapTop: obsTargetY - currentGapSize / 2, gapBottom: obsTargetY + currentGapSize / 2,
+              gapSize: currentGapSize,
+              passed: false, targetNoteName: getNoteString(targetNote), targetY: obsTargetY, endTargetY, lyricWord: lyric.word, passedFrame: null
+            });
+        } else if (isWave) {
+            const targetNote = lyric.note;
+            const rawY = canvas.height - ((targetNote - minNote) / noteRange) * canvas.height;
+            const obsTargetY = Math.max(100, Math.min(canvas.height - 100, rawY));
+            
+            const baseGapSize = DIFFICULTY_PARAMS[difficulty].gapSize;
+            const currentGapSize = Math.max(180, (baseGapSize - (score / 50)) / dynamicDifficulty);
 
-        obstacles.push({
-          type: 'pitch', x: canvas.width, width: dynamicWidth, shape,
-          gapTop: obsTargetY - currentGapSize / 2, gapBottom: obsTargetY + currentGapSize / 2,
-          passed: false, targetNoteName: getNoteString(targetNote), targetY: obsTargetY, lyricWord: lyric.word, passedFrame: null
-        });
+            obstacles.push({
+              type: 'wave', x: canvas.width, width: dynamicWidth,
+              gapTop: obsTargetY - currentGapSize / 2, gapBottom: obsTargetY + currentGapSize / 2,
+              gapSize: currentGapSize,
+              passed: false, targetNoteName: getNoteString(targetNote), targetY: obsTargetY,
+              waveAmplitude: 40 + Math.random() * 40,
+              waveFrequency: 0.05 + Math.random() * 0.05,
+              lyricWord: lyric.word, passedFrame: null
+            });
+        } else if (isZigzag) {
+            const targetNote = lyric.note;
+            const rawY = canvas.height - ((targetNote - minNote) / noteRange) * canvas.height;
+            const obsTargetY = Math.max(100, Math.min(canvas.height - 100, rawY));
+            
+            const baseGapSize = DIFFICULTY_PARAMS[difficulty].gapSize;
+            const currentGapSize = Math.max(180, (baseGapSize - (score / 50)) / dynamicDifficulty);
+
+            const points = [];
+            const numPoints = 4;
+            for (let p = 0; p <= numPoints; p++) {
+              points.push({
+                x: (p / numPoints) * dynamicWidth,
+                y: obsTargetY + (p % 2 === 0 ? -50 : 50)
+              });
+            }
+
+            obstacles.push({
+              type: 'zigzag', x: canvas.width, width: dynamicWidth,
+              gapTop: obsTargetY - currentGapSize / 2, gapBottom: obsTargetY + currentGapSize / 2,
+              gapSize: currentGapSize,
+              passed: false, targetNoteName: getNoteString(targetNote), targetY: obsTargetY,
+              zigzagPoints: points,
+              lyricWord: lyric.word, passedFrame: null
+            });
+        } else {
+            const targetNote = lyric.note;
+            const rawY = canvas.height - ((targetNote - minNote) / noteRange) * canvas.height;
+            const obsTargetY = Math.max(50, Math.min(canvas.height - 50, rawY));
+            
+            const baseGapSize = DIFFICULTY_PARAMS[difficulty].gapSize;
+            const gapMultiplier = lyric.phraseStart ? 0.95 : 1.0;
+            const currentGapSize = Math.max(180, (baseGapSize - (score / 50)) / dynamicDifficulty) * gapMultiplier;
+
+            const shape = durationInBeats >= 2 ? 'long' : durationInBeats < 1 ? 'staccato' : 'default';
+
+            if (shape !== 'staccato') {
+              obstacles.push({
+                type: 'pitch', x: canvas.width, width: dynamicWidth, shape,
+                gapTop: obsTargetY - currentGapSize / 2, gapBottom: obsTargetY + currentGapSize / 2,
+                gapSize: currentGapSize,
+                passed: false, targetNoteName: getNoteString(targetNote), targetY: obsTargetY, lyricWord: lyric.word, passedFrame: null
+              });
+            }
+        }
         
         const framesPerBeat = (60 * 60) / song.tempo;
         nextSpawnFrame = frameCount + (durationInBeats * framesPerBeat);
@@ -982,12 +1135,27 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({ audioController, onGameO
         const baseSpawnRate = DIFFICULTY_PARAMS[difficulty].spawnRate;
         const spawnRate = Math.max(40, baseSpawnRate / dynamicDifficulty);
         if (frameCount % Math.floor(spawnRate) === 0 && frameCount > 0) {
-          const isVolumeGate = Math.random() < 0.25;
-          if (isVolumeGate) {
+          const rand = Math.random();
+          if (rand < 0.2) {
             obstacles.push({
               type: 'volume', x: canvas.width, width: dynamicWidth,
               gapTop: canvas.height / 2, gapBottom: canvas.height / 2,
+              gapSize: canvas.height,
               passed: false, requiredVolume: 0.1 + Math.random() * 0.15, volumeProgress: 0, passedFrame: null
+            });
+          } else if (rand < 0.35) {
+            const targetNote = minNote + Math.floor(Math.random() * noteRange);
+            const endNote = targetNote + (Math.random() > 0.5 ? 4 : -4);
+            const obsTargetY = canvas.height - ((targetNote - minNote) / noteRange) * canvas.height;
+            const endTargetY = canvas.height - ((endNote - minNote) / noteRange) * canvas.height;
+            const baseGapSize = DIFFICULTY_PARAMS[difficulty].gapSize;
+            const currentGapSize = Math.max(150, (baseGapSize - (score / 15)) / dynamicDifficulty);
+
+            obstacles.push({
+              type: 'bend', x: canvas.width, width: dynamicWidth * 2,
+              gapTop: obsTargetY - currentGapSize / 2, gapBottom: obsTargetY + currentGapSize / 2,
+              gapSize: currentGapSize,
+              passed: false, targetNoteName: getNoteString(targetNote), targetY: obsTargetY, endTargetY, passedFrame: null
             });
           } else {
             const naturalNotes = [];
@@ -997,11 +1165,12 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({ audioController, onGameO
             const targetNote = naturalNotes[Math.floor(Math.random() * naturalNotes.length)];
             const obsTargetY = canvas.height - ((targetNote - minNote) / noteRange) * canvas.height;
             const baseGapSize = DIFFICULTY_PARAMS[difficulty].gapSize;
-            const currentGapSize = Math.max(35, (baseGapSize - (score / 15)) / dynamicDifficulty);
+            const currentGapSize = Math.max(150, (baseGapSize - (score / 15)) / dynamicDifficulty);
 
             obstacles.push({
               type: 'pitch', x: canvas.width, width: dynamicWidth,
               gapTop: obsTargetY - currentGapSize / 2, gapBottom: obsTargetY + currentGapSize / 2,
+              gapSize: currentGapSize,
               passed: false, targetNoteName: getNoteString(targetNote), targetY: obsTargetY, passedFrame: null
             });
           }
@@ -1030,7 +1199,9 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({ audioController, onGameO
           localStorage.setItem('highScore', finalScore.toString());
           setHighScore(finalScore);
         }
-        onGameOver(finalScore, true, { perfectGates, maxCombo });
+        const totalTimeSpent = (performance.now() - startTime) / 1000;
+        const accuracyPercentage = totalNotes > 0 ? (perfectGates / totalNotes) * 100 : 0;
+        onGameOver(finalScore, true, { perfectGates, maxCombo, accuracyPercentage, totalTimeSpent });
         return;
       }
 
@@ -1069,10 +1240,62 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({ audioController, onGameO
           }
           obs.gapTop = (canvas.height / 2) * (1 - obs.volumeProgress!);
           obs.gapBottom = canvas.height - (canvas.height / 2) * (1 - obs.volumeProgress!);
+        } else if (obs.type === 'bend' && obs.endTargetY !== undefined && obs.targetY !== undefined && obs.gapSize !== undefined) {
+          const progress = Math.max(0, Math.min(1, (playerX - obs.x) / obs.width));
+          const currentY = obs.targetY + (obs.endTargetY - obs.targetY) * progress;
+          obs.gapTop = currentY - obs.gapSize / 2;
+          obs.gapBottom = currentY + obs.gapSize / 2;
+        } else if (obs.type === 'wave' && obs.targetY !== undefined && obs.waveAmplitude !== undefined && obs.waveFrequency !== undefined && obs.gapSize !== undefined) {
+          const currentY = obs.targetY + Math.sin((playerX - obs.x) * obs.waveFrequency) * obs.waveAmplitude;
+          obs.gapTop = currentY - obs.gapSize / 2;
+          obs.gapBottom = currentY + obs.gapSize / 2;
+        } else if (obs.type === 'zigzag' && obs.zigzagPoints && obs.gapSize !== undefined) {
+          const progressX = playerX - obs.x;
+          // Find the segment
+          let currentY = obs.targetY || canvas.height / 2;
+          for (let p = 0; p < obs.zigzagPoints.length - 1; p++) {
+            const p1 = obs.zigzagPoints[p];
+            const p2 = obs.zigzagPoints[p + 1];
+            if (progressX >= p1.x && progressX <= p2.x) {
+              const segmentProgress = (progressX - p1.x) / (p2.x - p1.x);
+              currentY = p1.y + (p2.y - p1.y) * segmentProgress;
+              break;
+            }
+          }
+          obs.gapTop = currentY - obs.gapSize / 2;
+          obs.gapBottom = currentY + obs.gapSize / 2;
         }
 
-        if (playerX + 15 > obs.x && playerX - 15 < obs.x + obs.width) {
-          if (playerY - 10 < obs.gapTop || playerY + 10 > obs.gapBottom) {
+        // Calculate player tilt for precise collision
+        const tilt = (targetY - playerY) * 0.05;
+        const playerWidth = 30;
+        const playerHeight = 20;
+        const corners = [
+          {x: -playerWidth/2, y: -playerHeight/2},
+          {x: playerWidth/2, y: -playerHeight/2},
+          {x: playerWidth/2, y: playerHeight/2},
+          {x: -playerWidth/2, y: playerHeight/2}
+        ];
+
+        // Rotate and translate corners
+        const rotatedCorners = corners.map(c => {
+          const rx = c.x * Math.cos(tilt) - c.y * Math.sin(tilt);
+          const ry = c.x * Math.sin(tilt) + c.y * Math.cos(tilt);
+          return {x: playerX + rx, y: playerY + ry};
+        });
+
+        // Check collision
+        let collision = false;
+        for (const corner of rotatedCorners) {
+          if (corner.x > obs.x && corner.x < obs.x + obs.width) {
+            if (corner.y < obs.gapTop || corner.y > obs.gapBottom) {
+              collision = true;
+              break;
+            }
+          }
+        }
+
+        if (collision) {
             if (!isDying) {
               isDying = true;
               shakeTimer = 60; // Increased duration for more impact
@@ -1099,13 +1322,13 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({ audioController, onGameO
               }
             }
             return;
-          }
         }
 
         if (!obs.passed && obs.x + obs.width < playerX) {
           obs.passed = true;
           obs.passedFrame = frameCount;
           combo++;
+          totalNotes++;
           obstaclesPassed++;
           if (combo > maxCombo) maxCombo = combo;
           
@@ -1818,11 +2041,16 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({ audioController, onGameO
         ctx.shadowOffsetX = -10;
         ctx.shadowOffsetY = 10;
 
-        if (obs.type === 'pitch') {
-          const color = obs.shape === 'long' ? '#eab308' : obs.shape === 'staccato' ? '#ec4899' : theme.gateFront;
+        if (obs.type === 'pitch' || obs.type === 'bend' || obs.type === 'wave' || obs.type === 'zigzag') {
+          const color = obs.type === 'bend' ? '#38bdf8' : obs.type === 'wave' ? '#a855f7' : obs.type === 'zigzag' ? '#f97316' : (obs.shape === 'long' ? '#eab308' : theme.gateFront);
 
-          drawEnergyBeam(ctx, obs.x, 0, obs.width, obs.gapTop, color, frameCount, true, obs.shape);
-          drawEnergyBeam(ctx, obs.x, obs.gapBottom, obs.width, canvas.height - obs.gapBottom, color, frameCount, false, obs.shape);
+          if (obs.type === 'bend' || obs.type === 'wave' || obs.type === 'zigzag') {
+            // Draw dynamic beam
+            drawDynamicEnergyBeam(ctx, obs, color, frameCount, theme);
+          } else {
+            drawEnergyBeam(ctx, obs.x, 0, obs.width, obs.gapTop, color, frameCount, true, obs.shape);
+            drawEnergyBeam(ctx, obs.x, obs.gapBottom, obs.width, canvas.height - obs.gapBottom, color, frameCount, false, obs.shape);
+          }
           
           ctx.restore();
 
@@ -2076,19 +2304,19 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({ audioController, onGameO
 
       // --- Lyrics Display ---
       if (song && !isDying) {
-        const currentIndex = obstaclesPassed;
+        const currentIndex = currentLyricIndex;
         const lyricsToShow = 6;
         const centerY = canvas.height - 100;
         const centerX = canvas.width / 2;
 
         ctx.save();
-        ctx.textAlign = 'left';
+        ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
 
         // Subtle background bar for lyrics readability
         const lyricBgGrad = ctx.createLinearGradient(0, centerY - 50, 0, centerY + 50);
         lyricBgGrad.addColorStop(0, 'rgba(0, 0, 0, 0)');
-        lyricBgGrad.addColorStop(0.5, 'rgba(0, 0, 0, 0.5)');
+        lyricBgGrad.addColorStop(0.5, 'rgba(0, 0, 0, 0.6)');
         lyricBgGrad.addColorStop(1, 'rgba(0, 0, 0, 0)');
         ctx.fillStyle = lyricBgGrad;
         ctx.fillRect(0, centerY - 50, canvas.width, 100);
@@ -2115,7 +2343,9 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({ audioController, onGameO
           } else {
             ctx.font = 'bold 28px sans-serif';
             // Fade out words further in the future
-            const opacity = Math.max(0.1, 0.5 - (i * 0.1));
+            // Current word is prominent (handled in isCurrent block), 
+            // future words start at 0.8 opacity and fade out
+            const opacity = Math.max(0.1, 0.8 - (i * 0.2));
             ctx.fillStyle = `rgba(255, 255, 255, ${opacity})`;
             ctx.shadowBlur = 0;
           }
@@ -2132,10 +2362,11 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({ audioController, onGameO
         ctx.restore();
       }
 
-      // Breath Penalty UI
+      // Breath Meter UI
       if (DIFFICULTY_PARAMS[difficulty].breathPenaltyThreshold !== null) {
         const penaltyThreshold = DIFFICULTY_PARAMS[difficulty].breathPenaltyThreshold!;
-        const penaltyProgress = Math.min(1, silenceFrames / penaltyThreshold);
+        // Breath meter depletes as silenceFrames increases
+        const breathProgress = Math.max(0, 1 - (silenceFrames / penaltyThreshold));
         
         const meterWidth = 200;
         const meterHeight = 12;
@@ -2152,31 +2383,38 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({ audioController, onGameO
         ctx.strokeRect(meterX, meterY, meterWidth, meterHeight);
 
         // Fill
-        if (penaltyProgress > 0) {
-          // Pulse effect when close to penalty
-          const isCritical = penaltyProgress > 0.8;
-          const pulse = isCritical ? Math.sin(frameCount * 0.5) * 0.5 + 0.5 : 1;
+        if (breathProgress > 0) {
+          // Pulse effect when low breath
+          const isLow = breathProgress < 0.3;
+          const pulse = isLow ? Math.sin(frameCount * 0.2) * 0.5 + 0.5 : 1;
           
-          const r = isCritical ? 239 : (penaltyProgress > 0.5 ? 245 : 59);
-          const g = isCritical ? 68 : (penaltyProgress > 0.5 ? 158 : 130);
-          const b = isCritical ? 68 : (penaltyProgress > 0.5 ? 11 : 246);
+          // Color: Green to Red
+          const r = isLow ? 239 : 59;
+          const g = isLow ? 68 : 246;
+          const b = isLow ? 68 : 130;
           
           ctx.fillStyle = `rgba(${r}, ${g}, ${b}, ${0.5 + pulse * 0.5})`;
-          ctx.fillRect(meterX, meterY, meterWidth * penaltyProgress, meterHeight);
+          ctx.fillRect(meterX, meterY, meterWidth * breathProgress, meterHeight);
           
-          if (isCritical) {
+          if (isLow) {
             ctx.shadowColor = `rgba(${r}, ${g}, ${b}, 1)`;
             ctx.shadowBlur = 10;
-            ctx.fillRect(meterX, meterY, meterWidth * penaltyProgress, meterHeight);
+            ctx.fillRect(meterX, meterY, meterWidth * breathProgress, meterHeight);
             ctx.shadowBlur = 0;
+            
+            // Warning text
+            ctx.fillStyle = '#ef4444';
+            ctx.font = 'bold 14px sans-serif';
+            ctx.textAlign = 'center';
+            ctx.fillText('LOW BREATH!', canvas.width / 2, meterY - 10);
           }
         }
-
-        // Text
-        ctx.fillStyle = penaltyProgress > 0.8 ? '#ef4444' : 'rgba(255, 255, 255, 0.8)';
+        
+        // Label
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
         ctx.font = 'bold 12px sans-serif';
         ctx.textAlign = 'center';
-        ctx.fillText('BREATH LIMIT', canvas.width / 2, meterY - 8);
+        ctx.fillText('BREATH', canvas.width / 2, meterY - 8);
 
         ctx.restore();
       }
