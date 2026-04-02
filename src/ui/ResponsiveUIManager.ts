@@ -1,8 +1,8 @@
 /**
- * ResponsiveUIManager: Mathematical screen-aware UI positioning and sizing
+ * ResponsiveUIManager: Mobile & Tablet First Design
  *
- * Real Device Dimensions (actual playable area):
- * - iPhone SE (1st gen): 320×568 (oldest)
+ * Target Devices Only:
+ * - iPhone SE (1st gen): 320×568
  * - iPhone SE 2024: 393×852
  * - iPhone 14: 393×852
  * - iPhone 14 Pro: 393×852
@@ -12,12 +12,11 @@
  * - iPad (10.2"): 810×1080
  * - iPad Pro (11"): 834×1194
  *
- * Breakpoints:
- * - Small Mobile: width < 360px (edge case)
- * - Mobile Portrait: 360 ≤ width < 768px (all phones)
+ * Breakpoints (Mobile & Tablet Only):
+ * - Small Mobile: width < 360px (oldest phones)
+ * - Mobile Portrait: 360 ≤ width < 768px (all phones in vertical)
  * - Mobile Landscape: height < 500px (phone rotated)
- * - Tablet: 768 ≤ width < 1024px
- * - Desktop: width ≥ 1024px
+ * - Tablet: width ≥ 768px (iPad and larger tablets)
  */
 export class ResponsiveUIManager {
     private static instance: ResponsiveUIManager;
@@ -27,11 +26,11 @@ export class ResponsiveUIManager {
     private devicePixelRatio: number = 1;
     private orientation: 'portrait' | 'landscape' = 'portrait';
     private scaleFactor: number = 1;
-    private breakpoint: 'small' | 'mobile-portrait' | 'mobile-landscape' | 'tablet' | 'desktop' = 'desktop';
+    private breakpoint: 'small-mobile' | 'mobile-portrait' | 'mobile-landscape' | 'tablet' = 'mobile-portrait';
 
-    // Reference dimensions for calculations (1080p mobile)
-    private readonly REFERENCE_WIDTH = 1080;
-    private readonly REFERENCE_HEIGHT = 1920;
+    // Reference: iPhone 14 (393×852) - typical mobile reference
+    private readonly MOBILE_REFERENCE_WIDTH = 393;
+    private readonly MOBILE_REFERENCE_HEIGHT = 852;
 
     private constructor() {
         this.updateScreenDimensions();
@@ -66,31 +65,30 @@ export class ResponsiveUIManager {
     }
 
     /**
-     * Determine which breakpoint we're in
+     * Determine which breakpoint we're in (Mobile & Tablet only)
      */
     private calculateBreakpoint(): void {
         if (this.screenWidth < 360) {
-            this.breakpoint = 'small';
+            this.breakpoint = 'small-mobile';
         } else if (this.screenHeight < 500) {
             this.breakpoint = 'mobile-landscape';
         } else if (this.screenWidth < 768) {
             this.breakpoint = 'mobile-portrait';
-        } else if (this.screenWidth < 1024) {
-            this.breakpoint = 'tablet';
         } else {
-            this.breakpoint = 'desktop';
+            this.breakpoint = 'tablet';
         }
     }
 
     /**
-     * Calculate scale factor relative to reference dimensions
-     * Formula: scaleFactor = (currentWidth / referenceWidth) * 0.5 + 0.5
-     * This provides smooth scaling between 0.5x (small devices) and 1x (desktop)
+     * Calculate scale factor relative to mobile reference
+     * For mobile/tablet: more aggressive scaling to stay visible
+     * Formula: scaleFactor = (currentWidth / referenceWidth) * 0.8 + 0.4
+     * This provides scaling between 0.4x (small phones) and 1.2x (tablets)
      */
     private calculateScaleFactor(): void {
-        const widthRatio = this.screenWidth / this.REFERENCE_WIDTH;
-        // Clamp between 0.5 (small phones) and 1.0 (desktop)
-        this.scaleFactor = Math.max(0.5, Math.min(1.0, widthRatio));
+        const widthRatio = this.screenWidth / this.MOBILE_REFERENCE_WIDTH;
+        // Clamp between 0.4 (small phones) and 1.2 (tablets)
+        this.scaleFactor = Math.max(0.4, Math.min(1.2, widthRatio * 0.8 + 0.4));
     }
 
     // ============================================================================
@@ -126,37 +124,48 @@ export class ResponsiveUIManager {
     }
 
     public isMobilePortrait(): boolean {
-        return this.breakpoint === 'mobile-portrait';
+        return this.breakpoint === 'mobile-portrait' || this.breakpoint === 'small-mobile';
     }
 
     public isMobileLandscape(): boolean {
         return this.breakpoint === 'mobile-landscape';
     }
 
-    public isSmallScreen(): boolean {
-        return this.breakpoint === 'small';
+    public isSmallMobile(): boolean {
+        return this.breakpoint === 'small-mobile';
+    }
+
+    public isTablet(): boolean {
+        return this.breakpoint === 'tablet';
+    }
+
+    public isMobile(): boolean {
+        return this.breakpoint === 'small-mobile' || this.breakpoint === 'mobile-portrait' || this.breakpoint === 'mobile-landscape';
     }
 
     // ============================================================================
-    // RESPONSIVE SIZING CALCULATIONS
+    // RESPONSIVE SIZING CALCULATIONS (Mobile/Tablet Optimized)
     // ============================================================================
 
     /**
-     * Calculate responsive font size
-     * Formula: baseSize * scaleFactor, with min/max constraints
+     * Calculate responsive font size for mobile/tablet
+     * Minimum 12px (always readable), no upper limit for tablets
      */
     public calculateFontSize(baseSize: number): number {
         const responsiveSize = baseSize * this.scaleFactor;
-        // Minimum readable font size on mobile: 12px
-        // Maximum on desktop: no cap (use baseSize)
-        return Math.max(12, Math.min(baseSize, responsiveSize));
+        // Minimum readable font on mobile: 12px
+        return Math.max(12, responsiveSize);
     }
 
     /**
      * Calculate responsive value with constraints
      * Used for sizes, padding, margins
      */
-    public calculateResponsiveSize(baseSize: number, minSize: number = baseSize * 0.5, maxSize: number = baseSize): number {
+    public calculateResponsiveSize(
+        baseSize: number,
+        minSize: number = baseSize * 0.5,
+        maxSize: number = baseSize * 1.2
+    ): number {
         const responsiveSize = baseSize * this.scaleFactor;
         return Math.max(minSize, Math.min(maxSize, responsiveSize));
     }
@@ -182,54 +191,75 @@ export class ResponsiveUIManager {
         return {
             top: topPadding,
             bottom: bottomPadding,
-            left: 20,
-            right: 20,
+            left: 16,
+            right: 16,
         };
     }
 
     // ============================================================================
-    // BUTTON SIZING (Touch Targets)
+    // BUTTON SIZING (Touch Targets) - Mobile First
     // ============================================================================
 
     /**
      * Get minimum touch-safe button dimensions
-     * Recommendation: 48×48px (Apple), 50×50px (Android)
-     * On small screens: ensure at least 44×44px
+     * Mobile: 48×48px minimum (Apple/Android standards)
+     * Tablet: can be larger for better usability
      */
     public getButtonDimensions(baseWidth: number = 100, baseHeight: number = 40): { width: number; height: number } {
-        const responsiveWidth = this.calculateResponsiveSize(baseWidth, 44, baseWidth);
-        const responsiveHeight = this.calculateResponsiveSize(baseHeight, 40, baseHeight);
+        let minWidth = 44;
+        let minHeight = 40;
+
+        // Tablets get larger minimum touch targets
+        if (this.isTablet()) {
+            minWidth = 56;
+            minHeight = 48;
+        }
+
+        const responsiveWidth = this.calculateResponsiveSize(baseWidth, minWidth, baseWidth * 1.2);
+        const responsiveHeight = this.calculateResponsiveSize(baseHeight, minHeight, baseHeight * 1.2);
 
         return {
-            width: Math.max(44, responsiveWidth),
-            height: Math.max(40, responsiveHeight),
+            width: responsiveWidth,
+            height: responsiveHeight,
         };
     }
 
     /**
      * Get pause button specific dimensions
-     * Base: 100×40, Mobile: 60×32, Desktop: 100×40
+     * Mobile Portrait: 60×32
+     * Mobile Landscape: 50×30
+     * Tablet: 80×40
      */
     public getPauseButtonDimensions(): { width: number; height: number } {
-        if (this.isMobilePortrait()) {
-            return { width: 60, height: 32 };
-        } else if (this.isMobileLandscape()) {
+        if (this.isMobileLandscape()) {
             return { width: 50, height: 30 };
+        } else if (this.isSmallMobile()) {
+            return { width: 55, height: 30 };
+        } else if (this.isMobilePortrait()) {
+            return { width: 60, height: 32 };
+        } else {
+            // Tablet
+            return { width: 80, height: 40 };
         }
-        return { width: 100, height: 40 };
     }
 
     /**
      * Get resume button specific dimensions (primary action, larger)
-     * Base: 120×50, Mobile: 100×40, Desktop: 120×50
+     * Mobile Portrait: 100×40
+     * Mobile Landscape: 80×35
+     * Tablet: 130×50
      */
     public getResumeButtonDimensions(): { width: number; height: number } {
-        if (this.isMobilePortrait()) {
-            return { width: 100, height: 40 };
-        } else if (this.isMobileLandscape()) {
+        if (this.isMobileLandscape()) {
             return { width: 80, height: 35 };
+        } else if (this.isSmallMobile()) {
+            return { width: 90, height: 38 };
+        } else if (this.isMobilePortrait()) {
+            return { width: 100, height: 40 };
+        } else {
+            // Tablet
+            return { width: 130, height: 50 };
         }
-        return { width: 120, height: 50 };
     }
 
     // ============================================================================
@@ -237,46 +267,77 @@ export class ResponsiveUIManager {
     // ============================================================================
 
     /**
-     * Get HUD panel layout based on screen size and orientation
+     * Get HUD panel layout based on device type and orientation
+     * Mobile Portrait: compact, top-left with safe area
+     * Mobile Landscape: compact, bottom-left to avoid controls
+     * Tablet: larger, top-left
      */
     public getHUDPanelLayout(): { x: number; y: number; width: number; height: number } {
         const safe = this.getSafeAreaPadding();
         const padding = 10;
 
         if (this.isMobileLandscape()) {
-            // Mobile landscape: compact vertical, positioned bottom-left
+            // Mobile landscape: compact, positioned bottom-left
             return {
                 x: padding + safe.left,
-                y: this.screenHeight - 120 - safe.bottom,
-                width: 180,
-                height: 100,
+                y: this.screenHeight - 110 - safe.bottom,
+                width: 170,
+                height: 95,
+            };
+        } else if (this.isSmallMobile()) {
+            // Small phones: very compact
+            return {
+                x: padding + safe.left,
+                y: padding + safe.top,
+                width: 160,
+                height: 110,
             };
         } else if (this.isMobilePortrait()) {
-            // Mobile portrait: compact, top-left with safe area offset
+            // Standard mobile portrait: compact, top-left with safe area offset
             return {
                 x: padding + safe.left,
                 y: padding + safe.top,
                 width: 180,
                 height: 120,
             };
+        } else {
+            // Tablet: larger HUD, still top-left
+            return {
+                x: padding + safe.left,
+                y: padding + safe.top,
+                width: 220,
+                height: 140,
+            };
         }
-
-        // Desktop/Tablet: full-size HUD, top-left
-        return {
-            x: padding,
-            y: padding,
-            width: 220,
-            height: 132,
-        };
     }
 
     /**
      * Get HUD text positioning (relative to panel x, y)
      */
-    public getHUDTextPositions(): { altitude: { x: number; y: number }; speed: { x: number; y: number }; pitch: { x: number; y: number }; meterLabel: { x: number; y: number }; meter: { x: number; y: number } } {
-        const isCompact = this.isMobilePortrait() || this.isMobileLandscape();
-
-        if (isCompact) {
+    public getHUDTextPositions(): {
+        altitude: { x: number; y: number };
+        speed: { x: number; y: number };
+        pitch: { x: number; y: number };
+        meterLabel: { x: number; y: number };
+        meter: { x: number; y: number };
+    } {
+        if (this.isSmallMobile()) {
+            return {
+                altitude: { x: 12, y: 10 },
+                speed: { x: 12, y: 28 },
+                pitch: { x: 12, y: 46 },
+                meterLabel: { x: 12, y: 64 },
+                meter: { x: 12, y: 82 },
+            };
+        } else if (this.isMobileLandscape()) {
+            return {
+                altitude: { x: 12, y: 8 },
+                speed: { x: 12, y: 26 },
+                pitch: { x: 12, y: 44 },
+                meterLabel: { x: 12, y: 62 },
+                meter: { x: 12, y: 80 },
+            };
+        } else if (this.isMobilePortrait()) {
             return {
                 altitude: { x: 15, y: 12 },
                 speed: { x: 15, y: 32 },
@@ -284,16 +345,16 @@ export class ResponsiveUIManager {
                 meterLabel: { x: 15, y: 68 },
                 meter: { x: 15, y: 85 },
             };
+        } else {
+            // Tablet
+            return {
+                altitude: { x: 20, y: 18 },
+                speed: { x: 20, y: 40 },
+                pitch: { x: 20, y: 60 },
+                meterLabel: { x: 20, y: 80 },
+                meter: { x: 20, y: 100 },
+            };
         }
-
-        // Desktop layout
-        return {
-            altitude: { x: 25, y: 25 },
-            speed: { x: 25, y: 50 },
-            pitch: { x: 25, y: 68 },
-            meterLabel: { x: 25, y: 92 },
-            meter: { x: 25, y: 112 },
-        };
     }
 
     // ============================================================================
@@ -310,25 +371,27 @@ export class ResponsiveUIManager {
         if (this.isMobileLandscape()) {
             // Mobile landscape: position higher to avoid bottom controls
             return Math.max(20, this.screenHeight / 4);
-        } else if (this.isMobilePortrait()) {
+        } else if (this.isMobilePortrait() || this.isSmallMobile()) {
             // Mobile portrait: below safe area
             return safe.top + 20;
+        } else {
+            // Tablet: standard position
+            return 60;
         }
-
-        // Desktop: standard position
-        return 100;
     }
 
     /**
      * Get task overlay max width
+     * Mobile: 85% of screen, max 320px
+     * Tablet: 85% of screen, max 500px
      */
     public getTaskOverlayMaxWidth(): number {
-        if (this.isMobilePortrait() || this.isMobileLandscape()) {
-            // Mobile: 85% of screen, max 320px
+        if (this.isTablet()) {
+            return Math.min(this.screenWidth * 0.85, 500);
+        } else {
+            // Mobile
             return Math.min(this.screenWidth * 0.85, 320);
         }
-        // Desktop: max 400px
-        return 400;
     }
 
     // ============================================================================
@@ -337,33 +400,46 @@ export class ResponsiveUIManager {
 
     /**
      * Get start screen text positioning
+     * Optimized for mobile and tablet screens only
      */
-    public getStartScreenLayout(): { titleY: number; subtitleY: number; titleSize: number; subtitleSize: number } {
+    public getStartScreenLayout(): {
+        titleY: number;
+        subtitleY: number;
+        titleSize: number;
+        subtitleSize: number;
+    } {
         const safe = this.getSafeAreaPadding();
 
-        if (this.isMobilePortrait()) {
-            return {
-                titleY: this.screenHeight / 2 - 60 + safe.top,
-                subtitleY: this.screenHeight / 2 + 10 + safe.top,
-                titleSize: 20,
-                subtitleSize: 12,
-            };
-        } else if (this.isMobileLandscape()) {
+        if (this.isMobileLandscape()) {
             return {
                 titleY: this.screenHeight / 2 - 30,
                 subtitleY: this.screenHeight / 2 + 20,
                 titleSize: 18,
                 subtitleSize: 11,
             };
+        } else if (this.isSmallMobile()) {
+            return {
+                titleY: this.screenHeight / 2 - 50 + safe.top,
+                subtitleY: this.screenHeight / 2 + 10 + safe.top,
+                titleSize: 18,
+                subtitleSize: 11,
+            };
+        } else if (this.isMobilePortrait()) {
+            return {
+                titleY: this.screenHeight / 2 - 60 + safe.top,
+                subtitleY: this.screenHeight / 2 + 10 + safe.top,
+                titleSize: 20,
+                subtitleSize: 12,
+            };
+        } else {
+            // Tablet
+            return {
+                titleY: this.screenHeight / 2 - 60,
+                subtitleY: this.screenHeight / 2 + 20,
+                titleSize: 24,
+                subtitleSize: 14,
+            };
         }
-
-        // Desktop
-        return {
-            titleY: this.screenHeight / 2 - 20,
-            subtitleY: this.screenHeight / 2 + 30,
-            titleSize: 28,
-            subtitleSize: 14,
-        };
     }
 
     // ============================================================================
@@ -371,8 +447,10 @@ export class ResponsiveUIManager {
     // ============================================================================
 
     /**
-     * Get pause button position
-     * Top-right on portrait, top-left on landscape (avoid system controls at bottom)
+     * Get pause button position (mobile and tablet)
+     * Mobile Portrait: top-right
+     * Mobile Landscape: top-left (avoid system controls at bottom)
+     * Tablet: top-right
      */
     public getPauseButtonPosition(): { x: number; y: number } {
         const buttonDims = this.getPauseButtonDimensions();
@@ -387,7 +465,7 @@ export class ResponsiveUIManager {
             };
         }
 
-        // Portrait & Desktop: top-right
+        // Mobile portrait & Tablet: top-right
         return {
             x: this.screenWidth - buttonDims.width - padding - safe.right,
             y: padding + safe.top,
@@ -419,20 +497,6 @@ export class ResponsiveUIManager {
     // ============================================================================
     // HELPER METHODS
     // ============================================================================
-
-    /**
-     * Check if we're on a phone (not tablet/desktop)
-     */
-    public isPhone(): boolean {
-        return this.breakpoint === 'small' || this.breakpoint === 'mobile-portrait' || this.breakpoint === 'mobile-landscape';
-    }
-
-    /**
-     * Check if device is in a small viewport (< 400px width)
-     */
-    public isVerySmallScreen(): boolean {
-        return this.screenWidth < 400;
-    }
 
     /**
      * Get debug info for testing

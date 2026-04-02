@@ -1,5 +1,11 @@
 /* ============================================================================
-   Mobile Viewport Configuration
+   Mobile & Tablet Viewport Configuration (Mobile/Tablet Only)
+
+   Target Devices:
+   - iPhone: 320px to 428px width (all models)
+   - Android phones: 360px to 480px width
+   - iPad: 810px to 1194px width
+   - No desktop support
    ============================================================================ */
 @viewport {
   width: device-width;
@@ -90,18 +96,9 @@ body {
 }
 
 /* ============================================================================
-   Tablets (768px - 1023px width)
+   Tablets (768px and above) - iPad and larger tablets
    ============================================================================ */
-@media (min-width: 768px) and (max-width: 1023px) {
-  html, body {
-    font-size: 16px;
-  }
-}
-
-/* ============================================================================
-   Desktop (1024px and above)
-   ============================================================================ */
-@media (min-width: 1024px) {
+@media (min-width: 768px) {
   html, body {
     font-size: 16px;
   }
