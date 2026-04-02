@@ -12,6 +12,8 @@ import { SpriteSystem } from './engine/systems/SpriteSystem';
 import { FlightDynamicsSystem } from './engine/systems/FlightDynamicsSystem';
 import { VoiceInputSystem } from './engine/systems/VoiceInputSystem';
 import { LevelSystem } from './engine/systems/LevelSystem';
+import { ParallaxSystem } from './engine/systems/ParallaxSystem';
+import { HUDSystem } from './engine/systems/HUDSystem';
 import { VoiceInputManager } from './engine/input/VoiceInputManager';
 import { LeaderboardSystem } from './engine/systems/LeaderboardSystem';
 import { QuestSystem } from './engine/systems/QuestSystem';
@@ -44,11 +46,16 @@ async function init() {
 
     // 4. Register Systems
     const levelSystem = new LevelSystem(app);
+    const parallaxSystem = new ParallaxSystem(app);
+    const hudSystem = new HUDSystem(app);
+
     world.addSystem(new VoiceInputSystem());
     world.addSystem(new FlightDynamicsSystem());
     world.addSystem(new MovementSystem());
     world.addSystem(new SpriteSystem());
     world.addSystem(levelSystem);
+    world.addSystem(parallaxSystem);
+    world.addSystem(hudSystem);
     world.addSystem(new LeaderboardSystem());
     world.addSystem(new QuestSystem());
 
@@ -100,6 +107,18 @@ async function init() {
             // Initialize the level with the first song
             levelSystem.initLevel(1, SONGS[0], player);
             
+            // Initialize visuals
+            hudSystem.init(player);
+            
+            // Generate placeholder parallax textures
+            const textures = [0x111122, 0x1a1a3a, 0x24244a].map(color => {
+                const g = new Graphics().rect(0, 0, 512, 512).fill({ color });
+                // Add some "stars" or noise
+                for(let i=0; i<50; i++) g.circle(Math.random()*512, Math.random()*512, 1).fill({ color: 0xffffff, alpha: 0.5 });
+                return app.renderer.generateTexture(g);
+            });
+            await parallaxSystem.init(player, textures);
+
             // Start components and loop
             velocityEngine.start();
             console.log('Velocity Engine: Voice loop started.');
