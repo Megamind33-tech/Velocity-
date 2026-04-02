@@ -11,6 +11,7 @@ import { MovementSystem } from './engine/systems/MovementSystem';
 import { SpriteSystem } from './engine/systems/SpriteSystem';
 import { FlightDynamicsSystem } from './engine/systems/FlightDynamicsSystem';
 import { VoiceInputSystem } from './engine/systems/VoiceInputSystem';
+import { AutoForwardSystem } from './engine/systems/AutoForwardSystem';
 import { LevelSystem } from './engine/systems/LevelSystem';
 import { ParallaxSystem } from './engine/systems/ParallaxSystem';
 import { HUDSystem } from './engine/systems/HUDSystem';
@@ -23,6 +24,8 @@ import { SpriteComponent } from './engine/components/SpriteComponent';
 import { FlightDynamicsComponent } from './engine/components/FlightDynamicsComponent';
 import { GateComponent } from './engine/components/GateComponent';
 import { TaskOverlay } from './ui/TaskOverlay';
+import { PauseOverlay } from './ui/PauseOverlay';
+import { createDemoTouchZones } from './debug/DemoTouchZones';
 import { SONGS } from './data/songs';
 
 async function init() {
@@ -50,6 +53,7 @@ async function init() {
     const hudSystem = new HUDSystem(app);
 
     world.addSystem(new VoiceInputSystem());
+    world.addSystem(new AutoForwardSystem());
     world.addSystem(new FlightDynamicsSystem());
     world.addSystem(new MovementSystem());
     world.addSystem(new SpriteSystem());
@@ -86,7 +90,7 @@ async function init() {
     const overlay = new Graphics();
     overlay.rect(0, 0, app.screen.width, app.screen.height);
     overlay.fill({ color: 0x000000, alpha: 0.85 });
-    overlay.interactive = true;
+    overlay.eventMode = 'static';
     app.stage.addChild(overlay);
 
     const startStyle = new TextStyle({
@@ -98,10 +102,11 @@ async function init() {
     });
 
     const startText = new Text({ text: 'VELOCITY: VOICE-FLIGHT', style: startStyle });
-    const subText = new Text({ 
-        text: 'TAP SCREEN TO INITIALIZE MIC', 
-        style: { ...startStyle, fontSize: 14, alpha: 0.7 } 
+    const subText = new Text({
+        text: 'TAP SCREEN TO INITIALIZE MIC',
+        style: new TextStyle({ ...startStyle, fontSize: 14 }),
     });
+    subText.alpha = 0.7;
 
     startText.anchor.set(0.5);
     subText.anchor.set(0.5);
@@ -131,6 +136,15 @@ async function init() {
                 return app.renderer.generateTexture(g);
             });
             await parallaxSystem.init(player, textures);
+
+            const demoZones = createDemoTouchZones(app.screen.width, app.screen.height);
+            if (demoZones) {
+                app.stage.addChild(demoZones);
+                console.warn('[DEV] Demo touch strips active (left=up, right=down). Remove for production.');
+            }
+
+            const pauseOverlay = new PauseOverlay(app);
+            app.stage.addChild(pauseOverlay);
 
             // Start components and loop
             velocityEngine.start();

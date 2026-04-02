@@ -35,5 +35,5 @@ export async function getGlobalLeaderboard(): Promise<UserProfile[]> {
     const q = query(usersRef, orderBy('stars', 'desc'), limit(50));
     
     const snapshot = await getDocs(q);
-    return snapshot.docs.map(doc => doc.data() as UserProfile);
+    return snapshot.docs.map((d) => d.data() as UserProfile);
 }
