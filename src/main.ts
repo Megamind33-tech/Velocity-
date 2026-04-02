@@ -114,6 +114,15 @@ async function init() {
 
     const bus = EventBus.getInstance();
 
+    bus.on(GameEvents.LEVEL_START, async (levelId: number) => {
+        const uid = getPlayerIdForSync();
+        try {
+            await syncProfile(uid, Number(levelId), 100 * Number(levelId), 3);
+        } catch (e) {
+            console.warn('Velocity: profile sync on level start skipped.', e);
+        }
+    });
+
     bus.on(GameEvents.LEVEL_COMPLETE, async () => {
         endRun();
         unlockAfterComplete(currentLevelId);
