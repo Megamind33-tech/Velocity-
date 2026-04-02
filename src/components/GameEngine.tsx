@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useCallback } from 'react';
 import { AudioController } from '../lib/audio';
 import { Song } from '../lib/songs-extended';
 import { getLevelInfo } from '../lib/progression';
+import { getAircraftById } from '../lib/aircraft';
 
 interface GameEngineProps {
   audioController: AudioController;
@@ -11,6 +12,7 @@ interface GameEngineProps {
   difficulty: 'novice' | 'intermediate' | 'advanced' | 'master' | 'legend';
   isPaused: boolean;
   demoMode?: boolean;
+  aircraftId?: string;
   onGameOver: (score: number, win: boolean, stats: GameStats) => void;
 }
 
@@ -136,7 +138,7 @@ const DIFF_GLOW: Record<string, string> = {
 };
 
 export function GameEngine({
-  audioController, song, level, mode, difficulty, isPaused, demoMode, onGameOver,
+  audioController, song, level, mode, difficulty, isPaused, demoMode, aircraftId, onGameOver,
 }: GameEngineProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const stateRef = useRef<{
@@ -447,8 +449,18 @@ export function GameEngine({
         ctx.lineWidth = 2; ctx.stroke();
       }
 
-      // --- Plane ---
-      drawPlane(ctx, 100, planeY, pAngle, accurate, difficulty);
+      // --- Aircraft ---
+      {
+        const aircraft = getAircraftById(aircraftId || 'heli-classic');
+        const glowRgb = DIFF_GLOW[difficulty] || '67,231,255';
+        const gameTime = s.elapsed;
+        ctx.save();
+        ctx.translate(100, planeY);
+        const aircraftScale = 1.4;
+        ctx.scale(aircraftScale, aircraftScale);
+        aircraft.draw(ctx, pAngle, accurate, glowRgb, gameTime);
+        ctx.restore();
+      }
 
       // --- HUD ---
       const acc = s.hitCount > 0 ? s.accSum / s.hitCount : 0;
@@ -510,34 +522,6 @@ function spawnParticles(arr: Particle[], x: number, y: number, perfect: boolean)
       life: 0.6 + Math.random() * 0.4, maxLife: 1, color, size: 2 + Math.random() * 2,
     });
   }
-}
-
-function drawPlane(ctx: CanvasRenderingContext2D, x: number, y: number, angle: number, glow: boolean, diff: string) {
-  ctx.save(); ctx.translate(x, y);
-  const a = angle * Math.PI / 180;
-  // Glow
-  if (glow) {
-    const rgb = DIFF_GLOW[diff] || '67,231,255';
-    ctx.fillStyle = `rgba(${rgb},0.12)`;
-    ctx.beginPath(); ctx.arc(0, 0, 55, 0, Math.PI * 2); ctx.fill();
-  }
-  // Body
-  ctx.fillStyle = '#C0C0C0';
-  ctx.beginPath(); ctx.ellipse(0, 0, 40, 8, a, 0, Math.PI * 2); ctx.fill();
-  // Wings
-  ctx.fillStyle = '#E8E8E8';
-  ctx.beginPath(); ctx.ellipse(0, 0, 70, 4, a, 0, Math.PI * 2); ctx.fill();
-  // Cockpit
-  ctx.fillStyle = '#0047AB';
-  ctx.beginPath(); ctx.arc(8, -4, 3, 0, Math.PI * 2); ctx.fill();
-  // Outline glow
-  ctx.strokeStyle = glow ? `rgba(${DIFF_GLOW[diff] || '67,231,255'},0.7)` : 'rgba(200,200,200,0.4)';
-  ctx.lineWidth = 2;
-  ctx.beginPath(); ctx.ellipse(0, 0, 45, 12, a, 0, Math.PI * 2); ctx.stroke();
-  // Tail
-  ctx.fillStyle = '#B0B0B0';
-  ctx.beginPath(); ctx.moveTo(-35, 0); ctx.lineTo(-42, -10); ctx.lineTo(-42, 10); ctx.closePath(); ctx.fill();
-  ctx.restore();
 }
 
 function drawHUD(
