@@ -3,8 +3,7 @@ const K = {
 } as const;
 
 /**
- * Linear route unlock: clearing node N allows selecting node N+1 on the map.
- * Stars still gate individual charts inside song select.
+ * World tour legs cleared (1..7). Node k playable when k <= maxCleared + 1.
  */
 export const WorldMapProgress = {
     getMaxClearedNode(): number {
@@ -32,14 +31,13 @@ export const WorldMapProgress = {
     },
 
     /**
-     * Advance route only when the player starts the next sector in order
-     * (avoids skipping by playing a harder chart first).
+     * Advance when the player begins a run on the next tour leg (map flow).
      */
-    recordSequentialClear(nodeId: number): void {
-        if (nodeId < 1) return;
+    recordSequentialClear(legIndex: number): void {
+        if (legIndex < 1) return;
         const next = this.getMaxClearedNode() + 1;
-        if (nodeId === next) {
-            this.recordNodeCleared(nodeId);
+        if (legIndex === next) {
+            this.recordNodeCleared(legIndex);
         }
     },
 

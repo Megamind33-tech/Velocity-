@@ -38,7 +38,8 @@ import { SongSelectRoot } from './ui/SongSelectRoot';
 import { loadGameFont } from './ui/loadGameFont';
 import { WorldMapRoot } from './scenes/WorldMapRoot';
 import { WorldMapProgress } from './player/WorldMapProgress';
-import { VOCAL_STAGES, type VocalStage } from './data/vocalStages';
+import type { TourRegionId } from './data/worldTour';
+import { chartsForTourRegion } from './player/songFilter';
 
 function showInitFailure(message: string, detail?: string): void {
     const el = document.createElement('div');
@@ -121,7 +122,7 @@ async function init() {
     let runPrepared = false;
     let preparedSongId: string | null = null;
     let selectedSong: Song | null = null;
-    let mapSector: VocalStage | null = null;
+    let mapRegion: TourRegionId | null = null;
 
     const mainMenu = new MainMenuRoot(app, {
         onPlay: () => beginPlayFlow(),
@@ -134,8 +135,8 @@ async function init() {
 
     const songSelect = new SongSelectRoot(app, {
         onBack: () => {
-            if (mapSector != null) {
-                mapSector = null;
+            if (mapRegion != null) {
+                mapRegion = null;
                 songSelect.hide();
                 worldMap.show();
                 layoutAll();
@@ -152,7 +153,12 @@ async function init() {
             layoutAll();
         },
         onUnlockApplied: () => {
-            songSelect.setTracks(visibleCharts(SONGS), { mapSector });
+            if (mapRegion != null) {
+                const pool = chartsForTourRegion(visibleCharts(SONGS), mapRegion);
+                songSelect.setTracks(pool.length > 0 ? pool : visibleCharts(SONGS), { mapRegion });
+            } else {
+                songSelect.setTracks(visibleCharts(SONGS));
+            }
             songSelect.refreshProgress();
             layoutAll();
         },
@@ -163,17 +169,17 @@ async function init() {
 
     worldMap = new WorldMapRoot(app, {
         onBack: () => showMainMenu(),
-        onSelectNode: (nodeId) => {
-            const stage = VOCAL_STAGES[nodeId - 1];
-            if (!stage) return;
-            const furthest = WorldMapProgress.getFurthestSelectableNode(VOCAL_STAGES.length);
-            if (nodeId > furthest) return;
-            mapSector = stage;
+        onSelectLeg: (legIndex, regionId) => {
+            const furthest = WorldMapProgress.getFurthestSelectableNode(7);
+            if (legIndex > furthest) return;
+            mapRegion = regionId;
             worldMap.hide();
-            songSelect.setTracks(visibleCharts(SONGS), { mapSector });
+            const pool = chartsForTourRegion(visibleCharts(SONGS), regionId);
+            songSelect.setTracks(pool.length > 0 ? pool : visibleCharts(SONGS), { mapRegion });
             songSelect.show();
             layoutAll();
         },
+        onHomeCountryChange: () => layoutAll(),
     });
     worldMap.visible = false;
     app.stage.addChild(worldMap);
@@ -194,8 +200,9 @@ async function init() {
         onBack: () => {
             micGate.visible = false;
             gameLayer.visible = false;
-            if (mapSector != null) {
-                songSelect.setTracks(visibleCharts(SONGS), { mapSector });
+            if (mapRegion != null) {
+                const pool = chartsForTourRegion(visibleCharts(SONGS), mapRegion);
+                songSelect.setTracks(pool.length > 0 ? pool : visibleCharts(SONGS), { mapRegion });
                 songSelect.show();
             } else {
                 songSelect.setTracks(visibleCharts(SONGS));
@@ -248,7 +255,7 @@ async function init() {
         runPrepared = false;
         preparedSongId = null;
         selectedSong = null;
-        mapSector = null;
+        mapRegion = null;
         layoutAll();
     }
 
@@ -274,7 +281,7 @@ async function init() {
         mainMenu.hide();
         statsRoot.hide();
         worldMap.hide();
-        mapSector = null;
+        mapRegion = null;
         songSelect.setTracks(visibleCharts(SONGS));
         songSelect.show();
         gameLayer.visible = false;
@@ -347,8 +354,8 @@ async function init() {
 
         velocityEngine.setSimulationEnabled(true);
         VoiceInputManager.getInstance().resumeMic();
-        if (song.worldMapNodeId != null) {
-            WorldMapProgress.recordSequentialClear(song.worldMapNodeId);
+        if (song.tourLegIndex != null) {
+            WorldMapProgress.recordSequentialClear(song.tourLegIndex);
         }
         EventBus.getInstance().emit(GameEvents.LEVEL_START, levelId);
     }

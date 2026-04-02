@@ -1,43 +1,63 @@
 import { Application, Container, FederatedPointerEvent, Graphics, Rectangle, Text, TextStyle } from 'pixi.js';
-import { VOCAL_STAGES, STAGE_LABEL, type VocalStage } from '../data/vocalStages';
 import { GAME_UI } from '../ui/theme/GameUITheme';
 import { createMenuButton } from '../ui/gameUiPrimitives';
 import { WorldMapProgress } from '../player/WorldMapProgress';
 import { CareerProgress } from '../player/CareerProgress';
+import {
+    getTourOrder,
+    TOUR_REGIONS,
+    HOME_PRESET_OPTIONS,
+    type TourRegion,
+    type TourRegionId,
+} from '../data/worldTour';
+import { WorldMapProfile } from '../player/WorldMapProfile';
 
 export interface WorldMapHandlers {
     onBack: () => void;
-    /** 1-based route node (matches song.worldMapNodeId) */
-    onSelectNode: (nodeId: number) => void;
+    /** Tour leg 1..7 → region id for song filter */
+    onSelectLeg: (legIndex: number, regionId: TourRegionId) => void;
+    onHomeCountryChange?: (countryKey: string) => void;
 }
 
-interface MapNode {
-    id: number;
-    stage: VocalStage;
+interface TourPin {
+    legIndex: number;
+    region: TourRegion;
     x: number;
     y: number;
 }
 
-const NODE_R = 34;
+const MAP_W = 720;
+const MAP_H = 420;
+const PIN_R = 28;
 
 /**
- * Touch-pan world route (Prompt D): one node per vocal tier, unlock by route progress + stars.
+ * Stylized world map + continental tour (home country sets start, then globe order).
  */
 export class WorldMapRoot extends Container {
     private scrollLayer = new Container();
     private panLayer = new Graphics();
+    private oceanG = new Graphics();
     private pathG = new Graphics();
-    private nodes: MapNode[] = [];
-    private nodeViews: Container[] = [];
+    private pins: TourPin[] = [];
+    private pinViews: Container[] = [];
+    private homeRow: Container;
+    private homeLabel!: Text;
+    private homeBtns: Container[] = [];
     private btnBack: Container;
     private title!: Text;
     private hint!: Text;
     private starsHint!: Text;
     private panning = false;
+    private startX = 0;
     private startY = 0;
+    private scrollX = 0;
     private scrollY = 0;
-    private minScroll = 0;
-    private maxScroll = 0;
+    private minScrollX = 0;
+    private maxScrollX = 0;
+    private minScrollY = 0;
+    private maxScrollY = 0;
+    /** Map viewport top in screen space (for pan math) */
+    private viewTopY = 0;
 
     constructor(
         private readonly app: Application,
@@ -47,19 +67,19 @@ export class WorldMapRoot extends Container {
         this.eventMode = 'static';
 
         this.title = new Text({
-            text: 'TOUR ROUTE',
+            text: 'WORLD VOCAL TOUR',
             style: new TextStyle({
                 fontFamily: GAME_UI.fontTitle,
-                fontSize: 20,
+                fontSize: 18,
                 fill: '#ffffff',
-                letterSpacing: 4,
+                letterSpacing: 3,
             }),
         });
         this.title.anchor.set(0.5, 0);
         this.addChild(this.title);
 
         this.hint = new Text({
-            text: 'Drag to scroll · Tap a sector to fly',
+            text: 'Pinch the globe · Tap an open port',
             style: new TextStyle({
                 fontFamily: GAME_UI.fontBody,
                 fontSize: 10,
@@ -82,14 +102,28 @@ export class WorldMapRoot extends Container {
         this.starsHint.anchor.set(0.5, 0);
         this.addChild(this.starsHint);
 
-        this.scrollLayer.addChild(this.panLayer, this.pathG);
+        this.homeRow = new Container();
+        this.homeLabel = new Text({
+            text: 'HOME BASE',
+            style: new TextStyle({
+                fontFamily: GAME_UI.fontBody,
+                fontSize: 9,
+                fontWeight: '700',
+                fill: '#00f0ff',
+                letterSpacing: 2,
+            }),
+        });
+        this.homeRow.addChild(this.homeLabel);
+        this.addChild(this.homeRow);
+
+        this.scrollLayer.addChild(this.oceanG, this.pathG, this.panLayer);
         this.addChild(this.scrollLayer);
 
         this.btnBack = createMenuButton('BACK', 108, 46, () => this.handlers.onBack());
         this.addChild(this.btnBack);
 
-        this.buildNodes();
-        this.drawPaths();
+        this.buildHomePresets();
+        this.rebuildTourPins();
 
         this.panLayer.eventMode = 'static';
         this.panLayer.on('pointerdown', this.onPanDown, this);
@@ -98,114 +132,152 @@ export class WorldMapRoot extends Container {
         this.panLayer.on('pointerupoutside', this.onPanUp, this);
     }
 
-    private buildNodes(): void {
-        const count = VOCAL_STAGES.length;
-        const spacing = 280;
-        const w = 400;
-        for (let i = 0; i < count; i++) {
-            const stage = VOCAL_STAGES[i];
-            const x = w / 2 + Math.sin(i * 0.75) * 110;
-            const y = 120 + i * spacing;
-            this.nodes.push({ id: i + 1, stage, x, y });
+    private buildHomePresets(): void {
+        const bh = 30;
+        for (const opt of HOME_PRESET_OPTIONS) {
+            const b = createMenuButton(opt.label.toUpperCase(), 112, bh, () => {
+                WorldMapProfile.setHomeCountryKey(opt.key);
+                this.handlers.onHomeCountryChange?.(opt.key);
+                this.rebuildTourPins();
+                this.drawMapGraphics();
+                this.rebuildPinViews();
+                this.refreshHeaderLine();
+            });
+            this.homeRow.addChild(b);
+            this.homeBtns.push(b);
         }
     }
 
-    private drawPaths(): void {
+    private layoutHomePresets(width: number): void {
+        const gap = 6;
+        const btnW = 112;
+        const btnH = 30;
+        const cols = width < 420 ? 2 : width < 720 ? 3 : 4;
+        let col = 0;
+        let row = 0;
+        for (const b of this.homeBtns) {
+            b.position.set(col * (btnW + gap), 18 + row * (btnH + gap));
+            col++;
+            if (col >= cols) {
+                col = 0;
+                row++;
+            }
+        }
+        this.homeRow.hitArea = new Rectangle(0, 0, Math.max(200, width - 24), 18 + (row + 1) * (btnH + gap));
+    }
+
+    private rebuildTourPins(): void {
+        const home = WorldMapProfile.getHomeRegion();
+        const order = getTourOrder(home);
+        this.pins = order.map((region, i) => ({
+            legIndex: i + 1,
+            region,
+            x: region.mapU * MAP_W,
+            y: region.mapV * MAP_H,
+        }));
+    }
+
+    private drawMapGraphics(): void {
+        this.oceanG.clear();
+        this.oceanG.roundRect(0, 0, MAP_W, MAP_H, 12);
+        this.oceanG.fill({ color: 0x061220, alpha: 1 });
+        this.oceanG.stroke({ width: 2, color: GAME_UI.strokeCyan, alpha: 0.45 });
+        this.oceanG.eventMode = 'none';
+
+        for (const r of TOUR_REGIONS) {
+            const cx = r.mapU * MAP_W;
+            const cy = r.mapV * MAP_H;
+            const rx = 52 + (r.id === 'asia' ? 20 : 0);
+            const ry = 38 + (r.id === 'south_america' ? 24 : 0);
+            this.oceanG.ellipse(cx, cy, rx, ry);
+            this.oceanG.fill({ color: r.landColor, alpha: 0.55 });
+            this.oceanG.stroke({ width: 1, color: r.landColor2, alpha: 0.8 });
+        }
+
         this.pathG.clear();
-        this.pathG.setStrokeStyle({ width: 4, color: GAME_UI.strokeNeon, alpha: 0.35 });
-        for (let i = 0; i < this.nodes.length - 1; i++) {
-            const a = this.nodes[i];
-            const b = this.nodes[i + 1];
-            const cp1x = a.x;
-            const cp1y = a.y + 100;
-            const cp2x = b.x;
-            const cp2y = b.y - 100;
+        this.pathG.eventMode = 'none';
+        this.pathG.setStrokeStyle({ width: 3, color: GAME_UI.strokeNeon, alpha: 0.4 });
+        for (let i = 0; i < this.pins.length - 1; i++) {
+            const a = this.pins[i];
+            const b = this.pins[i + 1];
+            const mx = (a.x + b.x) / 2;
+            const my = Math.min(a.y, b.y) - 40;
             this.pathG.moveTo(a.x, a.y);
-            this.pathG.bezierCurveTo(cp1x, cp1y, cp2x, cp2y, b.x, b.y);
+            this.pathG.quadraticCurveTo(mx, my, b.x, b.y);
             this.pathG.stroke();
         }
     }
 
-    private rebuildNodeViews(): void {
-        for (const v of this.nodeViews) {
+    private rebuildPinViews(): void {
+        for (const v of this.pinViews) {
             this.scrollLayer.removeChild(v);
             v.destroy();
         }
-        this.nodeViews = [];
+        this.pinViews = [];
 
-        const furthest = WorldMapProgress.getFurthestSelectableNode(this.nodes.length);
-        const stars = CareerProgress.getStars();
+        const furthest = WorldMapProgress.getFurthestSelectableNode(this.pins.length);
 
-        for (const n of this.nodes) {
-            const routeOpen = n.id <= furthest;
+        for (const pin of this.pins) {
+            const open = pin.legIndex <= furthest;
             const c = new Container();
-            c.position.set(n.x, n.y);
+            c.position.set(pin.x, pin.y);
             c.eventMode = 'static';
-            c.cursor = routeOpen ? 'pointer' : 'default';
+            c.cursor = open ? 'pointer' : 'default';
+
+            const ring = new Graphics();
+            ring.circle(0, 0, PIN_R + 4);
+            ring.stroke({ width: open ? 2 : 1, color: open ? GAME_UI.accentHot : 0x332244, alpha: open ? 0.7 : 0.35 });
 
             const dot = new Graphics();
-            const locked = !routeOpen;
-            const fill = locked ? 0x221830 : 0x1a1035;
-            const stroke = locked ? 0x443355 : GAME_UI.strokeCyan;
-            dot.circle(0, 0, NODE_R);
-            dot.fill({ color: fill, alpha: locked ? 0.85 : 0.95 });
-            dot.stroke({ width: locked ? 2 : 3, color: stroke, alpha: locked ? 0.5 : 1 });
-            if (!locked) {
-                dot.circle(0, 0, NODE_R - 8);
-                dot.stroke({ width: 1, color: GAME_UI.accentHot, alpha: 0.4 });
-            }
+            dot.circle(0, 0, PIN_R);
+            dot.fill({ color: open ? pin.region.landColor : 0x1a1220, alpha: open ? 0.95 : 0.75 });
+            dot.stroke({
+                width: open ? 3 : 1,
+                color: open ? GAME_UI.strokeCyan : 0x443355,
+                alpha: open ? 1 : 0.5,
+            });
 
-            const label = new Text({
-                text: STAGE_LABEL[n.stage],
+            const leg = new Text({
+                text: String(pin.legIndex),
                 style: new TextStyle({
                     fontFamily: GAME_UI.fontBody,
-                    fontSize: 9,
+                    fontSize: 14,
                     fontWeight: '700',
-                    fill: locked ? '#554466' : '#ffffff',
-                    letterSpacing: 1,
-                    align: 'center',
-                    wordWrap: true,
-                    wordWrapWidth: NODE_R * 2 - 4,
+                    fill: open ? '#ffffff' : '#554466',
                 }),
             });
-            label.anchor.set(0.5, 0.5);
+            leg.anchor.set(0.5, 0.5);
 
-            const num = new Text({
-                text: String(n.id),
-                style: new TextStyle({
-                    fontFamily: GAME_UI.fontBody,
-                    fontSize: 16,
-                    fontWeight: '700',
-                    fill: locked ? '#443350' : '#00f0ff',
-                }),
-            });
-            num.anchor.set(0.5, 1.15);
-            num.position.set(0, NODE_R + 2);
+            c.addChild(ring, dot, leg);
 
-            c.addChild(dot, label, num);
-
-            const tap = (e: FederatedPointerEvent) => {
+            c.on('pointertap', (e: FederatedPointerEvent) => {
                 e.stopPropagation();
-                if (!routeOpen) return;
-                this.handlers.onSelectNode(n.id);
-            };
-            c.on('pointertap', tap);
+                if (!open) return;
+                this.handlers.onSelectLeg(pin.legIndex, pin.region.id);
+            });
 
             this.scrollLayer.addChild(c);
-            this.nodeViews.push(c);
+            this.pinViews.push(c);
         }
+    }
+
+    private refreshHeaderLine(): void {
+        const home = WorldMapProfile.getHomeRegion();
+        const reg = TOUR_REGIONS.find((r) => r.id === home);
+        this.starsHint.text = `★ ${CareerProgress.getStars()}  ·  HOME ${reg?.label ?? ''}  ·  NEXT LEG ${WorldMapProgress.getFurthestSelectableNode(this.pins.length)}`;
     }
 
     private onPanDown(e: FederatedPointerEvent): void {
         this.panning = true;
-        this.startY = e.global.y - this.scrollLayer.y;
+        this.startX = e.global.x - this.scrollX;
+        this.startY = e.global.y - this.viewTopY - this.scrollY;
     }
 
     private onPanMove(e: FederatedPointerEvent): void {
         if (!this.panning) return;
-        const ny = e.global.y - this.startY;
-        this.scrollY = Math.min(this.maxScroll, Math.max(this.minScroll, ny));
-        this.scrollLayer.y = this.scrollY;
+        this.scrollX = Math.min(this.maxScrollX, Math.max(this.minScrollX, e.global.x - this.startX));
+        this.scrollY = Math.min(this.maxScrollY, Math.max(this.minScrollY, e.global.y - this.viewTopY - this.startY));
+        this.scrollLayer.position.set(this.scrollX, this.viewTopY + this.scrollY);
     }
 
     private onPanUp(): void {
@@ -213,36 +285,54 @@ export class WorldMapRoot extends Container {
     }
 
     layout(width: number, height: number, safeTop: number): void {
-        this.title.position.set(width / 2, safeTop + 8);
-        this.hint.position.set(width / 2, safeTop + 32);
-        this.starsHint.text = `★ ${CareerProgress.getStars()}  ·  SECTOR ${WorldMapProgress.getFurthestSelectableNode(this.nodes.length)} OPEN`;
-        this.starsHint.position.set(width / 2, safeTop + 48);
+        this.title.position.set(width / 2, safeTop + 6);
+        this.hint.position.set(width / 2, safeTop + 26);
+        this.starsHint.position.set(width / 2, safeTop + 42);
+        this.refreshHeaderLine();
 
-        const topY = safeTop + 68;
+        const homeY = safeTop + 58;
+        this.homeRow.position.set(12, homeY);
+        this.homeLabel.position.set(0, 0);
+        this.layoutHomePresets(width);
+
+        const topY = homeY + 52;
+        this.viewTopY = topY;
         const bottomPad = 56;
+        const viewW = width;
         const viewH = height - topY - bottomPad;
 
-        const contentBottom = this.nodes[this.nodes.length - 1].y + NODE_R + 80;
-        const contentH = contentBottom;
-        const panW = Math.max(width, 400);
         this.panLayer.clear();
-        this.panLayer.rect(-panW / 2, 0, panW, contentH);
+        this.panLayer.rect(0, 0, MAP_W, MAP_H + 20);
         this.panLayer.fill({ color: 0x000000, alpha: 0.001 });
-        this.panLayer.hitArea = new Rectangle(-panW / 2, 0, panW, contentH);
+        this.panLayer.hitArea = new Rectangle(0, 0, MAP_W, MAP_H + 20);
 
-        this.minScroll = Math.min(0, viewH - contentH);
-        this.maxScroll = 0;
-        this.scrollY = Math.max(this.minScroll, Math.min(0, this.scrollY));
-        this.scrollLayer.y = this.scrollY;
-        this.scrollLayer.position.set(width / 2, topY);
+        const cx = Math.max(0, (viewW - MAP_W) / 2);
+        const cy = 10;
+        this.oceanG.position.set(cx, cy);
+        this.pathG.position.set(cx, cy);
+        this.panLayer.position.set(cx, cy);
+        for (let i = 0; i < this.pinViews.length; i++) {
+            const pin = this.pins[i];
+            this.pinViews[i].position.set(cx + pin.x, cy + pin.y);
+        }
+
+        this.minScrollX = Math.min(0, viewW - MAP_W - 24);
+        this.maxScrollX = 0;
+        this.minScrollY = Math.min(0, viewH - MAP_H - 32);
+        this.maxScrollY = 0;
+        this.scrollX = Math.max(this.minScrollX, Math.min(0, this.scrollX));
+        this.scrollY = Math.max(this.minScrollY, Math.min(0, this.scrollY));
+        this.scrollLayer.position.set(this.scrollX, this.viewTopY + this.scrollY);
 
         this.btnBack.position.set(12, height - this.btnBack.height - 12);
     }
 
     show(): void {
         this.visible = true;
-        this.rebuildNodeViews();
-        this.drawPaths();
+        this.rebuildTourPins();
+        this.drawMapGraphics();
+        this.rebuildPinViews();
+        this.refreshHeaderLine();
     }
 
     hide(): void {

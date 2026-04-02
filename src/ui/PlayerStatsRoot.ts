@@ -4,6 +4,9 @@ import { createMenuButton } from './gameUiPrimitives';
 import { MenuBackdrop } from './MenuBackdrop';
 import { LocalPlayerStats } from '../player/LocalPlayerStats';
 import { CareerProgress } from '../player/CareerProgress';
+import { WorldMapProgress } from '../player/WorldMapProgress';
+import { WorldMapProfile } from '../player/WorldMapProfile';
+import { getRegionById } from '../data/worldTour';
 import { getSafeAreaInsets } from './safeArea';
 
 /**
@@ -44,7 +47,7 @@ export class PlayerStatsRoot extends Container {
             fill: '#ccd8ff',
             letterSpacing: 0.5,
         });
-        for (let i = 0; i < 6; i++) {
+        for (let i = 0; i < 8; i++) {
             const t = new Text({ text: '', style: lineStyle });
             t.anchor.set(0, 0);
             this.lines.push(t);
@@ -60,7 +63,7 @@ export class PlayerStatsRoot extends Container {
         this.backdrop.layout(width, height);
 
         const pw = Math.min(340, width - 28);
-        const ph = 300;
+        const ph = 340;
         const px = (width - pw) / 2;
         const py = safeTop + 56;
 
@@ -80,8 +83,12 @@ export class PlayerStatsRoot extends Container {
         const mins = Math.floor(sec / 60);
         const stars = CareerProgress.getStars();
         const cred = CareerProgress.getBonusCredits();
+        const home = getRegionById(WorldMapProfile.getHomeRegion());
+        const leg = WorldMapProgress.getFurthestSelectableNode(7);
 
         const rows = [
+            `HOME REGION      ${home?.label ?? '—'}`,
+            `TOUR LEG OPEN    ${leg}`,
             `CAREER STARS     ${stars}`,
             `BONUS CREDITS    ${cred}`,
             `RUNS STARTED     ${runs}`,
@@ -108,7 +115,11 @@ export class PlayerStatsRoot extends Container {
         const mins = Math.floor(sec / 60);
         const stars = CareerProgress.getStars();
         const cred = CareerProgress.getBonusCredits();
+        const home = getRegionById(WorldMapProfile.getHomeRegion());
+        const leg = WorldMapProgress.getFurthestSelectableNode(7);
         const rows = [
+            `HOME REGION      ${home?.label ?? '—'}`,
+            `TOUR LEG OPEN    ${leg}`,
             `CAREER STARS     ${stars}`,
             `BONUS CREDITS    ${cred}`,
             `RUNS STARTED     ${runs}`,

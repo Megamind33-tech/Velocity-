@@ -3,6 +3,7 @@
  * Same musical idea can appear at multiple difficulties via `sourceTrackKey`.
  */
 import type { VocalStage } from './vocalStages';
+import type { TourRegionId } from './worldTour';
 
 export interface SongNote {
     time: number;
@@ -31,9 +32,11 @@ export interface Song {
     /** Parallax layer tints for this tier feel */
     parallaxPalette: [number, number, number];
     /**
-     * World map route node (1 = first tier). Omitted for off-route charts (e.g. secret).
+     * World tour leg (1 = first stop on your personal route). Omitted for off-route charts.
      */
-    worldMapNodeId?: number;
+    tourLegIndex?: number;
+    /** Musical locale for future regional packs / challenges */
+    regionId?: TourRegionId;
 }
 
 export const SONGS: Song[] = [
@@ -49,7 +52,8 @@ export const SONGS: Song[] = [
         starsRequired: 0,
         cruiseSpeedMultiplier: 0.82,
         parallaxPalette: [0x0a1220, 0x122038, 0x1a3050],
-        worldMapNodeId: 1,
+        tourLegIndex: 1,
+        regionId: 'north_america',
         notes: [
             { time: 1.2, pitch: 0.52 },
             { time: 2.8, pitch: 0.58 },
@@ -70,7 +74,8 @@ export const SONGS: Song[] = [
         starsRequired: 3,
         cruiseSpeedMultiplier: 0.88,
         parallaxPalette: [0x100818, 0x201028, 0x301838],
-        worldMapNodeId: 1,
+        tourLegIndex: 1,
+        regionId: 'north_america',
         notes: [
             { time: 1.0, pitch: 0.4 },
             { time: 2.4, pitch: 0.55 },
@@ -91,7 +96,8 @@ export const SONGS: Song[] = [
         starsRequired: 8,
         cruiseSpeedMultiplier: 1.0,
         parallaxPalette: [0x111122, 0x1a1a3a, 0x24244a],
-        worldMapNodeId: 2,
+        tourLegIndex: 2,
+        regionId: 'south_america',
         notes: [
             { time: 1.0, pitch: 0.5 },
             { time: 2.5, pitch: 0.7 },
@@ -113,7 +119,8 @@ export const SONGS: Song[] = [
         starsRequired: 12,
         cruiseSpeedMultiplier: 1.05,
         parallaxPalette: [0x120a1a, 0x22142e, 0x321e42],
-        worldMapNodeId: 2,
+        tourLegIndex: 2,
+        regionId: 'south_america',
         notes: [
             { time: 0.8, pitch: 0.35 },
             { time: 2.0, pitch: 0.62 },
@@ -137,7 +144,8 @@ export const SONGS: Song[] = [
         starsRequired: 22,
         cruiseSpeedMultiplier: 1.12,
         parallaxPalette: [0x180810, 0x281420, 0x382030],
-        worldMapNodeId: 3,
+        tourLegIndex: 3,
+        regionId: 'europe',
         notes: [
             { time: 0.9, pitch: 0.45 },
             { time: 2.1, pitch: 0.72 },
@@ -159,7 +167,8 @@ export const SONGS: Song[] = [
         starsRequired: 35,
         cruiseSpeedMultiplier: 1.18,
         parallaxPalette: [0x0c1018, 0x182030, 0x243048],
-        worldMapNodeId: 4,
+        tourLegIndex: 4,
+        regionId: 'africa',
         notes: [
             { time: 0.7, pitch: 0.55 },
             { time: 1.9, pitch: 0.35 },
@@ -180,7 +189,8 @@ export const SONGS: Song[] = [
         starsRequired: 50,
         cruiseSpeedMultiplier: 1.25,
         parallaxPalette: [0x1a0808, 0x2a1018, 0x3a1828],
-        worldMapNodeId: 5,
+        tourLegIndex: 5,
+        regionId: 'middle_east',
         notes: [
             { time: 0.6, pitch: 0.48 },
             { time: 1.8, pitch: 0.7 },
@@ -202,7 +212,8 @@ export const SONGS: Song[] = [
         starsRequired: 70,
         cruiseSpeedMultiplier: 1.32,
         parallaxPalette: [0x080818, 0x101028, 0x181838],
-        worldMapNodeId: 6,
+        tourLegIndex: 6,
+        regionId: 'asia',
         notes: [
             { time: 0.55, pitch: 0.5 },
             { time: 1.65, pitch: 0.68 },
@@ -224,7 +235,8 @@ export const SONGS: Song[] = [
         starsRequired: 95,
         cruiseSpeedMultiplier: 1.4,
         parallaxPalette: [0x120404, 0x220808, 0x320c10],
-        worldMapNodeId: 7,
+        tourLegIndex: 7,
+        regionId: 'oceania',
         notes: [
             { time: 0.5, pitch: 0.52 },
             { time: 1.5, pitch: 0.72 },

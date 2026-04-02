@@ -1,6 +1,7 @@
 import { Application, Container, Graphics, Rectangle, Text, TextStyle } from 'pixi.js';
 import type { Song } from '../data/songs';
 import { VOCAL_STAGES, STAGE_LABEL, type VocalStage } from '../data/vocalStages';
+import { getRegionById, type TourRegionId } from '../data/worldTour';
 import { GAME_UI } from './theme/GameUITheme';
 import { createMenuButton } from './gameUiPrimitives';
 import { MenuBackdrop } from './MenuBackdrop';
@@ -131,19 +132,20 @@ export class SongSelectRoot extends Container {
     }
 
     /**
-     * @param mapSector — when set (from world map), only lists charts for that tier.
+     * @param mapRegion — world tour stop: filter by `song.regionId` (musical locale).
      */
-    setTracks(visibleSongs: Song[], opts?: { mapSector?: VocalStage | null }): void {
+    setTracks(visibleSongs: Song[], opts?: { mapRegion?: TourRegionId | null }): void {
         this.clearList();
 
         const pool =
-            opts?.mapSector != null
-                ? visibleSongs.filter((s) => s.stage === opts.mapSector)
+            opts?.mapRegion != null
+                ? visibleSongs.filter((s) => s.regionId === opts.mapRegion)
                 : visibleSongs;
 
-        if (opts?.mapSector != null) {
-            this.header.text = `SECTOR: ${STAGE_LABEL[opts.mapSector]}`;
-            this.hint.text = 'Pick a chart on this route';
+        if (opts?.mapRegion != null) {
+            const reg = getRegionById(opts.mapRegion);
+            this.header.text = reg ? reg.label : 'TOUR STOP';
+            this.hint.text = reg ? reg.vocalFocus : 'Regional vocal focus';
         } else {
             this.header.text = 'PICK YOUR CHART';
             this.hint.text = 'Stars unlock charts · Credits open secrets';
