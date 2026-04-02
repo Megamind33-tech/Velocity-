@@ -130,13 +130,28 @@ export class SongSelectRoot extends Container {
         this.addChild(this.btnBack, this.btnConfirm, this.btnUnlock);
     }
 
-    /** Visible charts only (caller filters secrets). Rebuilds list. */
-    setTracks(visibleSongs: Song[]): void {
+    /**
+     * @param mapSector — when set (from world map), only lists charts for that tier.
+     */
+    setTracks(visibleSongs: Song[], opts?: { mapSector?: VocalStage | null }): void {
         this.clearList();
+
+        const pool =
+            opts?.mapSector != null
+                ? visibleSongs.filter((s) => s.stage === opts.mapSector)
+                : visibleSongs;
+
+        if (opts?.mapSector != null) {
+            this.header.text = `SECTOR: ${STAGE_LABEL[opts.mapSector]}`;
+            this.hint.text = 'Pick a chart on this route';
+        } else {
+            this.header.text = 'PICK YOUR CHART';
+            this.hint.text = 'Stars unlock charts · Credits open secrets';
+        }
 
         const items: ListItem[] = [];
         for (const stage of VOCAL_STAGES) {
-            const list = visibleSongs
+            const list = pool
                 .filter((s) => s.stage === stage)
                 .sort((a, b) => a.orderInStage - b.orderInStage);
             if (list.length === 0) continue;
@@ -157,8 +172,8 @@ export class SongSelectRoot extends Container {
             }
         }
 
-        const firstPlayable = visibleSongs.find((s) => CareerProgress.canPlaySong(toUnlockRules(s)));
-        this.selectedSong = firstPlayable ?? visibleSongs[0] ?? null;
+        const firstPlayable = pool.find((s) => CareerProgress.canPlaySong(toUnlockRules(s)));
+        this.selectedSong = firstPlayable ?? pool[0] ?? null;
         this.refreshAll();
         this.refreshHudLine();
     }

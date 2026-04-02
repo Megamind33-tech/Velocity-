@@ -36,6 +36,9 @@ import { CareerProgress } from './player/CareerProgress';
 import { toUnlockRules, visibleCharts } from './player/songUnlock';
 import { SongSelectRoot } from './ui/SongSelectRoot';
 import { loadGameFont } from './ui/loadGameFont';
+import { WorldMapRoot } from './scenes/WorldMapRoot';
+import { WorldMapProgress } from './player/WorldMapProgress';
+import { VOCAL_STAGES, type VocalStage } from './data/vocalStages';
 
 function showInitFailure(message: string, detail?: string): void {
     const el = document.createElement('div');
@@ -118,15 +121,28 @@ async function init() {
     let runPrepared = false;
     let preparedSongId: string | null = null;
     let selectedSong: Song | null = null;
+    let mapSector: VocalStage | null = null;
 
     const mainMenu = new MainMenuRoot(app, {
         onPlay: () => beginPlayFlow(),
+        onTour: () => beginTourFlow(),
         onStats: () => showStatsScreen(),
     });
     app.stage.addChild(mainMenu);
 
+    let worldMap: WorldMapRoot;
+
     const songSelect = new SongSelectRoot(app, {
-        onBack: () => showMainMenu(),
+        onBack: () => {
+            if (mapSector != null) {
+                mapSector = null;
+                songSelect.hide();
+                worldMap.show();
+                layoutAll();
+            } else {
+                showMainMenu();
+            }
+        },
         onConfirm: (song) => {
             selectedSong = song;
             songSelect.hide();
@@ -136,7 +152,7 @@ async function init() {
             layoutAll();
         },
         onUnlockApplied: () => {
-            songSelect.setTracks(visibleCharts(SONGS));
+            songSelect.setTracks(visibleCharts(SONGS), { mapSector });
             songSelect.refreshProgress();
             layoutAll();
         },
@@ -144,6 +160,23 @@ async function init() {
     songSelect.setTracks(visibleCharts(SONGS));
     songSelect.visible = false;
     app.stage.addChild(songSelect);
+
+    worldMap = new WorldMapRoot(app, {
+        onBack: () => showMainMenu(),
+        onSelectNode: (nodeId) => {
+            const stage = VOCAL_STAGES[nodeId - 1];
+            if (!stage) return;
+            const furthest = WorldMapProgress.getFurthestSelectableNode(VOCAL_STAGES.length);
+            if (nodeId > furthest) return;
+            mapSector = stage;
+            worldMap.hide();
+            songSelect.setTracks(visibleCharts(SONGS), { mapSector });
+            songSelect.show();
+            layoutAll();
+        },
+    });
+    worldMap.visible = false;
+    app.stage.addChild(worldMap);
 
     const statsRoot = new PlayerStatsRoot(app, () => showMainMenu());
     statsRoot.visible = false;
@@ -158,7 +191,18 @@ async function init() {
                 micGate.showDenied();
             }
         },
-        onBack: () => showMainMenu(),
+        onBack: () => {
+            micGate.visible = false;
+            gameLayer.visible = false;
+            if (mapSector != null) {
+                songSelect.setTracks(visibleCharts(SONGS), { mapSector });
+                songSelect.show();
+            } else {
+                songSelect.setTracks(visibleCharts(SONGS));
+                songSelect.show();
+            }
+            layoutAll();
+        },
     });
     micGate.visible = false;
     app.stage.addChild(micGate);
@@ -169,6 +213,7 @@ async function init() {
         const h = app.screen.height;
         mainMenu.layout(w, h, top);
         songSelect.layout(w, h, top);
+        worldMap.layout(w, h, top);
         statsRoot.layout(w, h, top);
         micGate.layout(w, h, top);
         pauseOverlay?.layout(w, h);
@@ -178,6 +223,7 @@ async function init() {
         mainMenu.show();
         statsRoot.hide();
         songSelect.hide();
+        worldMap.hide();
         micGate.visible = false;
         gameLayer.visible = false;
         velocityEngine.setSimulationEnabled(false);
@@ -202,19 +248,33 @@ async function init() {
         runPrepared = false;
         preparedSongId = null;
         selectedSong = null;
+        mapSector = null;
         layoutAll();
     }
 
     function showStatsScreen(): void {
         mainMenu.hide();
         songSelect.hide();
+        worldMap.hide();
         statsRoot.show();
+        layoutAll();
+    }
+
+    function beginTourFlow(): void {
+        mainMenu.hide();
+        statsRoot.hide();
+        songSelect.hide();
+        micGate.visible = false;
+        gameLayer.visible = false;
+        worldMap.show();
         layoutAll();
     }
 
     function beginPlayFlow(): void {
         mainMenu.hide();
         statsRoot.hide();
+        worldMap.hide();
+        mapSector = null;
         songSelect.setTracks(visibleCharts(SONGS));
         songSelect.show();
         gameLayer.visible = false;
@@ -287,6 +347,9 @@ async function init() {
 
         velocityEngine.setSimulationEnabled(true);
         VoiceInputManager.getInstance().resumeMic();
+        if (song.worldMapNodeId != null) {
+            WorldMapProgress.recordSequentialClear(song.worldMapNodeId);
+        }
         EventBus.getInstance().emit(GameEvents.LEVEL_START, levelId);
     }
 
