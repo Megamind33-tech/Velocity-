@@ -6,7 +6,7 @@ import { auth } from './firebaseConfig';
  */
 export async function initAuth(): Promise<User> {
     return new Promise((resolve, reject) => {
-        onAuthStateChanged(auth, async (user) => {
+        onAuthStateChanged(auth, async (user: User | null) => {
             if (user) {
                 console.log(`Firebase: User signed in as ${user.uid}`);
                 resolve(user);

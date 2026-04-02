@@ -98,10 +98,11 @@ async function init() {
     });
 
     const startText = new Text({ text: 'VELOCITY: VOICE-FLIGHT', style: startStyle });
-    const subText = new Text({ 
-        text: 'TAP SCREEN TO INITIALIZE MIC', 
-        style: { ...startStyle, fontSize: 14, alpha: 0.7 } 
+    const subText = new Text({
+        text: 'TAP SCREEN TO INITIALIZE MIC',
+        style: new TextStyle({ ...startStyle, fontSize: 14 }),
     });
+    subText.alpha = 0.7;
 
     startText.anchor.set(0.5);
     subText.anchor.set(0.5);
