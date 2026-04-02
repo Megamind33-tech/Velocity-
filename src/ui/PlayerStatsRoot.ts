@@ -3,6 +3,7 @@ import { GAME_UI } from './theme/GameUITheme';
 import { createMenuButton } from './gameUiPrimitives';
 import { MenuBackdrop } from './MenuBackdrop';
 import { LocalPlayerStats } from '../player/LocalPlayerStats';
+import { CareerProgress } from '../player/CareerProgress';
 import { getSafeAreaInsets } from './safeArea';
 
 /**
@@ -43,7 +44,7 @@ export class PlayerStatsRoot extends Container {
             fill: '#ccd8ff',
             letterSpacing: 0.5,
         });
-        for (let i = 0; i < 4; i++) {
+        for (let i = 0; i < 6; i++) {
             const t = new Text({ text: '', style: lineStyle });
             t.anchor.set(0, 0);
             this.lines.push(t);
@@ -59,7 +60,7 @@ export class PlayerStatsRoot extends Container {
         this.backdrop.layout(width, height);
 
         const pw = Math.min(340, width - 28);
-        const ph = 220;
+        const ph = 300;
         const px = (width - pw) / 2;
         const py = safeTop + 56;
 
@@ -77,8 +78,12 @@ export class PlayerStatsRoot extends Container {
         const hi = LocalPlayerStats.getHighScore();
         const sec = LocalPlayerStats.getPlaySeconds();
         const mins = Math.floor(sec / 60);
+        const stars = CareerProgress.getStars();
+        const cred = CareerProgress.getBonusCredits();
 
         const rows = [
+            `CAREER STARS     ${stars}`,
+            `BONUS CREDITS    ${cred}`,
             `RUNS STARTED     ${runs}`,
             `BEST GATES       ${best}`,
             `HIGH SCORE       ${hi}`,
@@ -101,7 +106,11 @@ export class PlayerStatsRoot extends Container {
         const hi = LocalPlayerStats.getHighScore();
         const sec = LocalPlayerStats.getPlaySeconds();
         const mins = Math.floor(sec / 60);
+        const stars = CareerProgress.getStars();
+        const cred = CareerProgress.getBonusCredits();
         const rows = [
+            `CAREER STARS     ${stars}`,
+            `BONUS CREDITS    ${cred}`,
             `RUNS STARTED     ${runs}`,
             `BEST GATES       ${best}`,
             `HIGH SCORE       ${hi}`,

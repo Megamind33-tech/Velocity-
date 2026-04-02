@@ -31,6 +31,9 @@ import { getSafeAreaInsets } from './ui/safeArea';
 import { SONGS, type Song } from './data/songs';
 import { LocalPlayerStats } from './player/LocalPlayerStats';
 import { VOICE_FLIGHT } from './data/constants';
+import { RunContext } from './engine/RunContext';
+import { CareerProgress } from './player/CareerProgress';
+import { toUnlockRules, visibleCharts } from './player/songUnlock';
 import { SongSelectRoot } from './ui/SongSelectRoot';
 import { loadGameFont } from './ui/loadGameFont';
 
@@ -59,6 +62,8 @@ async function init() {
     document.body.appendChild(canvas);
 
     await loadGameFont();
+
+    CareerProgress.ensureStarterProgress();
 
     startAuthInBackground();
 
@@ -100,7 +105,8 @@ async function init() {
 
     const player = world.createEntity();
     world.addComponent(player, new TransformComponent(app.screen.width / 4, app.screen.height / 2));
-    world.addComponent(player, new VelocityComponent(VOICE_FLIGHT.CRUISE_SPEED_X, 0));
+    RunContext.resetDefaults(VOICE_FLIGHT.CRUISE_SPEED_X);
+    world.addComponent(player, new VelocityComponent(RunContext.cruiseSpeedPx, 0));
     world.addComponent(player, new FlightDynamicsComponent(1.0, 0.05, 3000));
     world.addComponent(player, new SpriteComponent(playerSprite));
 
@@ -129,8 +135,13 @@ async function init() {
             micGate.clearDenied();
             layoutAll();
         },
+        onUnlockApplied: () => {
+            songSelect.setTracks(visibleCharts(SONGS));
+            songSelect.refreshProgress();
+            layoutAll();
+        },
     });
-    songSelect.setTracks(SONGS);
+    songSelect.setTracks(visibleCharts(SONGS));
     songSelect.visible = false;
     app.stage.addChild(songSelect);
 
@@ -185,7 +196,8 @@ async function init() {
         const vel = world.getComponent<VelocityComponent>(player, VelocityComponent.TYPE_ID)!;
         tr.x = app.screen.width / 4;
         tr.y = app.screen.height / 2;
-        vel.vx = VOICE_FLIGHT.CRUISE_SPEED_X;
+        RunContext.resetDefaults(VOICE_FLIGHT.CRUISE_SPEED_X);
+        vel.vx = RunContext.cruiseSpeedPx;
         vel.vy = 0;
         runPrepared = false;
         preparedSongId = null;
@@ -203,7 +215,7 @@ async function init() {
     function beginPlayFlow(): void {
         mainMenu.hide();
         statsRoot.hide();
-        songSelect.setTracks(SONGS);
+        songSelect.setTracks(visibleCharts(SONGS));
         songSelect.show();
         gameLayer.visible = false;
         micGate.visible = false;
@@ -222,7 +234,19 @@ async function init() {
         micGate.visible = false;
         LocalPlayerStats.recordRunStarted();
 
-        const song = selectedSong ?? SONGS[0];
+        const playable = visibleCharts(SONGS).filter((s) => CareerProgress.canPlaySong(toUnlockRules(s)));
+        const song = selectedSong && playable.some((p) => p.id === selectedSong!.id) ? selectedSong : playable[0];
+        if (!song) {
+            console.warn('Velocity: no playable chart');
+            showMainMenu();
+            return;
+        }
+        selectedSong = song;
+
+        RunContext.applySongTune(song.cruiseSpeedMultiplier, song.parallaxPalette);
+        const velStart = world.getComponent<VelocityComponent>(player, VelocityComponent.TYPE_ID)!;
+        velStart.vx = RunContext.cruiseSpeedPx;
+
         const levelId = levelIdForSong(song);
         const needNewWorld = !runPrepared || preparedSongId !== song.id;
 
@@ -231,7 +255,8 @@ async function init() {
             levelSystem.reset(world);
             levelSystem.initLevel(levelId, song, player);
             hudSystem.init(player);
-            const textures = [0x111122, 0x1a1a3a, 0x24244a].map((color) => {
+            const [c0, c1, c2] = RunContext.parallaxColors;
+            const textures = [c0, c1, c2].map((color) => {
                 const g = new Graphics().rect(0, 0, 512, 512).fill({ color });
                 for (let i = 0; i < 50; i++) {
                     g.circle(Math.random() * 512, Math.random() * 512, 1).fill({ color: 0xffffff, alpha: 0.5 });
@@ -269,6 +294,7 @@ async function init() {
 
     const eventBus = EventBus.getInstance();
     eventBus.on(GameEvents.LEVEL_START, async (levelId) => {
+        CareerProgress.addStars(1);
         const uid = getPlayerIdForSync();
         try {
             await syncProfile(uid, Number(levelId), 100 * Number(levelId), 3);
