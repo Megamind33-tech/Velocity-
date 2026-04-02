@@ -2,6 +2,7 @@ import { Container, Graphics, Text, TextStyle } from 'pixi.js';
 import { EventBus } from '../events/EventBus';
 import { GameEvents } from '../events/GameEvents';
 import { Quest, QuestTier } from '../data/questDefinitions';
+import { GAME_UI } from './theme/GameUITheme';
 
 /**
  * A sliding UI overlay that notifies the player of quest progress and completions.
@@ -21,8 +22,8 @@ export class TaskOverlay extends Container {
         const style = new TextStyle({
             fill: '#ffffff',
             fontSize: 18,
-            fontWeight: 'bold',
-            fontFamily: 'Arial',
+            fontWeight: '700',
+            fontFamily: GAME_UI.fontBody,
             dropShadow: {
                 alpha: 0.5,
                 blur: 4,

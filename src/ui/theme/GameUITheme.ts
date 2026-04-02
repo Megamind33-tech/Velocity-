@@ -13,8 +13,9 @@ export const GAME_UI = {
     textMuted: 0x8899cc,
     gold: 0xffdd44,
     danger: 0xff3355,
-    fontTitle: '"Audiowide", "Orbitron", system-ui, sans-serif',
-    fontBody: '"Orbitron", system-ui, sans-serif',
+    /** Self-hosted; files in /public/fonts/ (see public/fonts/README.txt) */
+    fontTitle: '"VelocityGame", monospace',
+    fontBody: '"VelocityGame", monospace',
     minTouchPx: 48,
 } as const;
 

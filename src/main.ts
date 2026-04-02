@@ -28,9 +28,11 @@ import { PlayerStatsRoot } from './ui/PlayerStatsRoot';
 import { MicGateOverlay } from './ui/MicGateOverlay';
 import { createDemoTouchZones } from './debug/DemoTouchZones';
 import { getSafeAreaInsets } from './ui/safeArea';
-import { SONGS } from './data/songs';
+import { SONGS, type Song } from './data/songs';
 import { LocalPlayerStats } from './player/LocalPlayerStats';
 import { VOICE_FLIGHT } from './data/constants';
+import { SongSelectRoot } from './ui/SongSelectRoot';
+import { loadGameFont } from './ui/loadGameFont';
 
 function showInitFailure(message: string, detail?: string): void {
     const el = document.createElement('div');
@@ -55,6 +57,8 @@ async function init() {
     canvas.style.width = '100%';
     canvas.style.height = '100%';
     document.body.appendChild(canvas);
+
+    await loadGameFont();
 
     startAuthInBackground();
 
@@ -106,12 +110,29 @@ async function init() {
     let pauseOverlay: PauseOverlay | null = null;
     let demoZones: Container | null = null;
     let runPrepared = false;
+    let preparedSongId: string | null = null;
+    let selectedSong: Song | null = null;
 
     const mainMenu = new MainMenuRoot(app, {
         onPlay: () => beginPlayFlow(),
         onStats: () => showStatsScreen(),
     });
     app.stage.addChild(mainMenu);
+
+    const songSelect = new SongSelectRoot(app, {
+        onBack: () => showMainMenu(),
+        onConfirm: (song) => {
+            selectedSong = song;
+            songSelect.hide();
+            gameLayer.visible = true;
+            micGate.visible = true;
+            micGate.clearDenied();
+            layoutAll();
+        },
+    });
+    songSelect.setTracks(SONGS);
+    songSelect.visible = false;
+    app.stage.addChild(songSelect);
 
     const statsRoot = new PlayerStatsRoot(app, () => showMainMenu());
     statsRoot.visible = false;
@@ -136,6 +157,7 @@ async function init() {
         const w = app.screen.width;
         const h = app.screen.height;
         mainMenu.layout(w, h, top);
+        songSelect.layout(w, h, top);
         statsRoot.layout(w, h, top);
         micGate.layout(w, h, top);
         pauseOverlay?.layout(w, h);
@@ -144,6 +166,7 @@ async function init() {
     function showMainMenu(): void {
         mainMenu.show();
         statsRoot.hide();
+        songSelect.hide();
         micGate.visible = false;
         gameLayer.visible = false;
         velocityEngine.setSimulationEnabled(false);
@@ -165,11 +188,14 @@ async function init() {
         vel.vx = VOICE_FLIGHT.CRUISE_SPEED_X;
         vel.vy = 0;
         runPrepared = false;
+        preparedSongId = null;
+        selectedSong = null;
         layoutAll();
     }
 
     function showStatsScreen(): void {
         mainMenu.hide();
+        songSelect.hide();
         statsRoot.show();
         layoutAll();
     }
@@ -177,18 +203,33 @@ async function init() {
     function beginPlayFlow(): void {
         mainMenu.hide();
         statsRoot.hide();
-        gameLayer.visible = true;
-        micGate.visible = true;
-        micGate.clearDenied();
+        songSelect.setTracks(SONGS);
+        songSelect.show();
+        gameLayer.visible = false;
+        micGate.visible = false;
         layoutAll();
+    }
+
+    function levelIdForSong(song: Song): number {
+        let h = 0;
+        for (let i = 0; i < song.id.length; i++) {
+            h = (h * 31 + song.id.charCodeAt(i)) >>> 0;
+        }
+        return (h % 9) + 1;
     }
 
     async function startRun(): Promise<void> {
         micGate.visible = false;
         LocalPlayerStats.recordRunStarted();
 
-        if (!runPrepared) {
-            levelSystem.initLevel(1, SONGS[0], player);
+        const song = selectedSong ?? SONGS[0];
+        const levelId = levelIdForSong(song);
+        const needNewWorld = !runPrepared || preparedSongId !== song.id;
+
+        if (needNewWorld) {
+            parallaxSystem.reset();
+            levelSystem.reset(world);
+            levelSystem.initLevel(levelId, song, player);
             hudSystem.init(player);
             const textures = [0x111122, 0x1a1a3a, 0x24244a].map((color) => {
                 const g = new Graphics().rect(0, 0, 512, 512).fill({ color });
@@ -199,6 +240,7 @@ async function init() {
             });
             await parallaxSystem.init(player, textures);
             runPrepared = true;
+            preparedSongId = song.id;
         }
 
         if (!demoZones) {
@@ -220,7 +262,7 @@ async function init() {
 
         velocityEngine.setSimulationEnabled(true);
         VoiceInputManager.getInstance().resumeMic();
-        EventBus.getInstance().emit(GameEvents.LEVEL_START, 1);
+        EventBus.getInstance().emit(GameEvents.LEVEL_START, levelId);
     }
 
     window.addEventListener('resize', () => layoutAll());

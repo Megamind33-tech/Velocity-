@@ -1,11 +1,22 @@
+@font-face {
+  font-family: 'VelocityGame';
+  src:
+    url('/fonts/VelocityGame.woff2') format('woff2'),
+    url('/fonts/VelocityGame.ttf') format('truetype');
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: block;
+}
+
 html, body {
   margin: 0;
   padding: 0;
   width: 100vw;
   height: 100vh;
   overflow: hidden;
-  background-color: #0a0a1a;
+  background-color: #050510;
   touch-action: none;
+  font-family: 'VelocityGame', monospace;
 }
 
 canvas {
