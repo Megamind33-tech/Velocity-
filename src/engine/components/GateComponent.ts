@@ -12,6 +12,7 @@ export class GateComponent implements Component {
     constructor(
         public width: number = 100,
         public height: number = 200,
-        public points: number = 10
+        public points: number = 10,
+        public passed: boolean = false
     ) {}
 }

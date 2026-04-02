@@ -1,6 +1,7 @@
 import { Entity, World, System } from '../World';
 import { TransformComponent } from '../components/TransformComponent';
 import { VelocityComponent } from '../components/VelocityComponent';
+import { GameState } from '../GameState';
 
 /**
  * System that handles spatial movement based on velocity.
@@ -15,6 +16,8 @@ export class MovementSystem implements System {
     }
 
     public update(entities: Entity[], world: World, delta: number): void {
+        if (GameState.paused || !GameState.runActive) return;
+
         const matchingEntities = world.getEntities(this.queryMask);
         
         // High-performance loop avoiding object allocation

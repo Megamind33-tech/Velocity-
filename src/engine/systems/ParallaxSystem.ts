@@ -1,7 +1,8 @@
-import { Application, Container, TilingSprite, Assets, Texture } from 'pixi.js';
+import { Application, Container, TilingSprite, Texture } from 'pixi.js';
 import { Entity, World, System } from '../World';
 import { TransformComponent } from '../components/TransformComponent';
 import { RENDERING } from '../../data/constants';
+import { GameState } from '../GameState';
 
 /**
  * High-performance Parallax System for simulating 3D depth in a 2D environment.
@@ -39,7 +40,7 @@ export class ParallaxSystem implements System {
     }
 
     public update(entities: Entity[], world: World, delta: number): void {
-        if (!this.playerEntity) return;
+        if (!GameState.runActive || !this.playerEntity) return;
 
         const transform = world.getComponent<TransformComponent>(this.playerEntity, TransformComponent.TYPE_ID);
         if (!transform) return;
