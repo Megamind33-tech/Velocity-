@@ -2,6 +2,7 @@ import { Application, Container, FederatedPointerEvent, Graphics, Rectangle, Tex
 import { getUnlockedLevelIds } from '../data/localProgress';
 import { createGameButton } from '../ui/game/GameUIComponents';
 import { GAME_SIZES } from '../ui/game/GameUITheme';
+import { ResponsiveUIManager } from '../ui/ResponsiveUIManager';
 
 interface LevelNode {
     id: number;
@@ -70,6 +71,21 @@ export class WorldMapScene {
         this.root.addChild(this.scrollLayer);
         app.stage.addChild(this.root);
 
+        const safe = ResponsiveUIManager.getInstance().getSafeAreaPadding();
+        const edgeL = Math.max(GAME_SIZES.spacing.md, safe.left);
+        const topChrome = safe.top + 8;
+        const backH = 36;
+        const backW = 64;
+
+        if (this.onBack) {
+            const backBtn = createGameButton('BACK', () => this.onBack!(), 'secondary', 'small', {
+                width: backW,
+                height: backH,
+            });
+            backBtn.position.set(edgeL, topChrome);
+            this.root.addChild(backBtn);
+        }
+
         const title = new Text({
             text: 'SELECT LEVEL',
             style: new TextStyle({
@@ -81,7 +97,7 @@ export class WorldMapScene {
             }),
         });
         title.anchor.set(0.5, 0);
-        title.position.set(app.screen.width / 2, 16);
+        title.position.set(app.screen.width / 2, topChrome + backH + 10);
         this.root.addChild(title);
 
         const unlocked = getUnlockedLevelIds();
@@ -94,14 +110,9 @@ export class WorldMapScene {
             style: new TextStyle({ fill: '#8899aa', fontSize: 12, fontFamily: 'system-ui, sans-serif' }),
         });
         hint.anchor.set(0.5, 1);
-        hint.position.set(app.screen.width / 2, app.screen.height - 56);
+        const bottomPad = Math.max(20, safe.bottom + 12);
+        hint.position.set(app.screen.width / 2, app.screen.height - bottomPad);
         this.root.addChild(hint);
-
-        if (this.onBack) {
-            const backBtn = createGameButton('BACK', () => this.onBack!(), 'secondary', 'medium');
-            backBtn.position.set(GAME_SIZES.spacing.md, GAME_SIZES.spacing.md);
-            this.root.addChild(backBtn);
-        }
 
         this.root.eventMode = 'static';
         this.root.hitArea = new Rectangle(0, 0, app.screen.width, app.screen.height);
