@@ -13,9 +13,11 @@ interface GameScreenProps {
   level: number;
   mode: 'A' | 'C';
   difficulty: 'novice' | 'intermediate' | 'advanced' | 'master' | 'legend';
+  worldId: number;
   isPaused: boolean;
   profile: PlayerProfile | null;
   demoMode?: boolean;
+  aircraftId?: string;
   onPauseToggle: () => void;
   onGameOver: (score: number, win: boolean, stats?: GameStats) => void;
   onAbort: () => void;
@@ -27,9 +29,11 @@ export function GameScreen({
   level,
   mode,
   difficulty,
+  worldId,
   isPaused,
   profile,
   demoMode,
+  aircraftId,
   onPauseToggle,
   onGameOver,
   onAbort,
@@ -59,8 +63,10 @@ export function GameScreen({
           level={level}
           mode={mode}
           difficulty={difficulty}
+          worldId={worldId}
           isPaused={isPaused}
           demoMode={demoMode}
+          aircraftId={aircraftId}
           onGameOver={onGameOver}
         />
 

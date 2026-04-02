@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useCallback } from 'react';
 import { AudioController } from '../lib/audio';
 import { Song } from '../lib/songs-extended';
 import { getLevelInfo } from '../lib/progression';
+import { WorldBgState, createWorldBgState, updateWorldBg, renderWorldBg } from './WorldBackground';
 
 interface GameEngineProps {
   audioController: AudioController;
@@ -9,8 +10,10 @@ interface GameEngineProps {
   level: number;
   mode: 'A' | 'C';
   difficulty: 'novice' | 'intermediate' | 'advanced' | 'master' | 'legend';
+  worldId: number;
   isPaused: boolean;
   demoMode?: boolean;
+  aircraftId?: string;
   onGameOver: (score: number, win: boolean, stats: GameStats) => void;
 }
 
@@ -136,7 +139,7 @@ const DIFF_GLOW: Record<string, string> = {
 };
 
 export function GameEngine({
-  audioController, song, level, mode, difficulty, isPaused, demoMode, onGameOver,
+  audioController, song, level, mode, difficulty, worldId, isPaused, demoMode, onGameOver,
 }: GameEngineProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const stateRef = useRef<{
@@ -149,6 +152,7 @@ export function GameEngine({
     waypoints: WaypointData[]; contour: ContourPoint[]; seq: number[];
     trail: { x: number; y: number; a: number }[];
     particles: Particle[]; stars: BgStar[];
+    worldBg: WorldBgState;
     lastFrame: number;
     demoAngle: number; demoNoteIdx: number;
   } | null>(null);
@@ -167,9 +171,10 @@ export function GameEngine({
       waypoints: mode === 'A' ? makeWaypoints(song, seq, level, c.width, c.height) : [],
       contour: mode === 'C' ? makeContour(song, seq, c.width, c.height) : [],
       seq, trail: [], particles: [], stars: createStars(c.width, c.height),
+      worldBg: createWorldBgState(worldId, c.width, c.height),
       lastFrame: 0, demoAngle: 0, demoNoteIdx: 0,
     };
-  }, [song, level, mode]);
+  }, [song, level, mode, worldId]);
 
   useEffect(() => { resetState(); }, [resetState]);
 
@@ -197,27 +202,18 @@ export function GameEngine({
       const levelInfo = getLevelInfo(level);
       const hz = levelInfo?.hitZones ?? 2;
 
-      // --- Background ---
-      ctx.fillStyle = '#07090E';
-      ctx.fillRect(0, 0, W, H);
+      // --- Animated World Background ---
+      updateWorldBg(s.worldBg, dt, W, H);
+      renderWorldBg(ctx, s.worldBg, W, H, now);
 
-      // Stars
-      for (const st of s.stars) {
-        st.x -= st.speed;
-        if (st.x < 0) { st.x = W; st.y = Math.random() * H; }
-        const flicker = st.brightness + Math.sin(now * 0.003 + st.x) * 0.15;
-        ctx.fillStyle = `rgba(200,220,255,${Math.max(0, flicker)})`;
-        ctx.beginPath();
-        ctx.arc(st.x, st.y, st.size, 0, Math.PI * 2);
-        ctx.fill();
-      }
-
-      // Altitude grid
+      // Altitude grid (subtle, adapts to world brightness)
       const noteNames = ['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
-      ctx.strokeStyle = 'rgba(67,231,255,0.08)';
+      const gridAlpha = worldId <= 2 ? 0.06 : 0.08;
+      const labelAlpha = worldId <= 2 ? 0.15 : 0.2;
+      ctx.strokeStyle = `rgba(67,231,255,${gridAlpha})`;
       ctx.lineWidth = 1;
       ctx.font = '10px "Inter",sans-serif';
-      ctx.fillStyle = 'rgba(184,191,212,0.2)';
+      ctx.fillStyle = `rgba(184,191,212,${labelAlpha})`;
       ctx.textAlign = 'right';
       for (let i = 0; i <= nr; i += 2) {
         const y = H - (i / nr) * (H * 0.8) - H * 0.1;
@@ -447,8 +443,18 @@ export function GameEngine({
         ctx.lineWidth = 2; ctx.stroke();
       }
 
-      // --- Plane ---
-      drawPlane(ctx, 100, planeY, pAngle, accurate, difficulty);
+      // --- Aircraft ---
+      {
+        const aircraft = getAircraftById(aircraftId || 'heli-classic');
+        const glowRgb = DIFF_GLOW[difficulty] || '67,231,255';
+        const gameTime = s.elapsed;
+        ctx.save();
+        ctx.translate(100, planeY);
+        const aircraftScale = 1.4;
+        ctx.scale(aircraftScale, aircraftScale);
+        aircraft.draw(ctx, pAngle, accurate, glowRgb, gameTime);
+        ctx.restore();
+      }
 
       // --- HUD ---
       const acc = s.hitCount > 0 ? s.accSum / s.hitCount : 0;
@@ -481,7 +487,7 @@ export function GameEngine({
 
     raf = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(raf);
-  }, [audioController, song, level, mode, difficulty, isPaused, demoMode, resetState]);
+  }, [audioController, song, level, mode, difficulty, worldId, isPaused, demoMode, resetState]);
 
   useEffect(() => {
     const resize = () => {
@@ -495,7 +501,7 @@ export function GameEngine({
 
   return (
     <canvas ref={canvasRef} width={window.innerWidth} height={window.innerHeight}
-      style={{ display: 'block', background: '#07090E' }} />
+      style={{ display: 'block', background: '#000' }} />
   );
 }
 
@@ -510,34 +516,6 @@ function spawnParticles(arr: Particle[], x: number, y: number, perfect: boolean)
       life: 0.6 + Math.random() * 0.4, maxLife: 1, color, size: 2 + Math.random() * 2,
     });
   }
-}
-
-function drawPlane(ctx: CanvasRenderingContext2D, x: number, y: number, angle: number, glow: boolean, diff: string) {
-  ctx.save(); ctx.translate(x, y);
-  const a = angle * Math.PI / 180;
-  // Glow
-  if (glow) {
-    const rgb = DIFF_GLOW[diff] || '67,231,255';
-    ctx.fillStyle = `rgba(${rgb},0.12)`;
-    ctx.beginPath(); ctx.arc(0, 0, 55, 0, Math.PI * 2); ctx.fill();
-  }
-  // Body
-  ctx.fillStyle = '#C0C0C0';
-  ctx.beginPath(); ctx.ellipse(0, 0, 40, 8, a, 0, Math.PI * 2); ctx.fill();
-  // Wings
-  ctx.fillStyle = '#E8E8E8';
-  ctx.beginPath(); ctx.ellipse(0, 0, 70, 4, a, 0, Math.PI * 2); ctx.fill();
-  // Cockpit
-  ctx.fillStyle = '#0047AB';
-  ctx.beginPath(); ctx.arc(8, -4, 3, 0, Math.PI * 2); ctx.fill();
-  // Outline glow
-  ctx.strokeStyle = glow ? `rgba(${DIFF_GLOW[diff] || '67,231,255'},0.7)` : 'rgba(200,200,200,0.4)';
-  ctx.lineWidth = 2;
-  ctx.beginPath(); ctx.ellipse(0, 0, 45, 12, a, 0, Math.PI * 2); ctx.stroke();
-  // Tail
-  ctx.fillStyle = '#B0B0B0';
-  ctx.beginPath(); ctx.moveTo(-35, 0); ctx.lineTo(-42, -10); ctx.lineTo(-42, 10); ctx.closePath(); ctx.fill();
-  ctx.restore();
 }
 
 function drawHUD(
