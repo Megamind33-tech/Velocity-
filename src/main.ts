@@ -59,50 +59,63 @@ async function init() {
     world.addSystem(new LeaderboardSystem());
     world.addSystem(new QuestSystem());
 
-    // 5. Create a "Test Player" Entity
-    // (In a real scenario, we'd load a drone sprite. For now, a glowing circle)
-    const gfx = new Graphics();
-    gfx.circle(0, 0, 20);
-    gfx.fill({ color: 0x00ffcc, alpha: 1 });
-    gfx.setStrokeStyle({ width: 2, color: 0xffffff });
-    gfx.stroke();
+    // 5. Create a "Premium Drone" Entity
+    const droneGfx = new Graphics();
     
-    // Generate texture from graphics
-    const texture = app.renderer.generateTexture(gfx);
+    // Body (Pentagon shape)
+    droneGfx.poly([-25, 0, -10, -15, 15, -15, 30, 0, 15, 15, -10, 15]);
+    droneGfx.fill({ color: 0x222233 });
+    droneGfx.stroke({ color: 0x00ffcc, width: 2 });
+    
+    // Thruster glow
+    droneGfx.circle(-20, 0, 8).fill({ color: 0xff3300, alpha: 0.6 });
+    droneGfx.circle(-20, 0, 4).fill({ color: 0xffcc00 });
+
+    const texture = app.renderer.generateTexture(droneGfx);
     const playerSprite = new Sprite(texture);
+    playerSprite.anchor.set(0.5);
     app.stage.addChild(playerSprite);
 
     const player = world.createEntity();
     world.addComponent(player, new TransformComponent(app.screen.width / 4, app.screen.height / 2));
-    world.addComponent(player, new VelocityComponent(200, 0)); // Horizontal engine speed
-    world.addComponent(player, new FlightDynamicsComponent(1.0, 0.05, 3000)); // Stronger thrust for voice
+    world.addComponent(player, new VelocityComponent(200, 0)); 
+    world.addComponent(player, new FlightDynamicsComponent(1.0, 0.05, 3000));
     world.addComponent(player, new SpriteComponent(playerSprite));
 
-    // 6. Mobile Voice Start Interaction (Required for AudioContext)
+    // 6. Mobile Voice Start Interaction (Premium Glassmorphism Style)
     const overlay = new Graphics();
     overlay.rect(0, 0, app.screen.width, app.screen.height);
-    overlay.fill({ color: 0x000000, alpha: 0.7 });
+    overlay.fill({ color: 0x000000, alpha: 0.85 });
     overlay.interactive = true;
     app.stage.addChild(overlay);
 
-    const startText = new Text({
-        text: 'TAP TO START VOICE FLIGHT',
-        style: new TextStyle({
-            fill: '#00ffcc',
-            fontSize: 24,
-            fontWeight: 'bold',
-            fontFamily: 'Arial'
-        })
+    const startStyle = new TextStyle({
+        fill: '#00ffcc',
+        fontSize: 28,
+        fontWeight: 'bold',
+        fontFamily: 'Orbitron, Arial',
+        dropShadow: { blur: 10, color: '#00ffcc', distance: 0 }
     });
+
+    const startText = new Text({ text: 'VELOCITY: VOICE-FLIGHT', style: startStyle });
+    const subText = new Text({ 
+        text: 'TAP SCREEN TO INITIALIZE MIC', 
+        style: { ...startStyle, fontSize: 14, alpha: 0.7 } 
+    });
+
     startText.anchor.set(0.5);
-    startText.position.set(app.screen.width / 2, app.screen.height / 2);
-    app.stage.addChild(startText);
+    subText.anchor.set(0.5);
+    startText.position.set(app.screen.width / 2, app.screen.height / 2 - 20);
+    subText.position.set(app.screen.width / 2, app.screen.height / 2 + 30);
+    
+    app.stage.addChild(startText, subText);
 
     overlay.on('pointerdown', async () => {
         const success = await VoiceInputManager.getInstance().init();
         if (success) {
             app.stage.removeChild(overlay);
             app.stage.removeChild(startText);
+            app.stage.removeChild(subText);
             
             // Initialize the level with the first song
             levelSystem.initLevel(1, SONGS[0], player);

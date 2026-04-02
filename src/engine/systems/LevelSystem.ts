@@ -3,11 +3,13 @@ import { TransformComponent } from '../components/TransformComponent';
 import { SpriteComponent } from '../components/SpriteComponent';
 import { GateComponent } from '../components/GateComponent';
 import { LevelGenerator, LevelGate } from '../../levels/LevelGenerator';
+import { ObjectPool } from '../utils/ObjectPool';
 import { Song } from '../../data/songs';
 import { Sprite, Graphics, Texture } from 'pixi.js';
 
 /**
  * System that manages the procedural generation and cleanup of level entities.
+ * Optimized with Object Pooling for mobile performance.
  */
 export class LevelSystem implements System {
     public readonly priority: number = 50;
@@ -17,9 +19,19 @@ export class LevelSystem implements System {
     private spawnRange: number = 2000;
     private cleanupRange: number = 800;
     private gateTexture: Texture | null = null;
+    
+    // Object Pool for recycling Gate sprites
+    private spritePool: ObjectPool<Sprite>;
 
     constructor(private app: any) {
         this.generator = new LevelGenerator();
+        this.spritePool = new ObjectPool<Sprite>(
+            () => new Sprite(),
+            (s) => {
+                s.visible = false;
+                s.parent?.removeChild(s);
+            }
+        );
     }
 
     /**
@@ -30,11 +42,13 @@ export class LevelSystem implements System {
         this.gatesToSpawn = this.generator.generate(levelId, song, this.app.screen.height);
         
         // Pre-create gate texture
-        const gfx = new Graphics();
-        gfx.rect(-50, -100, 100, 200);
-        gfx.fill({ color: 0x00ffcc, alpha: 0.3 });
-        gfx.stroke({ color: 0x00ffcc, width: 4 });
-        this.gateTexture = this.app.renderer.generateTexture(gfx);
+        if (!this.gateTexture) {
+            const gfx = new Graphics();
+            gfx.rect(-50, -100, 100, 200);
+            gfx.fill({ color: 0x00ffcc, alpha: 0.3 });
+            gfx.stroke({ color: 0x00ffcc, width: 4 });
+            this.gateTexture = this.app.renderer.generateTexture(gfx);
+        }
     }
 
     public update(entities: Entity[], world: World, delta: number): void {
@@ -49,16 +63,15 @@ export class LevelSystem implements System {
             this.spawnGate(world, gateData);
         }
 
-        // 2. Cleanup
+        // 2. Cleanup & Recycling
         const existingGates = world.getEntities(GateComponent.TYPE_ID);
         for (let i = 0; i < existingGates.length; i++) {
             const gate = existingGates[i];
             const transform = world.getComponent<TransformComponent>(gate, TransformComponent.TYPE_ID);
             if (transform && transform.x < playerTransform.x - this.cleanupRange) {
-                // In a real system, we'd recycle the sprite here
                 const spriteComp = world.getComponent<SpriteComponent>(gate, SpriteComponent.TYPE_ID);
                 if (spriteComp) {
-                    spriteComp.sprite.destroy();
+                    this.spritePool.release(spriteComp.sprite);
                 }
                 world.destroyEntity(gate);
             }
@@ -67,7 +80,10 @@ export class LevelSystem implements System {
 
     private spawnGate(world: World, data: LevelGate): void {
         const entity = world.createEntity();
-        const sprite = new Sprite(this.gateTexture!);
+        
+        const sprite = this.spritePool.acquire();
+        sprite.texture = this.gateTexture!;
+        sprite.visible = true;
         this.app.stage.addChild(sprite);
 
         world.addComponent(entity, new TransformComponent(data.x, data.y));

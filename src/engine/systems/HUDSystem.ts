@@ -21,26 +21,44 @@ export class HUDSystem implements System {
 
         const style = new TextStyle({
             fill: '#00ffcc',
-            fontSize: 16,
+            fontSize: 14,
             fontWeight: 'bold',
-            fontFamily: 'Orbitron, Arial'
+            fontFamily: 'Orbitron, Arial',
+            dropShadow: {
+                alpha: 0.8,
+                blur: 4,
+                color: '#000000',
+                distance: 2
+            }
         });
 
-        // Altitude & Speed
-        this.altitudeText = new Text({ text: 'ALT: 0', style });
-        this.speedText = new Text({ text: 'SPD: 0', style });
+        // 1. Glassmorphism Background Panel
+        const panel = new Graphics();
+        panel.roundRect(10, 10, 220, 120, 15);
+        panel.fill({ color: 0x000000, alpha: 0.4 });
+        panel.stroke({ color: 0xffffff, width: 1, alpha: 0.2 });
+        this.container.addChild(panel);
+
+        // 2. Metrics
+        this.altitudeText = new Text({ text: 'ALTITUDE: 000', style });
+        this.speedText = new Text({ text: 'VELOCITY: 000', style });
         
-        this.altitudeText.position.set(20, 20);
-        this.speedText.position.set(20, 45);
+        this.altitudeText.position.set(25, 25);
+        this.speedText.position.set(25, 50);
         this.container.addChild(this.altitudeText, this.speedText);
 
-        // Voice Power Meter
-        const meterLabel = new Text({ text: 'VOICE THRUST', style: { ...style, fontSize: 12 } });
-        meterLabel.position.set(20, 80);
+        // 3. Voice Power Meter
+        const labelStyle = new TextStyle({ ...style, fontSize: 10 });
+        const meterLabel = new Text({ 
+            text: 'VOICE INTAKE', 
+            style: labelStyle
+        });
+        meterLabel.alpha = 0.7;
+        meterLabel.position.set(25, 85);
         this.container.addChild(meterLabel);
 
         this.voiceMeter = new Graphics();
-        this.voiceMeter.position.set(20, 100);
+        this.voiceMeter.position.set(25, 105);
         this.container.addChild(this.voiceMeter);
     }
 
@@ -56,21 +74,24 @@ export class HUDSystem implements System {
         const voice = VoiceInputManager.getInstance();
 
         if (transform) {
-            // Altitude is inverse of Y (relative to start)
-            const alt = Math.floor((this.app.screen.height / 2 - transform.y) / 10);
-            this.altitudeText.text = `ALT: ${alt}m`;
+            const alt = Math.floor(Math.max(0, (this.app.screen.height / 2 - transform.y) / 2));
+            this.altitudeText.text = `ALTITUDE: ${alt.toString().padStart(3, '0')}m`;
         }
 
         if (velocity) {
-            const spd = Math.floor(Math.sqrt(velocity.vx * velocity.vx + velocity.vy * velocity.vy) / 10);
-            this.speedText.text = `SPD: ${spd}km/h`;
+            const spd = Math.floor(Math.sqrt(velocity.vx * velocity.vx + velocity.vy * velocity.vy) / 5);
+            this.speedText.text = `VELOCITY: ${spd.toString().padStart(3, '0')}km/h`;
         }
 
-        // Render Voice Meter
+        // Render Premium Voice Meter
         this.voiceMeter.clear();
-        this.voiceMeter.rect(0, 0, 200, 10).fill({ color: 0x333333 });
-        this.voiceMeter.rect(0, 0, 200 * voice.volume, 10).fill({ color: 0x00ffcc });
-        this.voiceMeter.setStrokeStyle({ width: 2, color: 0xffffff });
-        this.voiceMeter.stroke();
+        // Background rail
+        this.voiceMeter.roundRect(0, 0, 190, 8, 4).fill({ color: 0x222222, alpha: 0.8 });
+        // Glow layer
+        if (voice.volume > 0.05) {
+            this.voiceMeter.roundRect(0, 0, 190 * voice.volume, 8, 4)
+                .fill({ color: 0x00ffcc, alpha: 0.8 })
+                .stroke({ color: 0xffffff, width: 1, alpha: 0.5 });
+        }
     }
 }
