@@ -1,23 +1,20 @@
 /**
- * MainMenuScreen: title + Kenney textured buttons when art is preloaded
+ * Main menu: modern sci-fi chrome + musical spectrum backdrop
  */
 
 import { Application, Container, Graphics, Text, TextStyle } from 'pixi.js';
 import { BaseGameScreen } from '../GameUIManager';
-import { createGameButton, createMenuBackdrop } from '../GameUIComponents';
+import { createGameButton } from '../GameUIComponents';
 import { GAME_COLORS, GAME_FONTS, GAME_SIZES } from '../GameUITheme';
 import { gameFlow } from '../gameFlowBridge';
-import {
-    attachKenneyMenuPattern,
-    createKenneyNineSliceButton,
-    createKenneyPanelNineSlice,
-} from '../kenneyNineSlice';
+import { createKenneyNineSliceButton, createKenneyPanelNineSlice } from '../kenneyNineSlice';
 import { velocityUiArtReady } from '../velocityUiArt';
+import { MusicalMenuBackdrop } from '../musicalMenuBackdrop';
 
 const TITLE_PLATE_H = 112;
 
 export class MainMenuScreen extends BaseGameScreen {
-    private backdrop!: Container;
+    private backdrop!: MusicalMenuBackdrop;
     private titlePlate!: Container;
     private titleText!: Text;
     private subtitleText!: Text;
@@ -28,13 +25,16 @@ export class MainMenuScreen extends BaseGameScreen {
         this.setupUI();
     }
 
+    override update(deltaTime: number): void {
+        this.backdrop?.updateVisuals(deltaTime);
+    }
+
     private setupUI(): void {
         const width = this.app.screen.width;
         const height = this.app.screen.height;
 
-        this.backdrop = createMenuBackdrop(width, height);
+        this.backdrop = new MusicalMenuBackdrop(width, height);
         this.container.addChild(this.backdrop);
-        attachKenneyMenuPattern(this.backdrop, width, height);
 
         this.titlePlate = new Container();
         this.container.addChild(this.titlePlate);
@@ -45,8 +45,8 @@ export class MainMenuScreen extends BaseGameScreen {
             fontWeight: 'bold',
             fontFamily: GAME_FONTS.arcade,
             dropShadow: {
-                alpha: 0.8,
-                blur: 4,
+                alpha: 0.85,
+                blur: 8,
                 color: GAME_COLORS.primary,
                 distance: 0,
             },
@@ -77,14 +77,14 @@ export class MainMenuScreen extends BaseGameScreen {
     private layoutTitlePlate(width: number, height: number): void {
         this.titlePlate.removeChildren();
         const plateW = Math.min(340, width - 36);
-        const plate = createKenneyPanelNineSlice(plateW, TITLE_PLATE_H, 'panel_brown');
+        const plate = createKenneyPanelNineSlice(plateW, TITLE_PLATE_H);
         if (plate) {
             this.titlePlate.addChild(plate);
         } else {
             const g = new Graphics();
             g.roundRect(0, 0, plateW, TITLE_PLATE_H, 12);
             g.fill({ color: GAME_COLORS.panel_bg, alpha: 0.92 });
-            g.stroke({ color: GAME_COLORS.primary, width: 2, alpha: 0.5 });
+            g.stroke({ color: GAME_COLORS.primary, width: 2, alpha: 0.55 });
             this.titlePlate.addChild(g);
         }
         this.titlePlate.position.set(width / 2 - plateW / 2, Math.max(16, height * 0.08));
@@ -94,16 +94,15 @@ export class MainMenuScreen extends BaseGameScreen {
         const plateTop = this.titlePlate.y;
         this.titleText.position.set(width / 2, plateTop + 36);
         this.subtitleText.position.set(width / 2, plateTop + 78);
-        const colY = plateTop + TITLE_PLATE_H + 28;
-        this.buttonColumn.position.set(width / 2, colY);
+        this.buttonColumn.position.set(width / 2, plateTop + TITLE_PLATE_H + 28);
     }
 
     private buildButtons(): void {
         this.buttonColumn.removeChildren();
         const width = this.app.screen.width;
         const btnW = Math.min(288, Math.max(200, width - 48));
-        const btnH = 48;
-        const gap = 12;
+        const btnH = 52;
+        const gap = 10;
         const useArt = velocityUiArtReady();
 
         const addBtn = (
@@ -111,8 +110,7 @@ export class MainMenuScreen extends BaseGameScreen {
             variant: 'primary' | 'secondary' | 'accent',
             onClick: () => void
         ) => {
-            const v =
-                variant === 'primary' ? 'primary' : variant === 'accent' ? 'accent' : 'neutral';
+            const v = variant === 'primary' ? 'primary' : variant === 'accent' ? 'accent' : 'neutral';
             const kenney = useArt && createKenneyNineSliceButton(label, btnW, btnH, v, onClick);
             const b =
                 kenney ||
@@ -134,10 +132,7 @@ export class MainMenuScreen extends BaseGameScreen {
     }
 
     resize(width: number, height: number): void {
-        this.backdrop.destroy({ children: true });
-        this.backdrop = createMenuBackdrop(width, height);
-        this.container.addChildAt(this.backdrop, 0);
-        attachKenneyMenuPattern(this.backdrop, width, height);
+        this.backdrop.applyLayout(width, height);
         this.layoutTitlePlate(width, height);
         this.layoutTextAndButtons(width, height);
         this.buildButtons();

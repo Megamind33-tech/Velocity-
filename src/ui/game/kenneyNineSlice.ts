@@ -1,26 +1,21 @@
 /**
- * Nine-slice helpers for Kenney UI tiles (fixed 64×64 panels, 48×24 buttons).
+ * Nine-slice: Kenney Sci-Fi header buttons (192×64) + Adventure cyan panel (64×64).
  */
 
-import { Container, FederatedPointerEvent, NineSliceSprite, Text, TextStyle, TilingSprite } from 'pixi.js';
+import { Container, FederatedPointerEvent, NineSliceSprite, Text, TextStyle } from 'pixi.js';
 import { getVelocityUiTexture, type VelocityUiTextureKey } from './velocityUiArt';
 import { GAME_COLORS, GAME_FONTS } from './GameUITheme';
 
-/** Typical Kenney 64×64 panel — adjust if you swap art. */
 const PANEL_SLICE = 16;
 
-/** Kenney button_grey / button_red are 48×24. */
-const BTN_SLICE_X = 12;
-const BTN_SLICE_Y = 8;
+/** Sci-fi `button_square_header_large_rectangle` 192×64 */
+const SF_BTN_L = 56;
+const SF_BTN_R = 56;
+const SF_BTN_T = 20;
+const SF_BTN_B = 20;
 
-export type KenneyPanelKey = 'panel_blue' | 'panel_brown';
-
-export function createKenneyPanelNineSlice(
-    width: number,
-    height: number,
-    panelKey: KenneyPanelKey = 'panel_blue'
-): NineSliceSprite | null {
-    const tex = getVelocityUiTexture(panelKey);
+export function createKenneyPanelNineSlice(width: number, height: number): NineSliceSprite | null {
+    const tex = getVelocityUiTexture('panel_blue');
     if (!tex) return null;
     return new NineSliceSprite({
         texture: tex,
@@ -35,9 +30,6 @@ export function createKenneyPanelNineSlice(
 
 export type KenneyButtonVariant = 'primary' | 'neutral' | 'danger' | 'accent';
 
-/**
- * Interactive button: nine-slice background + centered label.
- */
 export function createKenneyNineSliceButton(
     label: string,
     width: number,
@@ -46,9 +38,11 @@ export function createKenneyNineSliceButton(
     onClick: () => void
 ): Container | null {
     let key: VelocityUiTextureKey;
-    if (variant === 'danger') key = 'button_red';
-    else if (variant === 'accent') key = 'button_brown';
-    else key = 'button_grey';
+    if (variant === 'danger') key = 'button_sf_danger';
+    else if (variant === 'accent') key = 'button_sf_accent';
+    else if (variant === 'primary') key = 'button_sf_primary';
+    else key = 'button_sf_neutral';
+
     const tex = getVelocityUiTexture(key);
     if (!tex) return null;
 
@@ -58,10 +52,10 @@ export function createKenneyNineSliceButton(
 
     const bg = new NineSliceSprite({
         texture: tex,
-        leftWidth: BTN_SLICE_X,
-        rightWidth: BTN_SLICE_X,
-        topHeight: BTN_SLICE_Y,
-        bottomHeight: BTN_SLICE_Y,
+        leftWidth: SF_BTN_L,
+        rightWidth: SF_BTN_R,
+        topHeight: SF_BTN_T,
+        bottomHeight: SF_BTN_B,
         width,
         height,
     });
@@ -71,16 +65,22 @@ export function createKenneyNineSliceButton(
         variant === 'danger'
             ? 0xffffff
             : variant === 'primary'
-              ? GAME_COLORS.primary
+              ? 0xffffff
               : variant === 'accent'
-                ? GAME_COLORS.accent_gold
-                : GAME_COLORS.text_primary;
+                ? 0x1a1208
+                : 0xe8f4ff;
     const style = new TextStyle({
         fill: textFill,
-        fontSize: Math.min(15, Math.floor(height * 0.36)),
+        fontSize: Math.min(16, Math.floor(height * 0.34)),
         fontWeight: 'bold',
         fontFamily: GAME_FONTS.arcade,
         align: 'center',
+        dropShadow: {
+            alpha: variant === 'accent' ? 0.25 : 0.5,
+            blur: 2,
+            color: 0x000000,
+            distance: 1,
+        },
     });
     const t = new Text({ text: label, style });
     t.anchor.set(0.5);
@@ -112,17 +112,4 @@ export function createKenneyNineSliceButton(
     root.on('pointercancel', onUp);
 
     return root;
-}
-
-/**
- * Subtle tiled blueprint pattern over the menu (call after createMenuBackdrop).
- */
-export function attachKenneyMenuPattern(parent: Container, screenW: number, screenH: number): void {
-    const tex = getVelocityUiTexture('pattern_grid_blueprint');
-    if (!tex) return;
-    const tile = new TilingSprite({ texture: tex, width: screenW, height: screenH });
-    tile.alpha = 0.14;
-    tile.position.set(0, 0);
-    const idx = Math.min(1, parent.children.length);
-    parent.addChildAt(tile, idx);
 }
