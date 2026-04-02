@@ -119,7 +119,7 @@ export class HUDSystem implements System {
     }
 
     public render(entities: Entity[], world: World, interpolation: number): void {
-        if (!this.playerEntity) return;
+        if (this.playerEntity === null) return;
 
         const transform = world.getComponent<TransformComponent>(this.playerEntity, TransformComponent.TYPE_ID);
         const velocity = world.getComponent<VelocityComponent>(this.playerEntity, VelocityComponent.TYPE_ID);

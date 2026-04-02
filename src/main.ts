@@ -185,7 +185,7 @@ async function init() {
 
     // 8. Setup Persistence Events
     const eventBus = EventBus.getInstance();
-    
+
     eventBus.on(GameEvents.LEVEL_START, async (payload?: { levelId: number }) => {
         const levelId = payload?.levelId ?? 1;
         const uid = getPlayerIdForSync();

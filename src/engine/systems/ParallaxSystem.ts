@@ -39,7 +39,7 @@ export class ParallaxSystem implements System {
     }
 
     public update(entities: Entity[], world: World, delta: number): void {
-        if (!this.playerEntity) return;
+        if (this.playerEntity === null) return;
 
         const transform = world.getComponent<TransformComponent>(this.playerEntity, TransformComponent.TYPE_ID);
         if (!transform) return;

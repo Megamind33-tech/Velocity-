@@ -81,7 +81,7 @@ export class LevelSystem implements System {
     }
 
     public update(entities: Entity[], world: World, delta: number): void {
-        if (!this.playerEntity) return;
+        if (this.playerEntity === null) return;
 
         const playerTransform = world.getComponent<TransformComponent>(this.playerEntity, TransformComponent.TYPE_ID);
         if (!playerTransform) return;
