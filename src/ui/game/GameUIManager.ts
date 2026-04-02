@@ -116,6 +116,18 @@ export class GameUIManager {
     }
 
     /**
+     * Hide every registered screen and clear navigation stack.
+     * Use when showing world gameplay layers (e.g. mission map) outside the screen system.
+     */
+    public hideAllScreens(): void {
+        for (const [, screen] of this.screens) {
+            screen.hide();
+        }
+        this.currentScreen = null;
+        this.previousScreen = null;
+    }
+
+    /**
      * Hide specific screen
      */
     public hideScreen(type: ScreenType): void {
@@ -184,6 +196,14 @@ export class GameUIManager {
      */
     public getUILayer(): Container {
         return this.uiLayer;
+    }
+
+    /** Keep menus and HUD above gameplay layers (map, sprites, overlays). */
+    public bringToFront(): void {
+        const p = this.uiLayer.parent;
+        if (p) {
+            p.addChild(this.uiLayer);
+        }
     }
 
     /**

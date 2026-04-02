@@ -4,8 +4,9 @@
 
 import { Application, Text, TextStyle } from 'pixi.js';
 import { BaseGameScreen } from '../GameUIManager';
-import { createGameButton, createGamePanel, createGameLabel } from '../GameUIComponents';
+import { createGameButton } from '../GameUIComponents';
 import { GAME_COLORS, GAME_FONTS, GAME_SIZES } from '../GameUITheme';
+import { gameFlow } from '../gameFlowBridge';
 
 export class MainMenuScreen extends BaseGameScreen {
     constructor(app: Application) {
@@ -52,9 +53,8 @@ export class MainMenuScreen extends BaseGameScreen {
         const buttonY = height / 2;
         const buttonSpacing = GAME_SIZES.spacing.xl;
 
-        // Start Game button
-        const startBtn = createGameButton('START GAME', () => {
-            this.uiManager.showScreen('in-game-hud');
+        const startBtn = createGameButton('MISSION SELECT', () => {
+            gameFlow().openMissionSelect();
         }, 'primary', 'large');
         startBtn.position.set(width / 2 - GAME_SIZES.button.large.width / 2, buttonY);
         this.container.addChild(startBtn);
@@ -73,11 +73,22 @@ export class MainMenuScreen extends BaseGameScreen {
         achievementsBtn.position.set(width / 2 - GAME_SIZES.button.medium.width / 2, buttonY + buttonSpacing * 2 + 40);
         this.container.addChild(achievementsBtn);
 
-        // Settings button
+        const storeBtn = createGameButton('STORE', () => {
+            this.uiManager.showScreen('store', false);
+        }, 'accent', 'medium');
+        storeBtn.position.set(width / 2 - GAME_SIZES.button.medium.width / 2, buttonY + buttonSpacing * 3 + 60);
+        this.container.addChild(storeBtn);
+
+        const rewardsBtn = createGameButton('REWARDS', () => {
+            this.uiManager.showScreen('rewards', false);
+        }, 'accent', 'medium');
+        rewardsBtn.position.set(width / 2 - GAME_SIZES.button.medium.width / 2, buttonY + buttonSpacing * 4 + 80);
+        this.container.addChild(rewardsBtn);
+
         const settingsBtn = createGameButton('SETTINGS', () => {
             this.uiManager.showScreen('settings', false);
         }, 'secondary', 'medium');
-        settingsBtn.position.set(width / 2 - GAME_SIZES.button.medium.width / 2, buttonY + buttonSpacing * 3 + 60);
+        settingsBtn.position.set(width / 2 - GAME_SIZES.button.medium.width / 2, buttonY + buttonSpacing * 5 + 100);
         this.container.addChild(settingsBtn);
     }
 
@@ -116,8 +127,16 @@ export class MainMenuScreen extends BaseGameScreen {
             achievementsBtn.position.set(width / 2 - GAME_SIZES.button.medium.width / 2, buttonY + buttonSpacing * 2 + 40);
         }
         if (children.length > 5) {
-            const settingsBtn = children[5];
-            settingsBtn.position.set(width / 2 - GAME_SIZES.button.medium.width / 2, buttonY + buttonSpacing * 3 + 60);
+            const storeBtn = children[5];
+            storeBtn.position.set(width / 2 - GAME_SIZES.button.medium.width / 2, buttonY + buttonSpacing * 3 + 60);
+        }
+        if (children.length > 6) {
+            const rewardsBtn = children[6];
+            rewardsBtn.position.set(width / 2 - GAME_SIZES.button.medium.width / 2, buttonY + buttonSpacing * 4 + 80);
+        }
+        if (children.length > 7) {
+            const settingsBtn = children[7];
+            settingsBtn.position.set(width / 2 - GAME_SIZES.button.medium.width / 2, buttonY + buttonSpacing * 5 + 100);
         }
     }
 }
