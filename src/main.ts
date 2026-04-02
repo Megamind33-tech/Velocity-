@@ -244,7 +244,7 @@ async function init() {
         if (!GameState.runActive) return;
         GameState.setPaused(true);
         VoiceInputManager.getInstance().pauseMic();
-        uiManager.showScreen('pause', false);
+        uiManager.showScreen('pause', true);
         uiManager.bringToFront();
     });
 
