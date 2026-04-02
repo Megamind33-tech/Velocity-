@@ -37,19 +37,28 @@ export class QuestSystem implements System {
         const bus = EventBus.getInstance();
 
         bus.on(GameEvents.GATE_PASSED, () => this.increment('the_sky_is_falling'));
-        bus.on(GameEvents.OBSTACLE_DODGED, () => this.increment('velocity_junkie')); // Simplified for demo
+        bus.on(GameEvents.OBSTACLE_DODGED, () => this.increment('velocity_junkie'));
+        bus.on(GameEvents.LEVEL_COMPLETE, () => this.increment('learner_pilot'));
+        bus.on(GameEvents.STARS_AWARDED, (data: any) => {
+            if (data && typeof data.stars === 'number') {
+                this.incrementBy('star_collector', data.stars);
+            }
+        });
     }
 
     private increment(questId: string) {
+        this.incrementBy(questId, 1);
+    }
+
+    private incrementBy(questId: string, amount: number) {
         const p = this.progress.get(questId);
         if (!p) return;
 
         const definition = QUEST_DEFINITIONS.find(q => q.id === questId);
         if (!definition) return;
 
-        p.currentValue++;
-        
-        // Check for tier completions
+        p.currentValue += amount;
+
         definition.tiers.forEach(tier => {
             if (p.currentValue >= tier.requirement && !p.completedTiers.includes(tier.id)) {
                 this.completeTier(definition, tier, p);
@@ -62,20 +71,17 @@ export class QuestSystem implements System {
     private async completeTier(quest: Quest, tier: QuestTier, progress: QuestProgress) {
         progress.completedTiers.push(tier.id);
         console.log(`QuestSystem: Tier Completed! ${quest.title} - ${tier.id}`);
-        
+
         EventBus.getInstance().emit(GameEvents.QUEST_COMPLETED, { quest, tier });
 
-        // Sync reward to Firebase if user is authenticated
         const user = auth.currentUser;
         if (user) {
-            // Note: In a production app, this would be a server-side Cloud Function 
-            // triggered by the progress update to prevent client-side reward spoofing.
             await syncProfile(user.uid, 0, tier.rewardXP, tier.rewardStars);
         }
     }
 
     public update(): void {
-        // QuestSystem is mostly event-driven, but we could handle time-based quests here.
+        // QuestSystem is mostly event-driven
     }
 
     public getProgress(questId: string): QuestProgress | undefined {

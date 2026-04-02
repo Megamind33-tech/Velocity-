@@ -27,6 +27,7 @@ import { TaskOverlay } from './ui/TaskOverlay';
 import { PauseOverlay } from './ui/PauseOverlay';
 import { createDemoTouchZones } from './debug/DemoTouchZones';
 import { SONGS } from './data/songs';
+import { getLevelDefinition, getSongForLevel } from './data/levelDefinitions';
 
 function showInitFailure(message: string, detail?: string): void {
     const el = document.createElement('div');
@@ -128,6 +129,21 @@ async function init() {
     
     app.stage.addChild(startText, subText);
 
+    const startLevel = (levelId: number) => {
+        const def = getLevelDefinition(levelId);
+        if (def) {
+            const song = getSongForLevel(def);
+            if (song) {
+                levelSystem.initLevelFromDefinition(def, song, player);
+                console.log(`Velocity: Started level ${def.id} — "${def.name}" (${def.zone})`);
+            } else {
+                levelSystem.initLevel(levelId, SONGS[0], player);
+            }
+        } else {
+            levelSystem.initLevel(levelId, SONGS[0], player);
+        }
+    };
+
     overlay.on('pointerdown', async () => {
         const success = await VoiceInputManager.getInstance().init();
         if (success) {
@@ -135,16 +151,12 @@ async function init() {
             app.stage.removeChild(startText);
             app.stage.removeChild(subText);
             
-            // Initialize the level with the first song
-            levelSystem.initLevel(1, SONGS[0], player);
+            startLevel(1);
             
-            // Initialize visuals
             hudSystem.init(player);
             
-            // Generate placeholder parallax textures
             const textures = [0x111122, 0x1a1a3a, 0x24244a].map(color => {
                 const g = new Graphics().rect(0, 0, 512, 512).fill({ color });
-                // Add some "stars" or noise
                 for(let i=0; i<50; i++) g.circle(Math.random()*512, Math.random()*512, 1).fill({ color: 0xffffff, alpha: 0.5 });
                 return app.renderer.generateTexture(g);
             });
@@ -159,7 +171,6 @@ async function init() {
             const pauseOverlay = new PauseOverlay(app);
             app.stage.addChild(pauseOverlay);
 
-            // Start components and loop
             velocityEngine.start();
             console.log('Velocity Engine: Voice loop started.');
         } else {
@@ -185,6 +196,24 @@ async function init() {
             await syncProfile(uid, Number(levelId), 100 * Number(levelId), 3);
         } catch (e) {
             console.warn('Velocity: profile sync skipped.', e);
+        }
+    });
+
+    eventBus.on(GameEvents.LEVEL_COMPLETE, (data: any) => {
+        if (data && typeof data.levelId === 'number') {
+            console.log(`Level ${data.levelId} complete! Gates: ${data.gatesPassed}/${data.totalGates} — ★${data.stars}`);
+        }
+    });
+
+    eventBus.on(GameEvents.LEVEL_SELECT, (levelId: any) => {
+        if (typeof levelId === 'number') {
+            startLevel(levelId);
+        }
+    });
+
+    eventBus.on(GameEvents.LEARNING_HINT, (data: any) => {
+        if (data && data.hint) {
+            console.log(`💡 Learning: [${data.label}] ${data.hint}`);
         }
     });
 
