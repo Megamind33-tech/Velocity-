@@ -7,6 +7,7 @@ import { BaseGameScreen } from '../GameUIManager';
 import { createGamePanel, createStatDisplay, createProgressBar, createGameButton } from '../GameUIComponents';
 import { GAME_COLORS, GAME_FONTS, GAME_SIZES } from '../GameUITheme';
 import { getHudDataSource, requestGamePause } from '../gameFlowBridge';
+import { GameState } from '../../../engine/GameState';
 
 export class InGameHUDScreen extends BaseGameScreen {
     private scoreText!: Text;
@@ -94,6 +95,7 @@ export class InGameHUDScreen extends BaseGameScreen {
 
     override update(_deltaTime: number): void {
         if (!this.container.visible) return;
+        this.pauseBtn.visible = !GameState.paused;
         const h = getHudDataSource();
         this.updateScore(h.getScore());
         this.updateLevel(h.getLevelId());

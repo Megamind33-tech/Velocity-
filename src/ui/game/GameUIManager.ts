@@ -151,9 +151,13 @@ export class GameUIManager {
      * Go back to previous screen
      */
     public goBack(): void {
-        if (this.previousScreen) {
-            this.showScreen(this.previousScreen);
+        const prev = this.previousScreen;
+        const cur = this.currentScreen;
+        if (!prev || prev === cur) {
+            this.showScreen('main-menu');
+            return;
         }
+        this.showScreen(prev);
     }
 
     /**

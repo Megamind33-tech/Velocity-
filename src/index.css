@@ -20,7 +20,7 @@ html, body {
   height: 100vh;
   height: 100dvh; /* Use dynamic viewport height on mobile (accounts for address bar) */
   overflow: hidden;
-  background-color: #0a0a1a;
+  background: radial-gradient(ellipse 120% 80% at 50% 0%, #1a1a3a 0%, #0a0a1a 45%, #050510 100%);
   touch-action: none;
   -webkit-user-select: none;
   -webkit-touch-callout: none;

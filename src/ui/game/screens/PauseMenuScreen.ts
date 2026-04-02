@@ -1,4 +1,4 @@
-import { Application, Container, Text } from 'pixi.js';
+import { Application, Container } from 'pixi.js';
 import { BaseGameScreen } from '../GameUIManager';
 import { createGamePanel, createGameButton } from '../GameUIComponents';
 import { GAME_SIZES } from '../GameUITheme';
@@ -15,43 +15,70 @@ export class PauseMenuScreen extends BaseGameScreen {
     private setupUI(): void {
         const width = this.app.screen.width;
         const height = this.app.screen.height;
-        this.panel = createGamePanel(400, 300, 'modal', 'PAUSED');
-        this.panel.position.set(width / 2 - 200, height / 2 - 150);
+        const panelW = Math.min(340, width - 32);
+        const panelH = Math.min(320, height * 0.55);
+        this.panel = createGamePanel(panelW, panelH, 'modal', 'PAUSED');
+        this.panel.position.set(width / 2 - panelW / 2, height / 2 - panelH / 2);
         this.container.addChild(this.panel);
 
         const content = this.panel.content;
-        const buttonY = 30;
-        const buttonSpacing = GAME_SIZES.spacing.xl;
+        const innerPad = GAME_SIZES.spacing.xl * 2;
+        const innerW = panelW - innerPad;
+        const btnW = Math.min(260, innerW);
+        const btnH = 48;
+        const gap = 14;
+        let y = 8;
+        const btnX = (innerW - btnW) / 2;
 
-        const resumeBtn = createGameButton('RESUME', () => {
-            resumeFromGamePause();
-            this.uiManager.goBack();
-        }, 'primary', 'large');
-        resumeBtn.position.set((400 - GAME_SIZES.button.large.width) / 2, buttonY);
-        content.addChild(resumeBtn);
+        const resumeBtn = createGameButton(
+            'RESUME',
+            () => {
+                resumeFromGamePause();
+                this.uiManager.goBack();
+            },
+            'primary',
+            'large',
+            { width: btnW, height: btnH }
+        );
+        resumeBtn.position.set(btnX, y);
+        y += btnH + gap;
 
-        const settingsBtn = createGameButton('SETTINGS', () => {
-            this.uiManager.showScreen('settings', false);
-        }, 'secondary', 'medium');
-        settingsBtn.position.set((400 - GAME_SIZES.button.medium.width) / 2, buttonY + buttonSpacing + 20);
-        content.addChild(settingsBtn);
+        const settingsBtn = createGameButton(
+            'SETTINGS',
+            () => {
+                this.uiManager.showScreen('settings', true);
+            },
+            'secondary',
+            'medium',
+            { width: btnW, height: btnH }
+        );
+        settingsBtn.position.set(btnX, y);
+        y += btnH + gap;
 
-        const mainMenuBtn = createGameButton('MAIN MENU', () => {
-            gameFlow().openMainMenu();
-            this.uiManager.showScreen('main-menu');
-        }, 'danger', 'medium');
-        mainMenuBtn.position.set((400 - GAME_SIZES.button.medium.width) / 2, buttonY + buttonSpacing * 2 + 40);
-        content.addChild(mainMenuBtn);
+        const mainMenuBtn = createGameButton(
+            'MAIN MENU',
+            () => {
+                resumeFromGamePause();
+                gameFlow().openMainMenu();
+                this.uiManager.showScreen('main-menu');
+            },
+            'danger',
+            'medium',
+            { width: btnW, height: btnH }
+        );
+        mainMenuBtn.position.set(btnX, y);
+
+        content.addChild(resumeBtn, settingsBtn, mainMenuBtn);
     }
 
     show(): void {
         super.show();
-        console.log('⏸️  Pause Menu opened');
     }
 
     resize(width: number, height: number): void {
-        if (this.panel) {
-            this.panel.position.set(width / 2 - 200, height / 2 - 150);
-        }
+        if (!this.panel) return;
+        const panelW = Math.min(340, width - 32);
+        const panelH = Math.min(320, height * 0.55);
+        this.panel.position.set(width / 2 - panelW / 2, height / 2 - panelH / 2);
     }
 }

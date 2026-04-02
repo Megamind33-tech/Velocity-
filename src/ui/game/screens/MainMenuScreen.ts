@@ -2,13 +2,18 @@
  * MainMenuScreen: Game start menu with level selection
  */
 
-import { Application, Text, TextStyle } from 'pixi.js';
+import { Application, Container, Text, TextStyle } from 'pixi.js';
 import { BaseGameScreen } from '../GameUIManager';
-import { createGameButton } from '../GameUIComponents';
+import { createGameButton, createMenuBackdrop } from '../GameUIComponents';
 import { GAME_COLORS, GAME_FONTS, GAME_SIZES } from '../GameUITheme';
 import { gameFlow } from '../gameFlowBridge';
 
 export class MainMenuScreen extends BaseGameScreen {
+    private backdrop!: Container;
+    private titleText!: Text;
+    private subtitleText!: Text;
+    private buttonColumn!: Container;
+
     constructor(app: Application) {
         super(app);
         this.setupUI();
@@ -18,7 +23,9 @@ export class MainMenuScreen extends BaseGameScreen {
         const width = this.app.screen.width;
         const height = this.app.screen.height;
 
-        // Title
+        this.backdrop = createMenuBackdrop(width, height);
+        this.container.addChild(this.backdrop);
+
         const titleStyle = new TextStyle({
             fill: GAME_COLORS.primary,
             fontSize: GAME_SIZES.font.title,
@@ -32,111 +39,63 @@ export class MainMenuScreen extends BaseGameScreen {
             },
         });
 
-        const title = new Text({ text: 'VELOCITY', style: titleStyle });
-        title.anchor.set(0.5);
-        title.position.set(width / 2, height / 4);
-        this.container.addChild(title);
+        this.titleText = new Text({ text: 'VELOCITY', style: titleStyle });
+        this.titleText.anchor.set(0.5);
+        this.container.addChild(this.titleText);
 
-        // Subtitle
         const subtitleStyle = new TextStyle({
             fill: GAME_COLORS.text_secondary,
             fontSize: GAME_SIZES.font.lg,
             fontFamily: GAME_FONTS.standard,
         });
 
-        const subtitle = new Text({ text: 'Voice-Powered Flight', style: subtitleStyle });
-        subtitle.anchor.set(0.5);
-        subtitle.position.set(width / 2, height / 4 + 60);
-        this.container.addChild(subtitle);
+        this.subtitleText = new Text({ text: 'Voice-Powered Flight', style: subtitleStyle });
+        this.subtitleText.anchor.set(0.5);
+        this.container.addChild(this.subtitleText);
 
-        // Button container
-        const buttonY = height / 2;
-        const buttonSpacing = GAME_SIZES.spacing.xl;
+        this.buttonColumn = new Container();
+        this.container.addChild(this.buttonColumn);
 
-        const startBtn = createGameButton('MISSION SELECT', () => {
-            gameFlow().openMissionSelect();
-        }, 'primary', 'large');
-        startBtn.position.set(width / 2 - GAME_SIZES.button.large.width / 2, buttonY);
-        this.container.addChild(startBtn);
+        this.layoutForSize(width, height);
+        this.buildButtons();
+    }
 
-        // Leaderboard button
-        const leaderboardBtn = createGameButton('LEADERBOARD', () => {
-            this.uiManager.showScreen('leaderboard', false);
-        }, 'secondary', 'medium');
-        leaderboardBtn.position.set(width / 2 - GAME_SIZES.button.medium.width / 2, buttonY + buttonSpacing + 20);
-        this.container.addChild(leaderboardBtn);
+    private layoutForSize(width: number, height: number): void {
+        this.titleText.position.set(width / 2, height * 0.18);
+        this.subtitleText.position.set(width / 2, height * 0.18 + 52);
+        this.buttonColumn.position.set(width / 2, height * 0.42);
+    }
 
-        // Achievements button
-        const achievementsBtn = createGameButton('ACHIEVEMENTS', () => {
-            this.uiManager.showScreen('achievements', false);
-        }, 'secondary', 'medium');
-        achievementsBtn.position.set(width / 2 - GAME_SIZES.button.medium.width / 2, buttonY + buttonSpacing * 2 + 40);
-        this.container.addChild(achievementsBtn);
+    private buildButtons(): void {
+        this.buttonColumn.removeChildren();
+        const width = this.app.screen.width;
+        const btnW = Math.min(288, Math.max(200, width - 48));
+        const btnH = 48;
+        const gap = 12;
 
-        const storeBtn = createGameButton('STORE', () => {
-            this.uiManager.showScreen('store', false);
-        }, 'accent', 'medium');
-        storeBtn.position.set(width / 2 - GAME_SIZES.button.medium.width / 2, buttonY + buttonSpacing * 3 + 60);
-        this.container.addChild(storeBtn);
+        const addBtn = (label: string, type: 'primary' | 'secondary' | 'accent', onClick: () => void) => {
+            const b = createGameButton(label, onClick, type, 'large', { width: btnW, height: btnH });
+            b.position.set(-btnW / 2, this.buttonColumn.children.length * (btnH + gap));
+            this.buttonColumn.addChild(b);
+        };
 
-        const rewardsBtn = createGameButton('REWARDS', () => {
-            this.uiManager.showScreen('rewards', false);
-        }, 'accent', 'medium');
-        rewardsBtn.position.set(width / 2 - GAME_SIZES.button.medium.width / 2, buttonY + buttonSpacing * 4 + 80);
-        this.container.addChild(rewardsBtn);
-
-        const settingsBtn = createGameButton('SETTINGS', () => {
-            this.uiManager.showScreen('settings', false);
-        }, 'secondary', 'medium');
-        settingsBtn.position.set(width / 2 - GAME_SIZES.button.medium.width / 2, buttonY + buttonSpacing * 5 + 100);
-        this.container.addChild(settingsBtn);
+        addBtn('MISSION SELECT', 'primary', () => gameFlow().openMissionSelect());
+        addBtn('LEADERBOARD', 'secondary', () => this.uiManager.showScreen('leaderboard', true));
+        addBtn('ACHIEVEMENTS', 'secondary', () => this.uiManager.showScreen('achievements', true));
+        addBtn('STORE', 'accent', () => this.uiManager.showScreen('store', true));
+        addBtn('REWARDS', 'accent', () => this.uiManager.showScreen('rewards', true));
+        addBtn('SETTINGS', 'secondary', () => this.uiManager.showScreen('settings', true));
     }
 
     show(): void {
         super.show();
-        console.log('📋 Main Menu opened');
-    }
-
-    hide(): void {
-        super.hide();
     }
 
     resize(width: number, height: number): void {
-        // Update positioned elements for responsive layout
-        const children = this.container.children;
-        if (children.length > 0) {
-            const title = children[0];
-            title.position.set(width / 2, height / 4);
-        }
-        if (children.length > 1) {
-            const subtitle = children[1];
-            subtitle.position.set(width / 2, height / 4 + 60);
-        }
-        const buttonY = height / 2;
-        const buttonSpacing = GAME_SIZES.spacing.xl;
-        if (children.length > 2) {
-            const startBtn = children[2];
-            startBtn.position.set(width / 2 - GAME_SIZES.button.large.width / 2, buttonY);
-        }
-        if (children.length > 3) {
-            const leaderboardBtn = children[3];
-            leaderboardBtn.position.set(width / 2 - GAME_SIZES.button.medium.width / 2, buttonY + buttonSpacing + 20);
-        }
-        if (children.length > 4) {
-            const achievementsBtn = children[4];
-            achievementsBtn.position.set(width / 2 - GAME_SIZES.button.medium.width / 2, buttonY + buttonSpacing * 2 + 40);
-        }
-        if (children.length > 5) {
-            const storeBtn = children[5];
-            storeBtn.position.set(width / 2 - GAME_SIZES.button.medium.width / 2, buttonY + buttonSpacing * 3 + 60);
-        }
-        if (children.length > 6) {
-            const rewardsBtn = children[6];
-            rewardsBtn.position.set(width / 2 - GAME_SIZES.button.medium.width / 2, buttonY + buttonSpacing * 4 + 80);
-        }
-        if (children.length > 7) {
-            const settingsBtn = children[7];
-            settingsBtn.position.set(width / 2 - GAME_SIZES.button.medium.width / 2, buttonY + buttonSpacing * 5 + 100);
-        }
+        this.backdrop.destroy({ children: true });
+        this.backdrop = createMenuBackdrop(width, height);
+        this.container.addChildAt(this.backdrop, 0);
+        this.layoutForSize(width, height);
+        this.buildButtons();
     }
 }
