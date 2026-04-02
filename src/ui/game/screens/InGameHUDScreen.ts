@@ -1,22 +1,26 @@
 /**
- * InGameHUDScreen: Real-time game metrics (arcade HUD layer)
+ * InGameHUDScreen: Compact HUD — minimal footprint on the gameplay canvas
  */
 
-import { Application, Container, Text, TextStyle } from 'pixi.js';
+import { Application, Container, Graphics, Text, TextStyle } from 'pixi.js';
 import { BaseGameScreen } from '../GameUIManager';
-import { createGamePanel, createStatDisplay, createProgressBar, createGameButton } from '../GameUIComponents';
+import { createGameButton, createProgressBar } from '../GameUIComponents';
 import { GAME_COLORS, GAME_FONTS, GAME_SIZES } from '../GameUITheme';
 import { getHudDataSource, requestGamePause } from '../gameFlowBridge';
 import { GameState } from '../../../engine/GameState';
+import { ResponsiveUIManager } from '../../ResponsiveUIManager';
 
 export class InGameHUDScreen extends BaseGameScreen {
+    private statsBg!: Graphics;
     private scoreText!: Text;
     private levelText!: Text;
     private altSpeedText!: Text;
+    private vocalRoot!: Container;
+    private vocalBg!: Graphics;
+    private vocalLabel!: Text;
     private altitudeBar!: Container & { setProgress: (current: number, max: number) => void };
-    private topLeftPanel!: Container & { content: Container };
-    private vocalPanel!: Container & { content: Container };
     private pauseBtn!: Container;
+    private lastBarWidth = 0;
 
     constructor(app: Application) {
         super(app);
@@ -24,83 +28,109 @@ export class InGameHUDScreen extends BaseGameScreen {
     }
 
     private setupUI(): void {
-        const width = this.app.screen.width;
-        const height = this.app.screen.height;
-        const padding = GAME_SIZES.spacing.lg;
+        this.statsBg = new Graphics();
+        this.container.addChild(this.statsBg);
 
-        this.topLeftPanel = createGamePanel(220, 168, 'hud');
-        this.topLeftPanel.position.set(padding, padding);
-        this.container.addChild(this.topLeftPanel);
-
-        const content = this.topLeftPanel.content;
-        const scoreDisplay = createStatDisplay('SCORE', '0', GAME_COLORS.accent_gold);
-        content.addChild(scoreDisplay);
-        this.scoreText = scoreDisplay.children[1] as Text;
-
-        const levelDisplay = createStatDisplay('LEVEL', '1', GAME_COLORS.primary);
-        levelDisplay.position.y = GAME_SIZES.spacing.xl;
-        content.addChild(levelDisplay);
-        this.levelText = levelDisplay.children[1] as Text;
-
-        const altStyle = new TextStyle({
+        const lineStyle = new TextStyle({
+            fill: GAME_COLORS.text_primary,
+            fontSize: 13,
+            fontFamily: GAME_FONTS.monospace,
+            fontWeight: 'bold',
+        });
+        const subStyle = new TextStyle({
             fill: GAME_COLORS.text_secondary,
-            fontSize: GAME_SIZES.font.sm,
+            fontSize: 11,
             fontFamily: GAME_FONTS.monospace,
         });
-        this.altSpeedText = new Text({ text: 'ALT — m  ·  SPD —', style: altStyle });
-        this.altSpeedText.position.set(0, GAME_SIZES.spacing.xl * 2 + 4);
-        content.addChild(this.altSpeedText);
 
-        this.vocalPanel = createGamePanel(200, 96, 'hud');
-        this.vocalPanel.position.set(padding, height - padding - 96);
-        this.container.addChild(this.vocalPanel);
+        this.scoreText = new Text({ text: 'SCORE 0', style: lineStyle });
+        this.levelText = new Text({ text: 'LV 1', style: lineStyle });
+        this.levelText.anchor.set(1, 0);
+        this.altSpeedText = new Text({ text: 'ALT 0m  ·  SPD 0', style: subStyle });
+        this.container.addChild(this.scoreText, this.levelText, this.altSpeedText);
 
-        const vocalContent = this.vocalPanel.content;
-        const vocalLabel = new Text({
-            text: 'VOCAL LEVEL',
+        this.pauseBtn = createGameButton('II', () => requestGamePause(), 'secondary', 'small', {
+            width: 52,
+            height: 32,
+        });
+        this.container.addChild(this.pauseBtn);
+
+        this.vocalRoot = new Container();
+        this.vocalBg = new Graphics();
+        this.vocalRoot.addChild(this.vocalBg);
+        this.vocalLabel = new Text({
+            text: 'VOCAL',
             style: new TextStyle({
                 fill: GAME_COLORS.text_secondary,
-                fontSize: GAME_SIZES.font.xs,
+                fontSize: 9,
                 fontFamily: GAME_FONTS.arcade,
             }),
         });
-        vocalContent.addChild(vocalLabel);
-        this.altitudeBar = createProgressBar(160, 20, 0, 100, GAME_COLORS.primary);
-        this.altitudeBar.position.y = GAME_SIZES.spacing.md + 4;
-        vocalContent.addChild(this.altitudeBar);
+        this.vocalLabel.position.set(10, 4);
+        this.vocalRoot.addChild(this.vocalLabel);
 
-        this.pauseBtn = createGameButton('PAUSE', () => requestGamePause(), 'secondary', 'small');
-        this.pauseBtn.position.set(
-            width - padding - GAME_SIZES.button.small.width,
-            padding
-        );
-        this.container.addChild(this.pauseBtn);
+        this.altitudeBar = createProgressBar(100, 8, 0, 100, GAME_COLORS.primary);
+        this.altitudeBar.position.set(10, 16);
+        this.vocalRoot.addChild(this.altitudeBar);
+        this.container.addChild(this.vocalRoot);
+
+        this.layoutChrome();
     }
 
-    public updateScore(score: number): void {
-        this.scoreText.text = String(score);
-    }
+    private layoutChrome(): void {
+        const width = this.app.screen.width;
+        const height = this.app.screen.height;
+        const safe = ResponsiveUIManager.getInstance().getSafeAreaPadding();
+        const pad = Math.max(GAME_SIZES.spacing.sm, safe.left, safe.right, 8);
+        const topY = Math.max(GAME_SIZES.spacing.sm, safe.top + 4);
+        const pauseW = 52;
+        const pauseH = 32;
+        const gap = 8;
+        const statsW = Math.min(220, Math.max(140, width - pad * 2 - pauseW - gap));
+        const statsH = 56;
 
-    public updateLevel(level: number): void {
-        this.levelText.text = String(level);
-    }
+        this.statsBg.clear();
+        this.statsBg.roundRect(0, 0, statsW, statsH, 8);
+        this.statsBg.fill({ color: GAME_COLORS.hud_bg, alpha: 0.82 });
+        this.statsBg.stroke({ color: GAME_COLORS.primary, width: 1, alpha: 0.45 });
+        this.statsBg.position.set(pad, topY);
 
-    public updateVocalLevel(current: number, max: number = 100): void {
-        this.altitudeBar.setProgress(current, max);
-    }
+        this.scoreText.position.set(pad + 10, topY + 8);
+        this.levelText.position.set(pad + statsW - 10, topY + 8);
+        this.altSpeedText.position.set(pad + 10, topY + 32);
 
-    public updateAltitudeSpeed(altM: number, speedPx: number): void {
-        this.altSpeedText.text = `ALT ${altM}m  ·  SPD ${Math.round(speedPx)}`;
+        this.pauseBtn.position.set(width - pad - pauseW, topY + (statsH - pauseH) / 2);
+
+        const vocalBodyH = 22;
+        const vocalW = width - pad * 2;
+        const bottomPad = Math.max(pad, safe.bottom + 8);
+        const vocalY = height - bottomPad - vocalBodyH - 18;
+
+        const barInnerW = Math.max(80, vocalW - 20);
+        if (barInnerW !== this.lastBarWidth) {
+            this.lastBarWidth = barInnerW;
+            this.vocalRoot.removeChild(this.altitudeBar);
+            this.altitudeBar.destroy({ children: true });
+            this.altitudeBar = createProgressBar(barInnerW, 8, 0, 100, GAME_COLORS.primary);
+            this.altitudeBar.position.set(10, 16);
+            this.vocalRoot.addChild(this.altitudeBar);
+        }
+
+        this.vocalBg.clear();
+        this.vocalBg.roundRect(0, 0, vocalW, vocalBodyH + 18, 8);
+        this.vocalBg.fill({ color: GAME_COLORS.hud_bg, alpha: 0.78 });
+        this.vocalBg.stroke({ color: GAME_COLORS.primary, width: 1, alpha: 0.35 });
+        this.vocalRoot.position.set(pad, vocalY);
     }
 
     override update(_deltaTime: number): void {
         if (!this.container.visible) return;
         this.pauseBtn.visible = !GameState.paused;
         const h = getHudDataSource();
-        this.updateScore(h.getScore());
-        this.updateLevel(h.getLevelId());
-        this.updateVocalLevel(Math.round(h.getVocal01() * 100), 100);
-        this.updateAltitudeSpeed(h.getAltitudeDisplay(), h.getForwardSpeed());
+        this.scoreText.text = `SCORE ${h.getScore()}`;
+        this.levelText.text = `LV ${h.getLevelId()}`;
+        this.altitudeBar.setProgress(Math.round(h.getVocal01() * 100), 100);
+        this.altSpeedText.text = `ALT ${h.getAltitudeDisplay()}m  ·  SPD ${Math.round(h.getForwardSpeed())}`;
     }
 
     show(): void {
@@ -108,12 +138,6 @@ export class InGameHUDScreen extends BaseGameScreen {
     }
 
     resize(width: number, height: number): void {
-        const padding = GAME_SIZES.spacing.lg;
-        this.topLeftPanel.position.set(padding, padding);
-        this.vocalPanel.position.set(padding, height - padding - 96);
-        this.pauseBtn.position.set(
-            width - padding - GAME_SIZES.button.small.width,
-            padding
-        );
+        this.layoutChrome();
     }
 }
