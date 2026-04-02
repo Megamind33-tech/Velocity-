@@ -21,7 +21,7 @@ export class VoiceInputSystem implements System {
     }
 
     public update(_entities: Entity[], world: World, delta: number): void {
-        if (GameState.paused) return;
+        if (GameState.paused || !GameState.runActive) return;
 
         if (!this.voiceManager.isInitialized) return;
 
