@@ -1,20 +1,19 @@
 /**
- * Main menu: modern sci-fi chrome + musical spectrum backdrop
+ * Main menu — Kenney UI Pack only (uniform chrome + shared backdrop).
  */
 
 import { Application, Container, Graphics, Text, TextStyle } from 'pixi.js';
 import { BaseGameScreen } from '../GameUIManager';
-import { createGameButton } from '../GameUIComponents';
+import { createGameButton, createMenuBackdrop } from '../GameUIComponents';
 import { GAME_COLORS, GAME_FONTS, GAME_SIZES } from '../GameUITheme';
 import { gameFlow } from '../gameFlowBridge';
 import { createKenneyNineSliceButton, createKenneyPanelNineSlice } from '../kenneyNineSlice';
 import { velocityUiArtReady } from '../velocityUiArt';
-import { MusicalMenuBackdrop } from '../musicalMenuBackdrop';
 
 const TITLE_PLATE_H = 112;
 
 export class MainMenuScreen extends BaseGameScreen {
-    private backdrop!: MusicalMenuBackdrop;
+    private backdrop!: Container;
     private titlePlate!: Container;
     private titleText!: Text;
     private subtitleText!: Text;
@@ -25,15 +24,11 @@ export class MainMenuScreen extends BaseGameScreen {
         this.setupUI();
     }
 
-    override update(deltaTime: number): void {
-        this.backdrop?.updateVisuals(deltaTime);
-    }
-
     private setupUI(): void {
         const width = this.app.screen.width;
         const height = this.app.screen.height;
 
-        this.backdrop = new MusicalMenuBackdrop(width, height);
+        this.backdrop = createMenuBackdrop(width, height);
         this.container.addChild(this.backdrop);
 
         this.titlePlate = new Container();
@@ -45,8 +40,8 @@ export class MainMenuScreen extends BaseGameScreen {
             fontWeight: 'bold',
             fontFamily: GAME_FONTS.arcade,
             dropShadow: {
-                alpha: 0.85,
-                blur: 8,
+                alpha: 0.8,
+                blur: 4,
                 color: GAME_COLORS.primary,
                 distance: 0,
             },
@@ -84,7 +79,7 @@ export class MainMenuScreen extends BaseGameScreen {
             const g = new Graphics();
             g.roundRect(0, 0, plateW, TITLE_PLATE_H, 12);
             g.fill({ color: GAME_COLORS.panel_bg, alpha: 0.92 });
-            g.stroke({ color: GAME_COLORS.primary, width: 2, alpha: 0.55 });
+            g.stroke({ color: GAME_COLORS.primary, width: 2, alpha: 0.5 });
             this.titlePlate.addChild(g);
         }
         this.titlePlate.position.set(width / 2 - plateW / 2, Math.max(16, height * 0.08));
@@ -132,7 +127,9 @@ export class MainMenuScreen extends BaseGameScreen {
     }
 
     resize(width: number, height: number): void {
-        this.backdrop.applyLayout(width, height);
+        this.backdrop.destroy({ children: true });
+        this.backdrop = createMenuBackdrop(width, height);
+        this.container.addChildAt(this.backdrop, 0);
         this.layoutTitlePlate(width, height);
         this.layoutTextAndButtons(width, height);
         this.buildButtons();

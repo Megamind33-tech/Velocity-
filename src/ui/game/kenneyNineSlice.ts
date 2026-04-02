@@ -1,28 +1,26 @@
 /**
- * Nine-slice: Kenney Sci-Fi header buttons (192×64) + Adventure cyan panel (64×64).
+ * Nine-slice for Kenney UI Pack rectangles (192×64): buttons + input outline panel.
  */
 
 import { Container, FederatedPointerEvent, NineSliceSprite, Text, TextStyle } from 'pixi.js';
 import { getVelocityUiTexture, type VelocityUiTextureKey } from './velocityUiArt';
 import { GAME_COLORS, GAME_FONTS } from './GameUITheme';
 
-const PANEL_SLICE = 16;
-
-/** Sci-fi `button_square_header_large_rectangle` 192×64 */
-const SF_BTN_L = 56;
-const SF_BTN_R = 56;
-const SF_BTN_T = 20;
-const SF_BTN_B = 20;
+/** Shared 192×64 Kenney slices (buttons + input_outline_rectangle). */
+const SLICE_L = 56;
+const SLICE_R = 56;
+const SLICE_T = 20;
+const SLICE_B = 20;
 
 export function createKenneyPanelNineSlice(width: number, height: number): NineSliceSprite | null {
-    const tex = getVelocityUiTexture('panel_blue');
+    const tex = getVelocityUiTexture('panel_frame');
     if (!tex) return null;
     return new NineSliceSprite({
         texture: tex,
-        leftWidth: PANEL_SLICE,
-        rightWidth: PANEL_SLICE,
-        topHeight: PANEL_SLICE,
-        bottomHeight: PANEL_SLICE,
+        leftWidth: SLICE_L,
+        rightWidth: SLICE_R,
+        topHeight: SLICE_T,
+        bottomHeight: SLICE_B,
         width,
         height,
     });
@@ -38,10 +36,10 @@ export function createKenneyNineSliceButton(
     onClick: () => void
 ): Container | null {
     let key: VelocityUiTextureKey;
-    if (variant === 'danger') key = 'button_sf_danger';
-    else if (variant === 'accent') key = 'button_sf_accent';
-    else if (variant === 'primary') key = 'button_sf_primary';
-    else key = 'button_sf_neutral';
+    if (variant === 'danger') key = 'button_danger';
+    else if (variant === 'accent') key = 'button_accent';
+    else if (variant === 'primary') key = 'button_primary';
+    else key = 'button_secondary';
 
     const tex = getVelocityUiTexture(key);
     if (!tex) return null;
@@ -52,23 +50,17 @@ export function createKenneyNineSliceButton(
 
     const bg = new NineSliceSprite({
         texture: tex,
-        leftWidth: SF_BTN_L,
-        rightWidth: SF_BTN_R,
-        topHeight: SF_BTN_T,
-        bottomHeight: SF_BTN_B,
+        leftWidth: SLICE_L,
+        rightWidth: SLICE_R,
+        topHeight: SLICE_T,
+        bottomHeight: SLICE_B,
         width,
         height,
     });
     root.addChild(bg);
 
     const textFill =
-        variant === 'danger'
-            ? 0xffffff
-            : variant === 'primary'
-              ? 0xffffff
-              : variant === 'accent'
-                ? 0x1a1208
-                : 0xe8f4ff;
+        variant === 'accent' ? 0x1a1a22 : 0xffffff;
     const style = new TextStyle({
         fill: textFill,
         fontSize: Math.min(16, Math.floor(height * 0.34)),
@@ -76,7 +68,7 @@ export function createKenneyNineSliceButton(
         fontFamily: GAME_FONTS.arcade,
         align: 'center',
         dropShadow: {
-            alpha: variant === 'accent' ? 0.25 : 0.5,
+            alpha: variant === 'accent' ? 0.15 : 0.45,
             blur: 2,
             color: 0x000000,
             distance: 1,
