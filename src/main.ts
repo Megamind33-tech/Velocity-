@@ -1,5 +1,6 @@
 import './index.css';
-import { Application, Container, Graphics, Sprite, Text, TextStyle } from 'pixi.js';
+import { Application, Assets, Sprite, Texture, Graphics, Text, TextStyle } from 'pixi.js';
+import { ResponsiveUIManager } from './ui/ResponsiveUIManager';
 import { WorldMapScene } from './scenes/WorldMapScene';
 import { EventBus } from './events/EventBus';
 import { GameEvents } from './events/GameEvents';
@@ -102,15 +103,59 @@ async function init() {
     world.addComponent(player, new FlightDynamicsComponent(1.0, 0.05, 3000));
     world.addComponent(player, new SpriteComponent(playerSprite));
 
-    const taskOverlay = new TaskOverlay();
-    app.stage.addChild(taskOverlay);
+    // 6. Mobile Voice Start Interaction (Premium Glassmorphism Style)
+    const responsiveManager = ResponsiveUIManager.getInstance();
+    const overlay = new Graphics();
+    overlay.rect(0, 0, app.screen.width, app.screen.height);
+    overlay.fill({ color: 0x000000, alpha: 0.85 });
+    overlay.eventMode = 'static';
+    app.stage.addChild(overlay);
 
-    let worldMap: WorldMapScene | null = null;
-    let pauseOverlay: PauseOverlay | null = null;
-    let demoZones: Container | null = null;
-    let parallaxReady = false;
-    let currentLevelId = 1;
-    let resultLayer: RunResultOverlay | null = null;
+    // Get responsive font sizes and positions
+    const startScreenLayout = responsiveManager.getStartScreenLayout();
+    const startStyle = new TextStyle({
+        fill: '#00ffcc',
+        fontSize: startScreenLayout.titleSize,
+        fontWeight: 'bold',
+        fontFamily: 'Orbitron, Arial',
+        dropShadow: { blur: 10, color: '#00ffcc', distance: 0 }
+    });
+
+    const startText = new Text({ text: 'VELOCITY: VOICE-FLIGHT', style: startStyle });
+    const subStyle = new TextStyle({
+        fill: '#00ffcc',
+        fontSize: startScreenLayout.subtitleSize,
+        fontWeight: 'bold',
+        fontFamily: 'Orbitron, Arial',
+        dropShadow: { blur: 10, color: '#00ffcc', distance: 0 }
+    });
+    const subText = new Text({
+        text: 'TAP SCREEN TO INITIALIZE MIC',
+        style: subStyle,
+    });
+    subText.alpha = 0.7;
+
+    startText.anchor.set(0.5);
+    subText.anchor.set(0.5);
+    startText.position.set(app.screen.width / 2, startScreenLayout.titleY);
+    subText.position.set(app.screen.width / 2, startScreenLayout.subtitleY);
+
+    app.stage.addChild(startText, subText);
+
+    const startLevel = (levelId: number) => {
+        const def = getLevelDefinition(levelId);
+        if (def) {
+            const song = getSongForLevel(def);
+            if (song) {
+                levelSystem.initLevelFromDefinition(def, song, player);
+                console.log(`Velocity: Started level ${def.id} — "${def.name}" (${def.zone})`);
+            } else {
+                levelSystem.initLevel(levelId, SONGS[0], player);
+            }
+        } else {
+            levelSystem.initLevel(levelId, SONGS[0], player);
+        }
+    };
 
     const bus = EventBus.getInstance();
 

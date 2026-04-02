@@ -1,11 +1,32 @@
+/* ============================================================================
+   Mobile & Tablet Viewport Configuration (Mobile/Tablet Only)
+
+   Target Devices:
+   - iPhone: 320px to 428px width (all models)
+   - Android phones: 360px to 480px width
+   - iPad: 810px to 1194px width
+   - No desktop support
+   ============================================================================ */
+@viewport {
+  width: device-width;
+  zoom: 1;
+  user-zoom: fixed;
+}
+
 html, body {
   margin: 0;
   padding: 0;
   width: 100vw;
   height: 100vh;
+  height: 100dvh; /* Use dynamic viewport height on mobile (accounts for address bar) */
   overflow: hidden;
   background-color: #0a0a1a;
   touch-action: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+  user-select: none;
+  -webkit-font-smoothing: antialiased;
+  -webkit-app-region: no-drag;
 }
 
 canvas {
@@ -13,4 +34,82 @@ canvas {
   width: 100%;
   height: 100%;
   touch-action: none;
+  -webkit-touch-callout: none;
+}
+
+/* ============================================================================
+   Safe Area Support (iOS Notch/Home Indicator)
+   ============================================================================ */
+body {
+  padding-top: max(0px, env(safe-area-inset-top));
+  padding-bottom: max(0px, env(safe-area-inset-bottom));
+  padding-left: max(0px, env(safe-area-inset-left));
+  padding-right: max(0px, env(safe-area-inset-right));
+}
+
+/* ============================================================================
+   Portrait Orientation (Mobile Vertical)
+   ============================================================================ */
+@media (orientation: portrait) {
+  html, body {
+    width: 100vw;
+    height: 100dvh;
+  }
+
+  canvas {
+    width: 100%;
+    height: 100%;
+  }
+}
+
+/* ============================================================================
+   Landscape Orientation (Mobile Horizontal)
+   ============================================================================ */
+@media (orientation: landscape) {
+  html, body {
+    width: 100vw;
+    height: 100dvh;
+  }
+
+  canvas {
+    width: 100%;
+    height: 100%;
+  }
+}
+
+/* ============================================================================
+   Small Mobile Devices (< 360px width)
+   ============================================================================ */
+@media (max-width: 359px) {
+  body {
+    font-size: 12px;
+  }
+}
+
+/* ============================================================================
+   Standard Mobile Devices (360px - 767px width)
+   ============================================================================ */
+@media (min-width: 360px) and (max-width: 767px) {
+  html, body {
+    font-size: 14px;
+  }
+}
+
+/* ============================================================================
+   Tablets (768px and above) - iPad and larger tablets
+   ============================================================================ */
+@media (min-width: 768px) {
+  html, body {
+    font-size: 16px;
+  }
+}
+
+/* ============================================================================
+   High DPI Devices (Retina displays)
+   ============================================================================ */
+@media (-webkit-min-device-pixel-ratio: 2), (min-resolution: 192dpi) {
+  canvas {
+    image-rendering: -webkit-optimize-contrast;
+    image-rendering: crisp-edges;
+  }
 }
