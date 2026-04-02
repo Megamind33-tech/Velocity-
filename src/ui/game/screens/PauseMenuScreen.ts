@@ -2,6 +2,7 @@ import { Application, Container, Text } from 'pixi.js';
 import { BaseGameScreen } from '../GameUIManager';
 import { createGamePanel, createGameButton } from '../GameUIComponents';
 import { GAME_SIZES } from '../GameUITheme';
+import { gameFlow, resumeFromGamePause } from '../gameFlowBridge';
 
 export class PauseMenuScreen extends BaseGameScreen {
     private panel!: Container & { content: Container };
@@ -23,6 +24,7 @@ export class PauseMenuScreen extends BaseGameScreen {
         const buttonSpacing = GAME_SIZES.spacing.xl;
 
         const resumeBtn = createGameButton('RESUME', () => {
+            resumeFromGamePause();
             this.uiManager.goBack();
         }, 'primary', 'large');
         resumeBtn.position.set((400 - GAME_SIZES.button.large.width) / 2, buttonY);
@@ -35,6 +37,7 @@ export class PauseMenuScreen extends BaseGameScreen {
         content.addChild(settingsBtn);
 
         const mainMenuBtn = createGameButton('MAIN MENU', () => {
+            gameFlow().openMainMenu();
             this.uiManager.showScreen('main-menu');
         }, 'danger', 'medium');
         mainMenuBtn.position.set((400 - GAME_SIZES.button.medium.width) / 2, buttonY + buttonSpacing * 2 + 40);
