@@ -1,10 +1,13 @@
-import { Application, Ticker } from 'pixi.js';
+import { Application, UPDATE_PRIORITY } from 'pixi.js';
 import { World } from './World';
 import { GameState } from './GameState';
 
 /**
  * The Engine manages the PixiJS Application and the high-stability game loop.
  * It uses a fixed-step accumulator pattern for physics/logic stability.
+ *
+ * Must use the Application's ticker: Pixi v8 defaults to a per-Application ticker
+ * (not Ticker.shared), so registering on Ticker.shared would never run with app.render().
  */
 export class Engine {
     private app: Application;
@@ -12,16 +15,15 @@ export class Engine {
 
     private readonly fixedTimeStep: number = 1 / 60;
     private accumulator: number = 0;
+    private loopRegistered = false;
 
     constructor(app: Application, world: World) {
         this.app = app;
         this.world = world;
-
-        Ticker.shared.add(this.onTick, this);
     }
 
     private onTick(): void {
-        const delta = Ticker.shared.elapsedMS / 1000;
+        const delta = this.app.ticker.elapsedMS / 1000;
 
         if (!GameState.paused) {
             this.accumulator += Math.min(delta, 0.25);
@@ -41,11 +43,19 @@ export class Engine {
     }
 
     public start(): void {
-        Ticker.shared.start();
+        if (!this.loopRegistered) {
+            // NORMAL runs before Application.render (UPDATE_PRIORITY.LOW) on the same ticker.
+            this.app.ticker.add(this.onTick, this, UPDATE_PRIORITY.NORMAL);
+            this.loopRegistered = true;
+        }
+        this.app.ticker.start();
         console.log(`Velocity Engine: Loop started (Fixed: ${1 / this.fixedTimeStep}Hz)`);
     }
 
     public stop(): void {
-        Ticker.shared.stop();
+        if (this.loopRegistered) {
+            this.app.ticker.remove(this.onTick, this);
+            this.loopRegistered = false;
+        }
     }
 }
