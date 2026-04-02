@@ -1,5 +1,6 @@
 import './index.css';
 import { Application, Assets, Sprite, Texture, Graphics, Text, TextStyle } from 'pixi.js';
+import { ResponsiveUIManager } from './ui/ResponsiveUIManager';
 import { WorldMapScene } from './scenes/WorldMapScene';
 import { EventBus } from './events/EventBus';
 import { GameEvents } from './events/GameEvents';
@@ -101,32 +102,42 @@ async function init() {
     world.addComponent(player, new SpriteComponent(playerSprite));
 
     // 6. Mobile Voice Start Interaction (Premium Glassmorphism Style)
+    const responsiveManager = ResponsiveUIManager.getInstance();
     const overlay = new Graphics();
     overlay.rect(0, 0, app.screen.width, app.screen.height);
     overlay.fill({ color: 0x000000, alpha: 0.85 });
     overlay.eventMode = 'static';
     app.stage.addChild(overlay);
 
+    // Get responsive font sizes and positions
+    const startScreenLayout = responsiveManager.getStartScreenLayout();
     const startStyle = new TextStyle({
         fill: '#00ffcc',
-        fontSize: 28,
+        fontSize: startScreenLayout.titleSize,
         fontWeight: 'bold',
         fontFamily: 'Orbitron, Arial',
         dropShadow: { blur: 10, color: '#00ffcc', distance: 0 }
     });
 
     const startText = new Text({ text: 'VELOCITY: VOICE-FLIGHT', style: startStyle });
+    const subStyle = new TextStyle({
+        fill: '#00ffcc',
+        fontSize: startScreenLayout.subtitleSize,
+        fontWeight: 'bold',
+        fontFamily: 'Orbitron, Arial',
+        dropShadow: { blur: 10, color: '#00ffcc', distance: 0 }
+    });
     const subText = new Text({
         text: 'TAP SCREEN TO INITIALIZE MIC',
-        style: new TextStyle({ ...startStyle, fontSize: 14 }),
+        style: subStyle,
     });
     subText.alpha = 0.7;
 
     startText.anchor.set(0.5);
     subText.anchor.set(0.5);
-    startText.position.set(app.screen.width / 2, app.screen.height / 2 - 20);
-    subText.position.set(app.screen.width / 2, app.screen.height / 2 + 30);
-    
+    startText.position.set(app.screen.width / 2, startScreenLayout.titleY);
+    subText.position.set(app.screen.width / 2, startScreenLayout.subtitleY);
+
     app.stage.addChild(startText, subText);
 
     const startLevel = (levelId: number) => {
