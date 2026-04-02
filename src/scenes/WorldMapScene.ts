@@ -157,7 +157,7 @@ export class WorldMapScene {
     }
 
     private drawNodes(): void {
-        const style = new TextStyle({
+        const idStyle = new TextStyle({
             fill: '#ffffff',
             fontSize: 20,
             fontWeight: 'bold',

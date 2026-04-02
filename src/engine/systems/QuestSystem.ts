@@ -66,20 +66,17 @@ export class QuestSystem implements System {
     private async completeTier(quest: Quest, tier: QuestTier, progress: QuestProgress) {
         progress.completedTiers.push(tier.id);
         console.log(`QuestSystem: Tier Completed! ${quest.title} - ${tier.id}`);
-        
+
         EventBus.getInstance().emit(GameEvents.QUEST_COMPLETED, { quest, tier });
 
-        // Sync reward to Firebase if user is authenticated
         const user = auth.currentUser;
         if (user) {
-            // Note: In a production app, this would be a server-side Cloud Function 
-            // triggered by the progress update to prevent client-side reward spoofing.
             await syncProfile(user.uid, 0, tier.rewardXP, tier.rewardStars);
         }
     }
 
     public update(): void {
-        // QuestSystem is mostly event-driven, but we could handle time-based quests here.
+        // QuestSystem is mostly event-driven
     }
 
     public getProgress(questId: string): QuestProgress | undefined {

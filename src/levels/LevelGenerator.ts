@@ -9,6 +9,7 @@ export interface LevelGate {
 
 /**
  * Generates rhythm-based levels with guaranteed solvability.
+ * Supports both legacy (levelId + Song) and new (LevelDefinition) generation paths.
  */
 export class LevelGenerator {
     /**
@@ -19,11 +20,10 @@ export class LevelGenerator {
         const baseSpeed = 300; // px per second
         const diff = DifficultyScaler.getMultiplier(levelId);
 
-        for (let i = 0; i < song.notes.length; i++) {
-            const note = song.notes[i];
+        for (let i = 0; i < notesToUse.length; i++) {
+            const note = notesToUse[i];
             const x = note.time * baseSpeed;
-            
-            // Map pitch (0-1) to height (avoiding screen edges)
+
             const padding = 100;
             const y = padding + (note.pitch * (worldHeight - padding * 2));
             
@@ -34,7 +34,6 @@ export class LevelGenerator {
                 width: Math.max(48, baseW / diff)
             };
 
-            // Gap-checking: Ensure the gate is reachable from the previous one
             if (i > 0) {
                 const prev = gates[i - 1];
                 const dx = gate.x - prev.x;
