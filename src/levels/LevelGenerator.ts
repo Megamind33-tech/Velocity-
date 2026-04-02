@@ -1,4 +1,5 @@
 import { Song } from '../data/songs';
+import { LevelDefinition } from '../data/levelDefinitions';
 import { DifficultyScaler } from './DifficultyScaler';
 
 export interface LevelGate {
@@ -16,6 +17,7 @@ export class LevelGenerator {
      * Generates a deterministic level from a seed and song data.
      */
     public generate(levelId: number, song: Song, worldHeight: number): LevelGate[] {
+        const notesToUse = song.notes;
         const gates: LevelGate[] = [];
         const baseSpeed = 300; // px per second
         const diff = DifficultyScaler.getMultiplier(levelId);
@@ -47,6 +49,56 @@ export class LevelGenerator {
                     // Adjust y to be solvable
                     const direction = gate.y > prev.y ? 1 : -1;
                     gate.y = prev.y + (direction * maxVerticalSpeed * dt);
+                }
+            }
+
+            gates.push(gate);
+        }
+
+        return gates;
+    }
+
+    /** Build gates from a level definition (note count, scroll speed, gate width). */
+    public generateForDefinition(def: LevelDefinition, song: Song, worldHeight: number): LevelGate[] {
+        if (song.notes.length === 0) {
+            return this.generate(def.id, song, worldHeight);
+        }
+        let notes = song.notes.slice(0, def.gateCount);
+        if (notes.length < def.gateCount) {
+            const src = song.notes;
+            while (notes.length < def.gateCount) {
+                notes.push(src[notes.length % src.length]);
+            }
+        }
+
+        const gates: LevelGate[] = [];
+        const baseSpeed = def.scrollSpeed;
+        const diff = DifficultyScaler.getMultiplier(def.id);
+
+        for (let i = 0; i < notes.length; i++) {
+            const note = notes[i];
+            const x = note.time * baseSpeed;
+
+            const padding = 100;
+            const y = padding + note.pitch * (worldHeight - padding * 2);
+
+            const baseW = def.gateWidth;
+            const gate: LevelGate = {
+                x,
+                y,
+                width: Math.max(48, baseW / diff),
+            };
+
+            if (i > 0) {
+                const prev = gates[i - 1];
+                const dx = gate.x - prev.x;
+                const dy = Math.abs(gate.y - prev.y);
+                const dt = dx / baseSpeed;
+
+                const maxVerticalSpeed = 420 / diff;
+                if (dy / dt > maxVerticalSpeed) {
+                    const direction = gate.y > prev.y ? 1 : -1;
+                    gate.y = prev.y + direction * maxVerticalSpeed * dt;
                 }
             }
 

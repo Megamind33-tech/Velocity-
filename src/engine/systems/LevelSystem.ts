@@ -29,6 +29,8 @@ export class LevelSystem implements System {
     private currentLevelDef: LevelDefinition | null = null;
     private levelComplete: boolean = false;
     private hintEmitted: boolean = false;
+    private gatesPassed: number = 0;
+    private totalGates: number = 0;
 
     private spritePool: ObjectPool<Sprite>;
 
@@ -48,11 +50,15 @@ export class LevelSystem implements System {
      */
     public initLevel(levelId: number, song: Song, player: Entity): void {
         this.playerEntity = player;
+        this.currentLevelDef = null;
+        this.levelComplete = false;
+        this.hintEmitted = false;
+        this.gatesPassed = 0;
         const plan = this.generator.generate(levelId, song, this.app.screen.height);
+        this.totalGates = plan.length;
         this.lastInitializedGateCount = plan.length;
         this.gatesToSpawn = plan;
-        
-        // Pre-create gate texture
+
         if (!this.gateTexture) {
             const gfx = new Graphics();
             gfx.rect(-50, -100, 100, 200);
@@ -60,8 +66,22 @@ export class LevelSystem implements System {
             gfx.stroke({ color: 0x00ffcc, width: 4 });
             this.gateTexture = this.app.renderer.generateTexture(gfx);
         }
+    }
 
-        EventBus.getInstance().emit(GameEvents.LEVEL_START, def.id);
+    public initLevelFromDefinition(def: LevelDefinition, song: Song, player: Entity): void {
+        this.playerEntity = player;
+        this.currentLevelDef = def;
+        this.levelComplete = false;
+        this.hintEmitted = false;
+        this.gatesPassed = 0;
+        const plan = this.generator.generateForDefinition(def, song, this.app.screen.height);
+        this.totalGates = plan.length;
+        this.lastInitializedGateCount = plan.length;
+        this.gatesToSpawn = plan;
+
+        const zone = getZoneForLevel(def.id);
+        const color = zone?.color ?? 0x00ffcc;
+        this.ensureGateTexture(color);
     }
 
     public getGatesPassed(): number { return this.gatesPassed; }
@@ -153,6 +173,8 @@ export class LevelSystem implements System {
         }
         this.gatesToSpawn = [];
         this.lastInitializedGateCount = 0;
+        this.gatesPassed = 0;
+        this.totalGates = 0;
     }
 
     private spawnGate(world: World, data: LevelGate): void {
