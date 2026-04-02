@@ -1,9 +1,10 @@
-import { Application, Container, Text, TextStyle } from 'pixi.js';
+import { Application, Container, Graphics, Text, TextStyle } from 'pixi.js';
 import { BaseGameScreen } from '../GameUIManager';
-import { createGamePanel, createGameButton, createStatDisplay } from '../GameUIComponents';
+import { createGamePanel, createGameButton, createStatDisplay, createModalDimmer } from '../GameUIComponents';
 import { GAME_COLORS, GAME_FONTS, GAME_SIZES } from '../GameUITheme';
 
 export class RewardsScreen extends BaseGameScreen {
+    private dimmer!: Graphics;
     private panel!: Container & { content: Container };
 
     constructor(app: Application) {
@@ -12,14 +13,21 @@ export class RewardsScreen extends BaseGameScreen {
     }
 
     private setupUI(): void {
-        const width = this.app.screen.width;
-        const height = this.app.screen.height;
+        const sw = this.app.screen.width;
+        const sh = this.app.screen.height;
 
-        this.panel = createGamePanel(450, 400, 'modal', 'DAILY REWARDS');
-        this.panel.position.set(width / 2 - 225, height / 2 - 200);
+        this.dimmer = createModalDimmer(sw, sh);
+        this.container.addChild(this.dimmer);
+
+        const panelW = Math.min(450, sw - 24);
+        const panelH = Math.min(440, sh - 48);
+        this.panel = createGamePanel(panelW, panelH, 'modal', 'DAILY REWARDS');
+        this.panel.position.set(sw / 2 - panelW / 2, sh / 2 - panelH / 2);
         this.container.addChild(this.panel);
 
         const content = this.panel.content;
+        const pad = GAME_SIZES.spacing.xl;
+        const innerW = panelW - pad * 2;
 
         const titleStyle = new TextStyle({
             fill: GAME_COLORS.accent_gold,
@@ -28,8 +36,8 @@ export class RewardsScreen extends BaseGameScreen {
             fontFamily: GAME_FONTS.standard,
         });
         const subtitle = new Text({ text: 'Come back tomorrow!', style: titleStyle });
-        subtitle.anchor.set(0.5);
-        subtitle.position.set(225, 0);
+        subtitle.anchor.set(0.5, 0);
+        subtitle.position.set(innerW / 2, 0);
         content.addChild(subtitle);
 
         let y = GAME_SIZES.spacing.xxl;
@@ -41,27 +49,46 @@ export class RewardsScreen extends BaseGameScreen {
 
         rewards.forEach((reward) => {
             const rewardDisplay = createStatDisplay(reward.day, `+${reward.tokens}`, GAME_COLORS.accent_green);
-            rewardDisplay.position.y = y;
+            rewardDisplay.position.set((innerW - 200) / 2, y);
             content.addChild(rewardDisplay);
             y += GAME_SIZES.spacing.xl;
         });
 
-        const claimBtn = createGameButton('CLAIM REWARD', () => {
-            console.log('Reward claimed!');
-            this.uiManager.goBack();
-        }, 'success', 'large');
-        claimBtn.position.set((450 - GAME_SIZES.button.large.width) / 2, y);
+        const btnW = Math.min(260, innerW);
+        const btnH = 46;
+        const claimBtn = createGameButton(
+            'CLAIM REWARD',
+            () => {
+                console.log('Reward claimed!');
+                this.uiManager.goBack();
+            },
+            'success',
+            'large',
+            { width: btnW, height: btnH }
+        );
+        claimBtn.position.set((innerW - btnW) / 2, y + 8);
         content.addChild(claimBtn);
+
+        const backBtn = createGameButton('BACK', () => this.uiManager.goBack(), 'secondary', 'medium', {
+            width: btnW,
+            height: btnH,
+        });
+        backBtn.position.set((innerW - btnW) / 2, y + btnH + 20);
+        content.addChild(backBtn);
     }
 
     show(): void {
         super.show();
-        console.log('🎁 Rewards opened');
     }
 
     resize(width: number, height: number): void {
+        this.dimmer.clear();
+        this.dimmer.rect(0, 0, width, height);
+        this.dimmer.fill({ color: 0x050510, alpha: 0.78 });
         if (this.panel) {
-            this.panel.position.set(width / 2 - 225, height / 2 - 200);
+            const panelW = Math.min(450, width - 24);
+            const panelH = Math.min(440, height - 48);
+            this.panel.position.set(width / 2 - panelW / 2, height / 2 - panelH / 2);
         }
     }
 }
