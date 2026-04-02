@@ -3,7 +3,7 @@ import { Application, Assets, Sprite, Texture, Graphics, Text, TextStyle } from 
 import { WorldMapScene } from './scenes/WorldMapScene';
 import { EventBus } from './events/EventBus';
 import { GameEvents } from './events/GameEvents';
-import { initAuth } from './firebase/auth';
+import { getPlayerIdForSync, startAuthInBackground } from './firebase/auth';
 import { syncProfile } from './firebase/db';
 import { World } from './engine/World';
 import { Engine } from './engine/Engine';
@@ -28,20 +28,33 @@ import { PauseOverlay } from './ui/PauseOverlay';
 import { createDemoTouchZones } from './debug/DemoTouchZones';
 import { SONGS } from './data/songs';
 
+function showInitFailure(message: string, detail?: string): void {
+    const el = document.createElement('div');
+    el.setAttribute('role', 'alert');
+    el.style.cssText =
+        'position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px;background:#0a0a1a;color:#00ffcc;font-family:system-ui,sans-serif;text-align:center;z-index:99999;';
+    el.innerHTML = `<h1 style="margin:0 0 12px;font-size:1.1rem">Velocity</h1><p style="margin:0;opacity:.9;max-width:320px">${message}</p>${detail ? `<pre style="margin-top:16px;font-size:11px;opacity:.6;white-space:pre-wrap;max-width:100%">${detail}</pre>` : ''}`;
+    document.body.appendChild(el);
+}
+
 async function init() {
-    // 1. Initialize PixiJS Application
+    // 1. Initialize PixiJS Application (must never be blocked by Firebase)
     const app = new Application();
-    await app.init({ 
-        background: '#0a0a1a', // Deep space blue
+    await app.init({
+        background: '#0a0a1a',
         resizeTo: window,
         resolution: window.devicePixelRatio || 1,
-        autoDensity: true
+        autoDensity: true,
+        preference: 'webgl',
     });
-    document.body.appendChild(app.canvas);
+    const canvas = app.canvas as HTMLCanvasElement;
+    canvas.style.display = 'block';
+    canvas.style.width = '100%';
+    canvas.style.height = '100%';
+    document.body.appendChild(canvas);
 
-    // 2. Initialize Firebase Auth
-    const user = await initAuth();
-    console.log(`Velocity Engine: Authenticated as ${user.uid}`);
+    // 2. Firebase in background only — broken keys on Vercel no longer blank the screen
+    startAuthInBackground();
 
     // 3. Initialize ECS World
     const world = new World();
@@ -166,8 +179,13 @@ async function init() {
     const eventBus = EventBus.getInstance();
     
     eventBus.on(GameEvents.LEVEL_START, async (levelId) => {
+        const uid = getPlayerIdForSync();
         console.log(`WorldMap: Syncing progress for level ${levelId}`);
-        await syncProfile(user.uid, Number(levelId), 100 * Number(levelId), 3);
+        try {
+            await syncProfile(uid, Number(levelId), 100 * Number(levelId), 3);
+        } catch (e) {
+            console.warn('Velocity: profile sync skipped.', e);
+        }
     });
 
     // 9. Loop is started after user interaction (overlay.on('pointerdown'))
@@ -178,4 +196,6 @@ async function init() {
 
 init().catch((err) => {
     console.error('Failed to initialize Velocity Engine:', err);
+    const msg = err instanceof Error ? err.message : String(err);
+    showInitFailure('Could not start the game engine. Try refreshing or another browser.', msg);
 });
