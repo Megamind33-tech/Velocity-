@@ -1,18 +1,20 @@
 import { Application, Container, Graphics, Text, TextStyle } from 'pixi.js';
 import { BaseGameScreen } from '../GameUIManager';
 import { createGameButton, createModalDimmer } from '../GameUIComponents';
+import { createKenneyNineSliceButton, createKenneyPanelNineSlice } from '../kenneyNineSlice';
 import { GAME_COLORS, GAME_FONTS, GAME_SIZES, GAME_PANEL_STYLES } from '../GameUITheme';
 import { gameFlow, resumeFromGamePause } from '../gameFlowBridge';
 import { ResponsiveUIManager } from '../../ResponsiveUIManager';
+import { velocityUiArtReady } from '../velocityUiArt';
 
 /**
  * Pause: full-screen dimmer, in-game HUD hidden while visible (see main pause handler).
- * Panel height is computed from buttons so nothing clips on short phones.
+ * Uses Kenney nine-slice panel/buttons when textures are preloaded.
  */
 export class PauseMenuScreen extends BaseGameScreen {
     private dimmer!: Graphics;
     private panel!: Container;
-    private panelBg!: Graphics;
+    private panelBgSlot!: Container;
     private titleText!: Text;
     private content!: Container;
 
@@ -29,8 +31,8 @@ export class PauseMenuScreen extends BaseGameScreen {
         this.container.addChild(this.dimmer);
 
         this.panel = new Container();
-        this.panelBg = new Graphics();
-        this.panel.addChild(this.panelBg);
+        this.panelBgSlot = new Container();
+        this.panel.addChild(this.panelBgSlot);
 
         const modal = GAME_PANEL_STYLES.modal;
         this.titleText = new Text({
@@ -103,14 +105,21 @@ export class PauseMenuScreen extends BaseGameScreen {
         const panelY = safe.top + 10 + Math.max(0, (maxPanelH - panelH) / 2);
         this.panel.position.set(panelX, panelY);
 
-        this.panelBg.clear();
-        this.panelBg.roundRect(0, 0, panelW, panelH, modal.corner_radius);
-        this.panelBg.fill({ color: modal.bg, alpha: modal.bg_alpha });
-        this.panelBg.stroke({
-            color: modal.border,
-            width: modal.border_width,
-            alpha: 1,
-        });
+        this.panelBgSlot.removeChildren();
+        const artPanel = createKenneyPanelNineSlice(panelW, panelH);
+        if (artPanel) {
+            this.panelBgSlot.addChild(artPanel);
+        } else {
+            const g = new Graphics();
+            g.roundRect(0, 0, panelW, panelH, modal.corner_radius);
+            g.fill({ color: modal.bg, alpha: modal.bg_alpha });
+            g.stroke({
+                color: modal.border,
+                width: modal.border_width,
+                alpha: 1,
+            });
+            this.panelBgSlot.addChild(g);
+        }
 
         this.titleText.position.set(panelW / 2, GAME_SIZES.spacing.lg);
         this.content.position.set(pad, contentTop);
@@ -122,45 +131,71 @@ export class PauseMenuScreen extends BaseGameScreen {
         this.content.removeChildren();
         let y = innerTop;
 
-        const resumeBtn = createGameButton(
-            'RESUME',
-            () => {
+        const useArt = velocityUiArtReady();
+
+        const resumeBtn =
+            useArt &&
+            createKenneyNineSliceButton('RESUME', btnW, btnH, 'primary', () => {
                 resumeFromGamePause();
                 this.uiManager.goBack();
-            },
-            'primary',
-            'large',
-            { width: btnW, height: btnH }
-        );
-        resumeBtn.position.set(btnX, y);
+            });
+        const resume =
+            resumeBtn ||
+            createGameButton(
+                'RESUME',
+                () => {
+                    resumeFromGamePause();
+                    this.uiManager.goBack();
+                },
+                'primary',
+                'large',
+                { width: btnW, height: btnH }
+            );
+        resume.position.set(btnX, y);
         y += btnH + gap;
 
-        const settingsBtn = createGameButton(
-            'SETTINGS',
-            () => {
+        const settingsBtn =
+            useArt &&
+            createKenneyNineSliceButton('SETTINGS', btnW, btnH, 'neutral', () => {
                 this.uiManager.showScreen('settings', true);
-            },
-            'secondary',
-            'medium',
-            { width: btnW, height: btnH }
-        );
-        settingsBtn.position.set(btnX, y);
+            });
+        const settings =
+            settingsBtn ||
+            createGameButton(
+                'SETTINGS',
+                () => {
+                    this.uiManager.showScreen('settings', true);
+                },
+                'secondary',
+                'medium',
+                { width: btnW, height: btnH }
+            );
+        settings.position.set(btnX, y);
         y += btnH + gap;
 
-        const mainMenuBtn = createGameButton(
-            'MAIN MENU',
-            () => {
+        const mainBtn =
+            useArt &&
+            createKenneyNineSliceButton('MAIN MENU', btnW, btnH, 'danger', () => {
                 resumeFromGamePause();
                 gameFlow().openMainMenu();
                 this.uiManager.showScreen('main-menu');
-            },
-            'danger',
-            'medium',
-            { width: btnW, height: btnH }
-        );
-        mainMenuBtn.position.set(btnX, y);
+            });
+        const mainMenu =
+            mainBtn ||
+            createGameButton(
+                'MAIN MENU',
+                () => {
+                    resumeFromGamePause();
+                    gameFlow().openMainMenu();
+                    this.uiManager.showScreen('main-menu');
+                },
+                'danger',
+                'medium',
+                { width: btnW, height: btnH }
+            );
+        mainMenu.position.set(btnX, y);
 
-        this.content.addChild(resumeBtn, settingsBtn, mainMenuBtn);
+        this.content.addChild(resume, settings, mainMenu);
     }
 
     show(): void {

@@ -49,6 +49,7 @@ import {
     registerRunEndCallbacks,
     setLastRunSummary,
 } from './ui/game/gameFlowBridge';
+import { preloadVelocityUiTextures } from './ui/game/velocityUiArt';
 
 function showInitFailure(message: string, detail?: string): void {
     const el = document.createElement('div');
@@ -75,6 +76,8 @@ async function init() {
     document.body.appendChild(canvas);
 
     startAuthInBackground();
+
+    await preloadVelocityUiTextures();
 
     const uiManager = GameUIManager.init(app);
     uiManager.registerScreen('main-menu', new MainMenuScreen(app));
