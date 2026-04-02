@@ -174,7 +174,7 @@ export class WorldMapScene {
             dot.position.set(node.x, node.y);
             this.scrollLayer.addChild(dot);
 
-            const txt = new Text({ text: node.id.toString(), style });
+            const txt = new Text({ text: node.id.toString(), style: idStyle });
             txt.anchor.set(0.5);
             txt.position.set(node.x, node.y);
             txt.alpha = node.unlocked ? 1 : 0.35;

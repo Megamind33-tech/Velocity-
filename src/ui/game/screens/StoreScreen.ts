@@ -4,7 +4,7 @@ import { createGamePanel, createGameButton, createGameLabel } from '../GameUICom
 import { GAME_COLORS, GAME_FONTS, GAME_SIZES } from '../GameUITheme';
 
 export class StoreScreen extends BaseGameScreen {
-    private panel: Container & { content: Container };
+    private panel!: Container & { content: Container };
 
     constructor(app: Application) {
         super(app);

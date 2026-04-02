@@ -9,11 +9,11 @@ import { createGamePanel, createStatDisplay, createProgressBar } from '../GameUI
 import { GAME_COLORS, GAME_SIZES } from '../GameUITheme';
 
 export class InGameHUDScreen extends BaseGameScreen {
-    private scoreText: Text;
-    private levelText: Text;
-    private altitudeBar: Container & { setProgress: (current: number, max: number) => void };
-    private topLeftPanel: Container & { content: Container };
-    private vocalPanel: Container & { content: Container };
+    private scoreText!: Text;
+    private levelText!: Text;
+    private altitudeBar!: Container & { setProgress: (current: number, max: number) => void };
+    private topLeftPanel!: Container & { content: Container };
+    private vocalPanel!: Container & { content: Container };
 
     constructor(app: Application) {
         super(app);
@@ -33,12 +33,12 @@ export class InGameHUDScreen extends BaseGameScreen {
         const content = this.topLeftPanel.content;
         const scoreDisplay = createStatDisplay('SCORE', '0', GAME_COLORS.accent_gold);
         content.addChild(scoreDisplay);
-        this.scoreText = scoreDisplay.children[1];
+        this.scoreText = scoreDisplay.children[1] as Text;
 
         const levelDisplay = createStatDisplay('LEVEL', '1', GAME_COLORS.primary);
         levelDisplay.position.y = GAME_SIZES.spacing.xl;
         content.addChild(levelDisplay);
-        this.levelText = levelDisplay.children[1];
+        this.levelText = levelDisplay.children[1] as Text;
 
         // Bottom-left: Vocal indicator
         this.vocalPanel = createGamePanel(200, 80, 'hud');
@@ -64,9 +64,7 @@ export class InGameHUDScreen extends BaseGameScreen {
     }
 
     public updateVocalLevel(current: number, max: number = 100): void {
-        if (this.altitudeBar && (this.altitudeBar).setProgress) {
-            (this.altitudeBar).setProgress(current, max);
-        }
+        this.altitudeBar.setProgress(current, max);
     }
 
     show(): void {

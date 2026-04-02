@@ -1,5 +1,5 @@
 import './index.css';
-import { Application, Assets, Sprite, Texture, Graphics, Text, TextStyle } from 'pixi.js';
+import { Application, Container, Sprite, Graphics, Text, TextStyle } from 'pixi.js';
 import { ResponsiveUIManager } from './ui/ResponsiveUIManager';
 import { WorldMapScene } from './scenes/WorldMapScene';
 import { EventBus } from './events/EventBus';
@@ -33,6 +33,7 @@ import { createDemoTouchZones } from './debug/DemoTouchZones';
 import { SONGS } from './data/songs';
 import { GameState } from './engine/GameState';
 import { unlockAfterComplete } from './data/localProgress';
+import { getLevelDefinition, getSongForLevel } from './data/levelDefinitions';
 
 function showInitFailure(message: string, detail?: string): void {
     const el = document.createElement('div');
@@ -64,6 +65,12 @@ async function init() {
     const velocityEngine = new Engine(app, world);
 
     const levelSystem = new LevelSystem(app);
+    let currentLevelId = 1;
+    let pauseOverlay: PauseOverlay | null = null;
+    let resultLayer: RunResultOverlay | null = null;
+    let parallaxReady = false;
+    let demoZones: Container | null = null;
+    let worldMap: WorldMapScene | null = null;
     const parallaxSystem = new ParallaxSystem(app);
     const hudSystem = new HUDSystem(app);
     const gatePlayout = new GatePlayoutSystem();
@@ -141,21 +148,6 @@ async function init() {
     subText.position.set(app.screen.width / 2, startScreenLayout.subtitleY);
 
     app.stage.addChild(startText, subText);
-
-    const startLevel = (levelId: number) => {
-        const def = getLevelDefinition(levelId);
-        if (def) {
-            const song = getSongForLevel(def);
-            if (song) {
-                levelSystem.initLevelFromDefinition(def, song, player);
-                console.log(`Velocity: Started level ${def.id} — "${def.name}" (${def.zone})`);
-            } else {
-                levelSystem.initLevel(levelId, SONGS[0], player);
-            }
-        } else {
-            levelSystem.initLevel(levelId, SONGS[0], player);
-        }
-    };
 
     const bus = EventBus.getInstance();
 
@@ -251,7 +243,18 @@ async function init() {
         vel.vx = 200;
         vel.vy = 0;
 
-        levelSystem.initLevel(levelId, SONGS[0], player);
+        const def = getLevelDefinition(levelId);
+        if (def) {
+            const song = getSongForLevel(def);
+            if (song) {
+                levelSystem.initLevelFromDefinition(def, song, player);
+                console.log(`Velocity: Started level ${def.id} — "${def.name}" (${def.zone})`);
+            } else {
+                levelSystem.initLevel(levelId, SONGS[0], player);
+            }
+        } else {
+            levelSystem.initLevel(levelId, SONGS[0], player);
+        }
         gatePlayout.configure(player, levelSystem.lastInitializedGateCount);
         boundsCheck.configure(player, app.screen.height);
         distanceQuest.configure(player);
