@@ -23,7 +23,7 @@ export class PauseOverlay extends Container {
     ) {
         super();
 
-        this.pauseBtn = createMenuButton('II', 52, 44, () => this.enterPause());
+        this.pauseBtn = createMenuButton('II', 52, 44, () => this.enterPause(), { compact: true });
         this.pauseBtn.position.set(app.screen.width - 64, 12);
         this.addChild(this.pauseBtn);
 

@@ -12,6 +12,7 @@
   },
   "dependencies": {
     "@pixi/sound": "^6.0.1",
+    "@pixi/ui": "^2.3.2",
     "firebase": "^11.6.0",
     "pixi.js": "^8.17.1",
     "vite": "^6.2.0"

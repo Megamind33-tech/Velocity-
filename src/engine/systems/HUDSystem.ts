@@ -5,6 +5,7 @@ import { VoiceInputManager } from '../input/VoiceInputManager';
 import { GameState } from '../GameState';
 import { VOICE_FLIGHT } from '../../data/constants';
 import { GAME_UI } from '../../ui/theme/GameUITheme';
+import { ProgressBar } from '@pixi/ui';
 import { Container, Graphics, Text, TextStyle } from 'pixi.js';
 
 /**
@@ -13,7 +14,7 @@ import { Container, Graphics, Text, TextStyle } from 'pixi.js';
 export class HUDSystem implements System {
     public readonly priority: number = 3000;
     private container: Container;
-    private voiceMeter: Graphics;
+    private voiceMeter: ProgressBar;
     private altitudeText: Text;
     private speedText: Text;
     private pitchText: Text;
@@ -63,7 +64,21 @@ export class HUDSystem implements System {
         meterLabel.position.set(25, 92);
         this.container.addChild(meterLabel);
 
-        this.voiceMeter = new Graphics();
+        const barW = 190;
+        const barH = 10;
+        const bgG = new Graphics();
+        bgG.roundRect(0, 0, barW, barH, 4);
+        bgG.fill({ color: 0x1a1035, alpha: 0.95 });
+        bgG.stroke({ width: 1, color: GAME_UI.strokeNeon, alpha: 0.35 });
+        const fillG = new Graphics();
+        fillG.roundRect(0, 0, barW, barH, 4);
+        fillG.fill({ color: GAME_UI.accentCool, alpha: 0.9 });
+        this.voiceMeter = new ProgressBar({
+            bg: bgG,
+            fill: fillG,
+            progress: 0,
+        });
+        this.voiceMeter.setSize(barW, barH);
         this.voiceMeter.position.set(25, 112);
         this.container.addChild(this.voiceMeter);
     }
@@ -98,16 +113,13 @@ export class HUDSystem implements System {
             this.pitchText.text = 'PITCH: (sing)';
         }
 
-        // Render Premium Voice Meter
-        this.voiceMeter.clear();
-        // Background rail
-        this.voiceMeter.roundRect(0, 0, 190, 8, 4).fill({ color: 0x1a1035, alpha: 0.9 });
-        // Glow layer
         const level = Math.min(1, voice.volume * 4);
-        if (!GameState.paused && !voice.isSuspended && level > 0.03) {
-            this.voiceMeter.roundRect(0, 0, 190 * level, 8, 4)
-                .fill({ color: GAME_UI.accentCool, alpha: 0.85 })
-                .stroke({ color: GAME_UI.accentHot, width: 1, alpha: 0.6 });
-        }
+        const pct =
+            GameState.paused || voice.isSuspended
+                ? 0
+                : level > 0.03
+                  ? Math.round(level * 100)
+                  : 0;
+        this.voiceMeter.progress = pct;
     }
 }
