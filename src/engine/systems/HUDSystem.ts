@@ -45,7 +45,8 @@ export class HUDSystem implements System {
         // 2. Metrics
         this.altitudeText = new Text({ text: 'ALTITUDE: 000', style });
         this.speedText = new Text({ text: 'FORWARD: 000', style });
-        this.pitchText = new Text({ text: 'PITCH: --- Hz', style: { ...style, fontSize: 12 } });
+        const pitchStyle = new TextStyle({ ...style, fontSize: 12 });
+        this.pitchText = new Text({ text: 'PITCH: --- Hz', style: pitchStyle });
 
         this.altitudeText.position.set(25, 25);
         this.speedText.position.set(25, 50);
@@ -53,7 +54,13 @@ export class HUDSystem implements System {
         this.container.addChild(this.altitudeText, this.speedText, this.pitchText);
 
         // 3. Voice Power Meter
-        const labelStyle = new TextStyle({ ...style, fontSize: 10 });
+        const labelStyle = new TextStyle({
+            fill: style.fill,
+            fontSize: 10,
+            fontWeight: style.fontWeight,
+            fontFamily: style.fontFamily,
+            dropShadow: style.dropShadow
+        });
         const meterLabel = new Text({
             text: 'VOCAL LEVEL (GATE)',
             style: labelStyle,

@@ -20,7 +20,7 @@ export class VocalAudioProcessor {
     private highPassFilter: BiquadFilterNode | null = null;
     private lowPassFilter: BiquadFilterNode | null = null;
     private vocalBoostEQ: BiquadFilterNode | null = null;
-    private compressor: DynamicsCompressor | null = null;
+    private compressor: DynamicsCompressorNode | null = null;
     private noiseGate: GainNode | null = null;
 
     // Analysis
