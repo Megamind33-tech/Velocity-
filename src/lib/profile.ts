@@ -20,6 +20,7 @@ export interface PlayerProfile {
   challenges: Challenge[];
   dailyChallenge?: Challenge;
   lastDailyChallengeDate?: string;
+  selectedAircraftId?: string;
 }
 
 import { ACHIEVEMENTS } from './achievements';
