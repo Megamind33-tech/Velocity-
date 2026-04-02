@@ -8,7 +8,7 @@ import {
   Zap,
   Target,
   Play,
-  Plane,
+  Star,
 } from 'lucide-react';
 import { PlayerProfile } from '../lib/profile';
 import type { Screen } from '../App';
@@ -27,6 +27,7 @@ export function HomeScreen({ profile, onNavigate }: HomeScreenProps) {
       <div className="mg-vignette" aria-hidden />
       <div className="mg-scanlines" aria-hidden />
 
+      {/* Top bar with profile + settings */}
       <header className="mg-topbar shrink-0">
         <button
           type="button"
@@ -37,35 +38,44 @@ export function HomeScreen({ profile, onNavigate }: HomeScreenProps) {
             <div
               className="mg-hex w-11 h-12 text-sm"
               style={{
-                background: 'linear-gradient(145deg, #9b7fff, #43e7ff)',
-                boxShadow: '0 0 22px rgba(125,92,255,0.55)',
+                background: 'linear-gradient(145deg, #FFE566, #FFBF00)',
+                boxShadow: '0 0 22px rgba(255,191,0,0.45)',
               }}
             >
               {profile?.username?.[0]?.toUpperCase() ?? 'V'}
             </div>
             <span
               className="absolute -bottom-0.5 -right-1 text-[9px] font-black px-1.5 py-0.5 rounded-md"
-              style={{ background: '#FFC94A', color: '#05060c' }}
+              style={{ background: '#43E7FF', color: '#0B0E2A' }}
             >
               {profile?.level ?? 1}
             </span>
           </div>
           <div className="min-w-0 flex-1">
-            <div className="text-sm font-black text-[#F5F7FC] truncate tracking-tight">
+            <div className="text-sm font-black text-white truncate tracking-tight">
               {profile?.username ?? 'Performer'}
             </div>
-            <div className="text-[10px] font-bold uppercase tracking-widest text-[#7A8399]">
+            <div className="text-[10px] font-bold uppercase tracking-widest text-[#6B85B0]">
               XP {profile?.xp?.toLocaleString() ?? 0}
             </div>
-            <div className="xp-bar-track w-full max-w-[140px] mt-1.5 h-1.5">
-              <div className="xp-bar-fill h-full rounded-full" style={{ width: `${xpPct}%` }} />
+            {/* Space-style XP bar */}
+            <div className="mg-progress-track w-full max-w-[140px] mt-1.5 !h-2 !p-0.5">
+              <div className="mg-progress-fill--gold h-full rounded-full" style={{ width: `${xpPct}%` }} />
             </div>
           </div>
         </button>
+
+        {/* Currency display */}
+        <div className="mg-currency shrink-0">
+          <Star className="w-4 h-4 text-[#FFC94A]" fill="#FFC94A" />
+          <span className="mg-currency-value">{profile?.totalScore ? (profile.totalScore > 9999 ? `${(profile.totalScore / 1000).toFixed(0)}k` : profile.totalScore) : 0}</span>
+        </div>
+
         <button
           type="button"
           onClick={() => onNavigate('settings')}
-          className="mg-action-icon shrink-0 w-11 h-11 rounded-xl"
+          className="mg-icon-btn--ghost mg-icon-btn--small shrink-0 flex items-center justify-center rounded-xl"
+          style={{ width: 40, height: 40, background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.15)', color: '#ffffff' }}
           aria-label="Settings"
         >
           <Settings className="w-5 h-5" />
@@ -73,28 +83,26 @@ export function HomeScreen({ profile, onNavigate }: HomeScreenProps) {
       </header>
 
       <div className="mg-scroll flex flex-col gap-5">
-        <div className="text-center pt-2">
+        {/* Title section */}
+        <div className="text-center pt-4">
           <p className="mg-logo-tag mb-2">Vocal rhythm</p>
           <h1 className="mg-logo">Velocity</h1>
-          <p className="text-xs text-[#A7B0C6] mt-3 max-w-[280px] mx-auto leading-relaxed">
-            Worlds, songs, and levels — tap Play to enter the campaign.
+          <p className="text-xs text-[#8BA0C8] mt-3 max-w-[280px] mx-auto leading-relaxed">
+            Worlds, songs, and levels — tap Start to enter the campaign.
           </p>
         </div>
 
-        <div className="mg-panel">
-          <div className="mg-panel-header flex items-center gap-2">
-            <Zap className="w-3.5 h-3.5" />
-            Campaign
-          </div>
-          <p className="mg-panel-body mb-4">
-            Progress through vocal worlds, unlock tracks, and chase three-star clears.
-          </p>
-          <button type="button" className="mg-cta" onClick={() => onNavigate('world-select')}>
-            <Play className="w-5 h-5 shrink-0" fill="currentColor" />
-            Play
-          </button>
-        </div>
+        {/* START button (golden capsule, matching design) */}
+        <button
+          type="button"
+          className="mg-cta mx-auto max-w-[260px]"
+          onClick={() => onNavigate('world-select')}
+        >
+          <Play className="w-5 h-5 shrink-0" fill="currentColor" />
+          Start
+        </button>
 
+        {/* Action tiles */}
         <div className="mg-action-grid">
           {[
             { label: 'Train', icon: <Dumbbell className="w-5 h-5" />, screen: 'training' as Screen },
@@ -115,29 +123,34 @@ export function HomeScreen({ profile, onNavigate }: HomeScreenProps) {
           ))}
         </div>
 
+        {/* Stats strip */}
         {profile && profile.songsPlayed > 0 && (
           <div className="grid grid-cols-3 gap-2">
             {[
               { v: profile.songsPlayed, l: 'Runs', c: '#43E7FF' },
               { v: profile.perfectGates, l: 'Perfect', c: '#B9FF66' },
-              { v: profile.totalScore, l: 'Score', c: '#7D5CFF' },
+              { v: profile.totalScore, l: 'Score', c: '#FFBF00' },
             ].map((s) => (
               <div
                 key={s.l}
-                className="rounded-2xl p-3 text-center border border-[rgba(255,255,255,0.08)]"
-                style={{ background: 'rgba(12,14,26,0.85)' }}
+                className="rounded-2xl p-3 text-center backdrop-blur-sm"
+                style={{
+                  background: 'rgba(30, 60, 140, 0.3)',
+                  border: '1px solid rgba(100, 180, 255, 0.18)',
+                }}
               >
                 <div className="score-display text-lg font-black tabular-nums" style={{ color: s.c }}>
                   {s.v > 9999 ? `${(s.v / 1000).toFixed(1)}k` : s.v}
                 </div>
-                <div className="text-[9px] font-black uppercase tracking-widest text-[#7A8399] mt-1">{s.l}</div>
+                <div className="text-[9px] font-black uppercase tracking-widest text-[#6B85B0] mt-1">{s.l}</div>
               </div>
             ))}
           </div>
         )}
 
+        {/* Daily challenge */}
         {profile?.dailyChallenge && (
-          <div className="mg-panel" style={{ animation: 'none', boxShadow: '0 12px 40px rgba(0,0,0,0.45)' }}>
+          <div className="mg-panel" style={{ animation: 'none' }}>
             <div className="mg-panel-header flex items-center justify-between gap-2">
               <span className="flex items-center gap-2">
                 <Target className="w-3.5 h-3.5" />
@@ -147,19 +160,19 @@ export function HomeScreen({ profile, onNavigate }: HomeScreenProps) {
                 <span className="text-[9px] font-black uppercase text-[#B9FF66]">Done</span>
               )}
             </div>
-            <h3 className="font-display text-base font-black text-[#F5F7FC] mb-1">
+            <h3 className="font-display text-base font-black text-white mb-1">
               {profile.dailyChallenge.title}
             </h3>
-            <p className="text-xs text-[#A7B0C6] mb-3">{profile.dailyChallenge.description}</p>
-            <div className="xp-bar-track h-2">
+            <p className="text-xs text-[#8BA0C8] mb-3">{profile.dailyChallenge.description}</p>
+            <div className="mg-progress-track !h-3">
               <div
-                className="xp-bar-fill"
+                className="mg-progress-fill--gold h-full rounded-full"
                 style={{
                   width: `${Math.min(100, (profile.dailyChallenge.progress / profile.dailyChallenge.target) * 100)}%`,
                 }}
               />
             </div>
-            <div className="flex justify-between text-[10px] font-bold text-[#7A8399] mt-2">
+            <div className="flex justify-between text-[10px] font-bold text-[#6B85B0] mt-2">
               <span>
                 {profile.dailyChallenge.progress} / {profile.dailyChallenge.target}
               </span>

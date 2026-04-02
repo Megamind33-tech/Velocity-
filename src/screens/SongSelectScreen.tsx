@@ -1,8 +1,9 @@
 import React, { useMemo } from 'react';
-import { Music, Star } from 'lucide-react';
+import { Music, Star, ChevronLeft } from 'lucide-react';
 import { SONGS } from '../lib/songs-extended';
 import { WORLDS } from '../lib/progression';
 import { PrimaryButton } from '../components/ui/PrimaryButton';
+import { IconButton } from '../components/ui/IconButton';
 
 interface SongSelectScreenProps {
   worldId: number;
@@ -27,11 +28,17 @@ export function SongSelectScreen({
       <div className="mg-kit-layer mg-kit-layer--stage" aria-hidden />
       <div className="mg-vignette" aria-hidden />
       <div className="mg-scanlines" aria-hidden />
-      <header className="mg-topbar shrink-0 flex-col items-stretch !gap-1">
-        <h1 className="mg-topbar-title !text-[15px] !tracking-[0.12em]">{world?.name ?? 'Tracks'}</h1>
-        <p className="mg-topbar-sub !normal-case !tracking-normal !text-xs !font-medium text-[#A7B0C6] max-w-full">
-          {world?.description}
-        </p>
+
+      <header className="mg-topbar shrink-0">
+        <IconButton label="Back" variant="white" size="sm" onClick={onBack}>
+          <ChevronLeft className="w-5 h-5" />
+        </IconButton>
+        <div className="flex-1 min-w-0">
+          <h1 className="mg-topbar-title !text-[15px] !tracking-[0.12em]">{world?.name ?? 'Tracks'}</h1>
+          <p className="mg-topbar-sub !normal-case !tracking-normal !text-xs !font-medium text-[#8BA0C8] max-w-full">
+            {world?.description}
+          </p>
+        </div>
       </header>
 
       <div className="mg-scroll !pt-3">
@@ -47,38 +54,44 @@ export function SongSelectScreen({
                 onClick={() => onSelectSong(song.id)}
                 className="group cursor-pointer"
               >
-                <div className="mg-panel !p-3 !animate-none hover:border-[rgba(67,231,255,0.45)] transition-colors h-full flex flex-col min-h-[200px]">
+                <div className="mg-panel !p-3 !animate-none hover:border-[rgba(100,180,255,0.50)] transition-colors h-full flex flex-col min-h-[200px]">
                   <div className="flex items-start gap-2 mb-2">
-                    <div className="mg-action-icon w-9 h-9 shrink-0 mt-0.5 p-0">
-                      <Music className="w-4 h-4" />
+                    <div
+                      className="w-9 h-9 shrink-0 mt-0.5 rounded-xl flex items-center justify-center"
+                      style={{
+                        background: 'rgba(255,255,255,0.12)',
+                        border: '1px solid rgba(255,255,255,0.18)',
+                      }}
+                    >
+                      <Music className="w-4 h-4 text-white" />
                     </div>
                     <div className="flex-1 min-w-0">
-                      <h3 className="text-xs font-black text-[#F5F7FC] truncate uppercase tracking-wide">{song.title}</h3>
-                      <p className="text-[10px] text-[#7A8399] truncate mt-0.5">{song.artist}</p>
+                      <h3 className="text-xs font-black text-white truncate uppercase tracking-wide">{song.title}</h3>
+                      <p className="text-[10px] text-[#6B85B0] truncate mt-0.5">{song.artist}</p>
                     </div>
                   </div>
 
                   <div className="space-y-1 mb-2 text-[10px]">
                     <div className="flex justify-between">
-                      <span className="text-[#7A8399]">Duration</span>
-                      <span className="text-[#F5F7FC] font-bold tabular-nums">{song.duration}s</span>
+                      <span className="text-[#6B85B0]">Duration</span>
+                      <span className="text-white font-bold tabular-nums">{song.duration}s</span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-[#7A8399]">Range</span>
-                      <span className="text-[#F5F7FC] font-bold tabular-nums">
+                      <span className="text-[#6B85B0]">Range</span>
+                      <span className="text-white font-bold tabular-nums">
                         {Math.abs(song.maxNote - song.minNote)} st
                       </span>
                     </div>
                   </div>
 
                   <div className="flex gap-1 mb-2">
-                    {[1, 2, 3].map((star) => (
+                    {[1, 2, 3].map((s) => (
                       <Star
-                        key={star}
-                        className={`w-3.5 h-3.5 ${
-                          star <= stars
-                            ? 'fill-[#FFC94A] text-[#FFC94A]'
-                            : 'text-[var(--border-default)]'
+                        key={s}
+                        className={`w-4 h-4 ${
+                          s <= stars
+                            ? 'fill-[#FFC94A] text-[#FFC94A] mg-star'
+                            : 'text-[rgba(100,180,255,0.25)] mg-star--empty'
                         }`}
                       />
                     ))}
@@ -92,7 +105,7 @@ export function SongSelectScreen({
 
                   <div className="mt-auto" onClick={(e) => e.stopPropagation()}>
                     <PrimaryButton
-                      variant="cyan"
+                      variant="gold"
                       size="sm"
                       fullWidth
                       onClick={() => onSelectSong(song.id)}

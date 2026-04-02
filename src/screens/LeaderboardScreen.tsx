@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ArrowLeft, Trophy, Crown } from 'lucide-react';
+import { ChevronLeft, Trophy, Crown } from 'lucide-react';
 import { PlayerProfile } from '../lib/profile';
 import { IconButton } from '../components/ui/IconButton';
 
@@ -62,35 +62,36 @@ export function LeaderboardScreen({ profile, onBack }: LeaderboardScreenProps) {
   const entries = getEntries();
 
   const rankColors = ['#FFD700', '#C0C8D8', '#CD7F32'];
-  const rankLabels = ['gold', 'silver', 'bronze'];
 
   return (
     <div className="game-screen mg-stage flex flex-col">
       <div className="mg-kit-layer mg-kit-layer--tournament" aria-hidden />
       <div className="mg-vignette" aria-hidden />
       <div className="mg-scanlines" aria-hidden />
+
       <header className="mg-topbar shrink-0">
-        <IconButton label="Back" variant="surface" onClick={onBack}>
-          <ArrowLeft className="w-5 h-5" />
+        <IconButton label="Back" variant="white" size="sm" onClick={onBack}>
+          <ChevronLeft className="w-5 h-5" />
         </IconButton>
         <div className="flex-1 min-w-0">
           <h2 className="mg-topbar-title !text-sm">Rankings</h2>
-          <p className="mg-topbar-sub !normal-case !tracking-normal !text-[11px] !font-medium text-[#A7B0C6]">
+          <p className="mg-topbar-sub !normal-case !tracking-normal !text-[11px] !font-medium text-[#8BA0C8]">
             Global · Weekly · Personal
           </p>
         </div>
         <Trophy className="w-7 h-7 text-[#FFC94A] shrink-0" style={{ filter: 'drop-shadow(0 0 8px rgba(255,201,74,0.5))' }} />
       </header>
 
-      <div className="relative z-[3] flex gap-1.5 px-4 py-3 shrink-0 border-b border-[rgba(255,255,255,0.08)] bg-[rgba(5,6,14,0.55)] backdrop-blur-md">
+      {/* Tab bar */}
+      <div className="relative z-[3] flex gap-1.5 px-4 py-3 shrink-0 border-b border-[rgba(80,160,255,0.15)] bg-[rgba(10,15,50,0.6)] backdrop-blur-md">
         {CATEGORY_TABS.map(tab => (
           <button
             key={tab.key}
             onClick={() => setCategory(tab.key)}
-            className="flex-1 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest transition-all active:scale-95"
+            className="flex-1 py-2.5 rounded-full text-xs font-black uppercase tracking-widest transition-all active:scale-95"
             style={category === tab.key
-              ? { background: 'rgba(255,201,74,0.12)', color: '#FFC94A', border: '1px solid rgba(255,201,74,0.30)' }
-              : { background: 'var(--bg-surface)', color: 'var(--text-muted)', border: '1px solid var(--border-subtle)' }
+              ? { background: 'linear-gradient(180deg, #FFE566, #FFBF00)', color: '#3D2000', border: 'none', boxShadow: '0 3px 0 #8B6508, 0 4px 12px rgba(255,191,0,0.3)' }
+              : { background: 'rgba(30,60,140,0.25)', color: '#6B85B0', border: '1.5px solid rgba(100,180,255,0.18)' }
             }
           >
             {tab.label}
@@ -98,33 +99,32 @@ export function LeaderboardScreen({ profile, onBack }: LeaderboardScreenProps) {
         ))}
       </div>
 
-      {/* ── Entries ── */}
       <div className="mg-scroll !pt-3">
 
-        {/* Personal bests mode */}
+        {/* Personal bests */}
         {category === 'personal' && (
           <>
             {(entries as { songId: string; diff: string; score: number }[]).length === 0 ? (
-              <div className="text-center py-16 text-[#4A5068]">
+              <div className="text-center py-16 text-[#6B85B0]">
                 <Trophy className="w-10 h-10 mx-auto mb-3 opacity-30" />
                 <p className="text-sm font-bold">No scores yet.</p>
                 <p className="text-xs mt-1">Play some songs to see your best scores here.</p>
               </div>
             ) : (
-              <div
-                className="rounded-2xl overflow-hidden border"
-                style={{ borderColor: 'var(--border-subtle)' }}
-              >
+              <div className="rounded-2xl overflow-hidden" style={{ border: '1.5px solid rgba(100,180,255,0.18)' }}>
                 {(entries as { songId: string; diff: string; score: number }[]).map((e, i) => (
                   <div
                     key={i}
                     className="flex items-center px-4 py-3.5 border-b last:border-0"
-                    style={{ borderColor: 'rgba(255,255,255,0.04)', background: i % 2 === 0 ? 'var(--bg-surface)' : 'transparent' }}
+                    style={{
+                      borderColor: 'rgba(80,160,255,0.1)',
+                      background: i % 2 === 0 ? 'rgba(30,60,140,0.2)' : 'transparent',
+                    }}
                   >
-                    <div className="text-sm font-black text-[#4A5068] w-6">{i + 1}</div>
+                    <div className="text-sm font-black text-[#6B85B0] w-6">{i + 1}</div>
                     <div className="flex-1 ml-3 min-w-0">
-                      <div className="text-sm font-bold text-[#F5F7FC] capitalize truncate">{e.songId.replace(/_/g, ' ')}</div>
-                      <div className="text-[10px] text-[#4A5068] uppercase font-bold tracking-wider">{e.diff}</div>
+                      <div className="text-sm font-bold text-white capitalize truncate">{e.songId.replace(/_/g, ' ')}</div>
+                      <div className="text-[10px] text-[#6B85B0] uppercase font-bold tracking-wider">{e.diff}</div>
                     </div>
                     <div className="font-mono font-black text-lg text-[#43E7FF] score-display">{e.score.toLocaleString()}</div>
                   </div>
@@ -134,10 +134,10 @@ export function LeaderboardScreen({ profile, onBack }: LeaderboardScreenProps) {
           </>
         )}
 
-        {/* Global / weekly mode */}
+        {/* Global / weekly */}
         {category !== 'personal' && (
           <>
-            {/* Top 3 podium */}
+            {/* Podium */}
             {(entries as { name: string; score: number; level: number; isYou?: boolean }[]).length >= 3 && (
               <div className="flex items-end justify-center gap-3 pt-4 pb-6">
                 {[1, 0, 2].map(idx => {
@@ -147,28 +147,29 @@ export function LeaderboardScreen({ profile, onBack }: LeaderboardScreenProps) {
                   const color = rankColors[idx];
                   return (
                     <div key={idx} className={`flex flex-col items-center ${isFirst ? 'order-2' : idx === 1 ? 'order-1' : 'order-3'}`}>
-                      {isFirst && <Crown className="w-5 h-5 mb-1" style={{ color }} />}
+                      {isFirst && <Crown className="w-5 h-5 mb-1" style={{ color, filter: `drop-shadow(0 0 6px ${color}88)` }} />}
                       <div
-                        className="rounded-2xl flex items-center justify-center font-black text-base text-[#07090E]"
+                        className="rounded-2xl flex items-center justify-center font-black text-base"
                         style={{
                           width: isFirst ? 60 : 48,
                           height: isFirst ? 60 : 48,
                           background: `linear-gradient(135deg, ${color}, ${color}99)`,
-                          boxShadow: `0 0 20px ${color}66`,
+                          boxShadow: `0 4px 0 rgba(0,0,0,0.2), 0 0 20px ${color}66`,
+                          color: '#0B0E2A',
                           fontSize: isFirst ? 22 : 18,
                         }}
                       >
                         {entry.name[0]?.toUpperCase()}
                       </div>
-                      <div className={`font-black text-xs mt-2 text-center max-w-[72px] truncate ${entry.isYou ? 'text-[#43E7FF]' : 'text-[#F5F7FC]'}`}>
+                      <div className={`font-black text-xs mt-2 text-center max-w-[72px] truncate ${entry.isYou ? 'text-[#43E7FF]' : 'text-white'}`}>
                         {entry.name}
                       </div>
                       <div className="font-mono text-sm font-black score-display" style={{ color }}>
                         {entry.score.toLocaleString()}
                       </div>
                       <div
-                        className="text-[10px] font-bold text-[#07090E] px-2 py-0.5 rounded-full mt-1"
-                        style={{ background: `${color}cc` }}
+                        className="text-[10px] font-bold px-2 py-0.5 rounded-full mt-1"
+                        style={{ background: `${color}cc`, color: '#0B0E2A' }}
                       >
                         #{idx + 1}
                       </div>
@@ -178,11 +179,8 @@ export function LeaderboardScreen({ profile, onBack }: LeaderboardScreenProps) {
               </div>
             )}
 
-            {/* Rest of the list */}
-            <div
-              className="rounded-2xl overflow-hidden border"
-              style={{ borderColor: 'var(--border-subtle)' }}
-            >
+            {/* List */}
+            <div className="rounded-2xl overflow-hidden" style={{ border: '1.5px solid rgba(100,180,255,0.18)' }}>
               {(entries as { name: string; score: number; level: number; isYou?: boolean }[]).map((entry, i) => {
                 const isTop3 = i < 3;
                 return (
@@ -190,28 +188,26 @@ export function LeaderboardScreen({ profile, onBack }: LeaderboardScreenProps) {
                     key={i}
                     className="flex items-center px-4 py-4 border-b last:border-0 transition-colors"
                     style={{
-                      borderColor: 'rgba(255,255,255,0.04)',
+                      borderColor: 'rgba(80,160,255,0.1)',
                       background: entry.isYou
-                        ? 'rgba(67,231,255,0.06)'
-                        : i % 2 === 0 ? 'var(--bg-surface)' : 'transparent',
+                        ? 'rgba(67,231,255,0.08)'
+                        : i % 2 === 0 ? 'rgba(30,60,140,0.2)' : 'transparent',
                       borderLeft: entry.isYou ? '2px solid rgba(67,231,255,0.5)' : undefined,
                     }}
                   >
-                    {/* Rank number */}
                     <div
                       className="w-8 text-center font-black text-base"
                       style={{
-                        color: isTop3 ? rankColors[i] : 'var(--text-muted)',
+                        color: isTop3 ? rankColors[i] : '#6B85B0',
                         textShadow: isTop3 ? `0 0 8px ${rankColors[i]}88` : 'none',
                       }}
                     >
                       {i + 1}
                     </div>
 
-                    {/* Player info */}
                     <div className="flex-1 ml-3 min-w-0">
                       <div className="flex items-center gap-2">
-                        <span className={`font-black text-sm ${entry.isYou ? 'text-[#43E7FF]' : 'text-[#F5F7FC]'}`}>
+                        <span className={`font-black text-sm ${entry.isYou ? 'text-[#43E7FF]' : 'text-white'}`}>
                           {entry.name}
                         </span>
                         {entry.isYou && (
@@ -223,20 +219,19 @@ export function LeaderboardScreen({ profile, onBack }: LeaderboardScreenProps) {
                           </span>
                         )}
                       </div>
-                      <div className="text-[10px] text-[#4A5068] font-bold uppercase tracking-wider">
+                      <div className="text-[10px] text-[#6B85B0] font-bold uppercase tracking-wider">
                         Lv {entry.level}
                       </div>
                     </div>
 
-                    {/* Score */}
                     <div className="text-right">
                       <div
                         className="font-mono font-black text-lg score-display"
-                        style={{ color: entry.isYou ? '#43E7FF' : '#F5F7FC' }}
+                        style={{ color: entry.isYou ? '#43E7FF' : '#FFFFFF' }}
                       >
                         {entry.score.toLocaleString()}
                       </div>
-                      <div className="text-[9px] text-[#4A5068] font-bold uppercase tracking-wider">pts</div>
+                      <div className="text-[9px] text-[#6B85B0] font-bold uppercase tracking-wider">pts</div>
                     </div>
                   </div>
                 );

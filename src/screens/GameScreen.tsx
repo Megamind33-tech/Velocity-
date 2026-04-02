@@ -70,13 +70,13 @@ export function GameScreen({
           onGameOver={onGameOver}
         />
 
-        {/* ── PROFESSIONAL GAMING HUD OVERLAY ── */}
+        {/* HUD Overlay */}
         <div className="hud-overlay flex flex-col px-3 py-3 z-[60]">
           <div className="flex items-center justify-between gap-3 pointer-events-none">
             <div className="mg-hud-chip pointer-events-auto max-w-[min(72vw,280px)]">
               <Mic className="w-4 h-4 text-[#43E7FF] shrink-0 animate-pulse" />
               <div className="min-w-0">
-                <div className="text-[10px] font-black text-[#F5F7FC] truncate leading-tight">
+                <div className="text-[10px] font-black text-white truncate leading-tight">
                   {song?.title ?? 'Endless Run'}
                 </div>
                 <div
@@ -90,17 +90,18 @@ export function GameScreen({
 
             <button
               onClick={onPauseToggle}
-              className="pointer-events-auto mg-action-icon w-12 h-12 rounded-xl border-[rgba(255,255,255,0.12)]"
+              className="pointer-events-auto mg-icon-btn"
               aria-label={isPaused ? 'Resume' : 'Pause'}
+              style={{ width: 48, height: 48 }}
             >
               {isPaused
-                ? <Play className="w-5 h-5 text-[var(--color-primary)]" />
-                : <Pause className="w-5 h-5 text-secondary" />
+                ? <Play className="w-5 h-5 text-[#2A3080]" />
+                : <Pause className="w-5 h-5 text-[#2A3080]" />
               }
             </button>
           </div>
 
-          {/* BOTTOM HUD: Vocal Status Indicator */}
+          {/* Bottom: Vocal Status */}
           <div className="mt-auto flex flex-col items-center gap-2 pointer-events-none pb-2">
             <div className="mg-hud-chip rounded-full px-5 py-2">
               <div
@@ -114,32 +115,34 @@ export function GameScreen({
                 {isPaused ? 'Paused' : 'Live'}
               </span>
             </div>
-            <div className="text-[9px] text-[#7A8399] font-bold uppercase tracking-wider">
+            <div className="text-[9px] text-[#6B85B0] font-bold uppercase tracking-wider">
               {isPaused ? 'Tap resume' : 'Nail perfect gates for bonus'}
             </div>
           </div>
         </div>
 
-        {/* PAUSE OVERLAY */}
+        {/* Pause Overlay */}
         {isPaused && (
           <div
             className="absolute inset-0 flex items-center justify-center z-40 animate-fade-in"
-            style={{ background: 'rgba(7,9,14,0.92)', backdropFilter: 'blur(20px)' }}
+            style={{ background: 'rgba(8,10,35,0.92)', backdropFilter: 'blur(20px)' }}
           >
             <div className="w-full max-w-sm mx-4 mg-panel flex flex-col gap-5 !animate-none">
-              {/* Decorative glow orb */}
               <div
                 className="absolute -top-12 left-1/2 -translate-x-1/2 w-24 h-24 rounded-full pointer-events-none"
-                style={{ background: 'radial-gradient(circle, rgba(125,92,255,0.4), transparent 70%)' }}
+                style={{ background: 'radial-gradient(circle, rgba(60,120,255,0.35), transparent 70%)' }}
               />
               <div className="text-center space-y-2">
-                <Pause className="w-8 h-8 mx-auto text-[var(--color-secondary)]" />
-                <h3 className="font-display text-headline font-black uppercase tracking-tight text-primary">
+                <Pause className="w-8 h-8 mx-auto text-[#80c8ff]" />
+                <h3
+                  className="text-headline font-black uppercase tracking-tight text-white"
+                  style={{ fontFamily: 'var(--font-game, Orbitron, sans-serif)' }}
+                >
                   Paused
                 </h3>
-                {song && <p className="text-caption text-secondary">{song.title}</p>}
+                {song && <p className="text-caption text-[#8BA0C8]">{song.title}</p>}
               </div>
-              <PrimaryButton variant="violet" size="md" fullWidth onClick={onPauseToggle} icon={<Play className="w-4 h-4" />}>
+              <PrimaryButton variant="gold" size="md" fullWidth onClick={onPauseToggle} icon={<Play className="w-4 h-4" />}>
                 Resume
               </PrimaryButton>
               <SecondaryButton
@@ -149,7 +152,7 @@ export function GameScreen({
               >
                 Exit to Home
               </SecondaryButton>
-              <div className="text-center text-label text-tertiary">Progress Saved</div>
+              <div className="text-center text-label text-[#6B85B0]">Progress Saved</div>
             </div>
           </div>
         )}

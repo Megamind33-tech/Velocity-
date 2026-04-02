@@ -4,47 +4,69 @@ interface IconButtonProps {
   children: React.ReactNode;
   onClick?: () => void;
   label: string;
-  variant?: 'ghost' | 'surface' | 'cyan' | 'danger';
+  variant?: 'ghost' | 'surface' | 'cyan' | 'danger' | 'white';
   size?: 'sm' | 'md' | 'lg';
   className?: string;
   active?: boolean;
 }
 
-const VARIANT_STYLES: Record<string, string> = {
-  ghost:   'text-[#A7B0C6] hover:text-[#F5F7FC] hover:bg-[rgba(255,255,255,0.06)]',
-  surface: 'bg-[#181F31] border border-[rgba(255,255,255,0.08)] text-[#A7B0C6] hover:text-[#F5F7FC] hover:border-[rgba(255,255,255,0.16)]',
-  cyan:    'bg-[rgba(67,231,255,0.10)] border border-[rgba(67,231,255,0.25)] text-[#43E7FF] hover:bg-[rgba(67,231,255,0.18)]',
-  danger:  'bg-[rgba(255,107,107,0.10)] border border-[rgba(255,107,107,0.25)] text-[#FF6B6B] hover:bg-[rgba(255,107,107,0.18)]',
-};
-
-const SIZE_STYLES: Record<string, string> = {
-  sm: 'w-8 h-8 rounded-lg',
-  md: 'w-11 h-11 rounded-xl',
-  lg: 'w-14 h-14 rounded-2xl',
-};
-
 export function IconButton({
   children,
   onClick,
   label,
-  variant = 'ghost',
+  variant = 'white',
   size = 'md',
   className = '',
   active,
 }: IconButtonProps) {
+  const sizeMap: Record<string, string> = {
+    sm: 'w-10 h-10 rounded-xl',
+    md: 'w-12 h-12 rounded-[14px]',
+    lg: 'w-14 h-14 rounded-2xl',
+  };
+
+  const variantMap: Record<string, React.CSSProperties> = {
+    white: {
+      background: 'linear-gradient(180deg, #ffffff 0%, #e8ecf5 60%, #d0d5e5 100%)',
+      color: '#2A3080',
+      boxShadow: '0 4px 0 rgba(150,160,190,0.6), 0 6px 0 rgba(100,110,140,0.3), 0 7px 16px rgba(0,0,0,0.25), inset 0 1px 0 rgba(255,255,255,0.9)',
+      border: 'none',
+    },
+    ghost: {
+      background: 'rgba(255,255,255,0.08)',
+      color: '#B8CCE8',
+      border: '1px solid rgba(255,255,255,0.15)',
+    },
+    surface: {
+      background: 'rgba(40, 80, 160, 0.30)',
+      color: '#B8CCE8',
+      border: '1.5px solid rgba(100, 180, 255, 0.22)',
+    },
+    cyan: {
+      background: 'rgba(67,231,255,0.15)',
+      color: '#43E7FF',
+      border: '1.5px solid rgba(67,231,255,0.30)',
+    },
+    danger: {
+      background: 'rgba(255,107,107,0.15)',
+      color: '#FF6B6B',
+      border: '1.5px solid rgba(255,107,107,0.30)',
+    },
+  };
+
   return (
     <button
       type="button"
       onClick={onClick}
       aria-label={label}
       className={`
-        inline-flex items-center justify-center shrink-0
-        transition-all duration-150 active:scale-90 select-none
-        ${VARIANT_STYLES[variant]}
-        ${SIZE_STYLES[size]}
-        ${active ? 'ring-1 ring-[#43E7FF]/40' : ''}
+        inline-flex items-center justify-center shrink-0 cursor-pointer
+        transition-all duration-150 active:translate-y-[2px] active:scale-95 select-none
+        ${sizeMap[size]}
+        ${active ? 'ring-2 ring-[rgba(100,180,255,0.5)]' : ''}
         ${className}
       `}
+      style={variantMap[variant] || variantMap.white}
     >
       {children}
     </button>

@@ -7,8 +7,8 @@
 .game-screen {
   position: fixed;
   inset: 0;
-  background: var(--bg-primary);
-  color: var(--text-primary);
+  background: #0B0E2A;
+  color: #FFFFFF;
   font-family: "Inter", ui-sans-serif, sans-serif;
   overflow: hidden;
   display: flex;

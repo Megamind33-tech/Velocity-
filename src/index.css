@@ -11,19 +11,18 @@
   --font-display: "Space Grotesk", ui-sans-serif, system-ui, sans-serif;
   --font-game: "Orbitron", ui-sans-serif, system-ui, sans-serif;
 
-  /* Expose design tokens to Tailwind arbitrary value system */
-  --color-bg-primary:  #07090E;
-  --color-bg-surface:  #111624;
-  --color-bg-elevated: #181F31;
+  --color-bg-primary:  #0B0E2A;
+  --color-bg-surface:  #141845;
+  --color-bg-elevated: #1C2158;
   --color-accent-cyan:   #43E7FF;
   --color-accent-violet: #7D5CFF;
   --color-accent-pink:   #FF4FC3;
   --color-success:  #B9FF66;
   --color-amber:    #FFC94A;
   --color-fail:     #FF6B6B;
-  --color-text-primary:   #F5F7FC;
-  --color-text-secondary: #A7B0C6;
-  --color-text-muted:     #4A5068;
+  --color-text-primary:   #FFFFFF;
+  --color-text-secondary: #B8CCE8;
+  --color-text-muted:     #6B85B0;
 }
 
 @layer base {
@@ -37,8 +36,8 @@
   }
 
   body {
-    background-color: #07090E;
-    color: #F5F7FC;
+    background-color: #0B0E2A;
+    color: #FFFFFF;
     margin: 0;
     padding: 0;
     overflow: hidden;

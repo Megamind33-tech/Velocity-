@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Trophy, Star, TrendingUp, Home, RefreshCw, ChevronRight, Zap, Award } from 'lucide-react';
+import { Trophy, Star, TrendingUp, Home, RefreshCw, Zap } from 'lucide-react';
 import { Song } from '../lib/songs-extended';
 import { getLevelInfo } from '../lib/progression';
 import { SecondaryButton } from '../components/ui/SecondaryButton';
@@ -53,9 +53,6 @@ export function NewResultsScreen({
   const passed = accuracy >= 60;
   const xp = xpEarned || Math.floor(score / 10) + stars * 50;
 
-  const gradeColor = score >= 750 ? '#FFC94A' : accuracy >= 90 ? '#B9FF66' : accuracy >= 75 ? '#FFC94A' : '#FF6B6B';
-  const gradeText = score >= 750 ? 'PERFECT FLIGHT!' : accuracy >= 90 ? 'EXCELLENT!' : accuracy >= 75 ? 'GOOD RUN!' : accuracy >= 60 ? 'CLEARED!' : 'TURBULENCE!';
-
   const headlineColor =
     score >= 750 ? '#FFC94A' : accuracy >= 90 ? '#B9FF66' : accuracy >= 75 ? '#FFC94A' : '#FF6B6B';
 
@@ -65,80 +62,80 @@ export function NewResultsScreen({
       <div className="mg-vignette" aria-hidden />
       <div className="mg-scanlines" aria-hidden />
 
-      <header className="mg-topbar shrink-0 flex-col items-center text-center !py-6">
-        {score >= 750 ? (
-          <Trophy className="w-14 h-14 text-[#FFC94A] mb-3" style={{ filter: 'drop-shadow(0 0 12px rgba(255,201,74,0.6))' }} />
-        ) : (
-          <Star className="w-14 h-14 text-[#43E7FF] mb-3" style={{ filter: 'drop-shadow(0 0 12px rgba(67,231,255,0.5))' }} />
-        )}
+      {/* Stars hero section */}
+      <header className="shrink-0 relative z-[3] flex flex-col items-center text-center pt-8 pb-4 px-4">
+        {/* Big stars */}
+        <div className="flex items-end justify-center gap-3 mb-4">
+          {[1, 2, 3].map((s) => (
+            <Star
+              key={s}
+              className={`${s === 2 ? 'w-16 h-16 -mt-3' : 'w-12 h-12'} transition-all duration-500 ${
+                s <= stars
+                  ? 'fill-[#FFC94A] text-[#FFC94A]'
+                  : 'fill-[rgba(60,80,120,0.4)] text-[rgba(60,80,120,0.4)]'
+              }`}
+              style={s <= stars ? { filter: 'drop-shadow(0 0 14px rgba(255,201,74,0.7))' } : undefined}
+            />
+          ))}
+        </div>
+
         <h1
           className="text-2xl sm:text-3xl font-black tracking-tight mb-1"
           style={{
             fontFamily: 'var(--font-game, Orbitron, sans-serif)',
-            color: headlineColor,
-            textShadow: `0 0 24px ${headlineColor}55`,
+            color: '#ffffff',
+            textShadow: `0 0 30px ${headlineColor}55`,
           }}
         >
-          {score >= 750 ? 'PERFECT' : accuracy >= 90 ? 'EXCELLENT' : accuracy >= 75 ? 'GOOD RUN' : 'TRY AGAIN'}
+          {passed ? 'LEVEL COMPLETE' : 'TRY AGAIN'}
         </h1>
-        <p className="text-xs text-[#A7B0C6] font-medium">
+        <p className="text-xs text-[#8BA0C8] font-medium">
           {song.title} · {levelInfo?.name}
         </p>
       </header>
 
       <div className="mg-scroll space-y-4">
+        {/* Score panel */}
         <div className="mg-panel !text-center !animate-none">
           <div className="mg-panel-header justify-center">Final score</div>
-          <p className="score-display text-4xl font-black text-[#F5F7FC] tabular-nums">{score.toLocaleString()}</p>
+          <div className="flex items-center justify-center gap-3">
+            <Zap className="w-5 h-5 text-[#FFC94A]" />
+            <p className="score-display text-4xl font-black text-white tabular-nums">{score.toLocaleString()}</p>
+          </div>
           {isNewRecord && (
-            <p className="text-[11px] font-black uppercase tracking-widest text-[#B9FF66] mt-2">New record</p>
+            <p className="text-[11px] font-black uppercase tracking-widest text-[#B9FF66] mt-2">New record!</p>
           )}
         </div>
 
-        <div className="mg-panel !text-center !animate-none">
-          <div className="mg-panel-header justify-center">Rating</div>
-          <div className="flex justify-center gap-4 mb-2 py-1">
-            {[1, 2, 3].map((star) => (
-              <Star
-                key={star}
-                className={`w-9 h-9 ${
-                  star <= stars ? 'fill-[#FFC94A] text-[#FFC94A]' : 'text-[var(--border-default)]'
-                }`}
-              />
-            ))}
-          </div>
-          <p className="text-xs text-[#A7B0C6]">
-            {stars === 3 ? 'Flawless vocal line.' : stars === 2 ? 'Strong performance.' : stars === 1 ? 'Solid effort.' : 'Practice the chart.'}
-          </p>
-        </div>
-
+        {/* Stats grid */}
         <div className="grid grid-cols-2 gap-3">
           <div className="mg-panel !p-3 !animate-none">
-            <p className="text-[9px] font-black uppercase tracking-wider text-[#7A8399] mb-1">Accuracy</p>
+            <p className="text-[9px] font-black uppercase tracking-wider text-[#6B85B0] mb-1">Accuracy</p>
             <p className="text-xl font-black text-[#43E7FF] tabular-nums">{accuracy.toFixed(1)}%</p>
           </div>
           <div className="mg-panel !p-3 !animate-none">
-            <p className="text-[9px] font-black uppercase tracking-wider text-[#7A8399] mb-1">Max combo</p>
+            <p className="text-[9px] font-black uppercase tracking-wider text-[#6B85B0] mb-1">Max combo</p>
             <p className="text-xl font-black text-[#B9FF66] tabular-nums">{maxCombo}</p>
           </div>
           <div className="mg-panel !p-3 !animate-none">
-            <p className="text-[9px] font-black uppercase tracking-wider text-[#7A8399] mb-1">Notes</p>
+            <p className="text-[9px] font-black uppercase tracking-wider text-[#6B85B0] mb-1">Notes</p>
             <p className="text-xl font-black text-[#7D5CFF] tabular-nums">
               {notesHit}/{notesHit + notesMissed}
             </p>
           </div>
           <div className="mg-panel !p-3 !animate-none">
-            <p className="text-[9px] font-black uppercase tracking-wider text-[#7A8399] mb-1">Missed</p>
+            <p className="text-[9px] font-black uppercase tracking-wider text-[#6B85B0] mb-1">Missed</p>
             <p className="text-xl font-black text-[#FF6B6B] tabular-nums">{notesMissed}</p>
           </div>
         </div>
 
+        {/* Previous best */}
         {previousBestScore > 0 && (
           <div className="mg-panel !animate-none">
             <div className="flex items-center justify-between gap-3">
               <div>
-                <p className="text-[9px] font-black uppercase tracking-wider text-[#7A8399] mb-1">Previous best</p>
-                <p className="text-lg font-black text-[#F5F7FC] tabular-nums">{previousBestScore.toLocaleString()}</p>
+                <p className="text-[9px] font-black uppercase tracking-wider text-[#6B85B0] mb-1">Previous best</p>
+                <p className="text-lg font-black text-white tabular-nums">{previousBestScore.toLocaleString()}</p>
               </div>
               {score > previousBestScore ? (
                 <div className="flex items-center gap-2 text-[#B9FF66]">
@@ -146,7 +143,7 @@ export function NewResultsScreen({
                   <span className="font-black tabular-nums">+{(score - previousBestScore).toLocaleString()}</span>
                 </div>
               ) : (
-                <p className="text-[11px] text-[#7A8399] text-right">
+                <p className="text-[11px] text-[#6B85B0] text-right">
                   {(previousBestScore - score).toLocaleString()} pts to beat best
                 </p>
               )}
@@ -155,6 +152,7 @@ export function NewResultsScreen({
         )}
       </div>
 
+      {/* Footer with golden retry button */}
       <footer className="mg-footer-bar shrink-0 space-y-2">
         <button type="button" className="mg-cta" onClick={onRetry}>
           <RefreshCw className="w-5 h-5" />
