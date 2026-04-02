@@ -4,6 +4,7 @@ import { VelocityComponent } from '../components/VelocityComponent';
 import { VoiceInputManager } from '../input/VoiceInputManager';
 import { GameState } from '../GameState';
 import { VOICE_FLIGHT } from '../../data/constants';
+import { RunContext } from '../RunContext';
 import { GAME_UI } from '../../ui/theme/GameUITheme';
 import { ProgressBar } from '@pixi/ui';
 import { Container, Graphics, Text, TextStyle } from 'pixi.js';
@@ -18,6 +19,7 @@ export class HUDSystem implements System {
     private altitudeText: Text;
     private speedText: Text;
     private pitchText: Text;
+    private leadText: Text;
     private playerEntity: Entity | null = null;
 
     constructor(private app: any, parent: Container) {
@@ -39,7 +41,7 @@ export class HUDSystem implements System {
 
         // 1. Glassmorphism Background Panel
         const panel = new Graphics();
-        panel.roundRect(10, 10, 220, 132, 14);
+        panel.roundRect(10, 10, 220, 152, 14);
         panel.fill({ color: GAME_UI.bgPanel, alpha: 0.88 });
         panel.stroke({ color: GAME_UI.strokeNeon, width: 2, alpha: 0.65 });
         this.container.addChild(panel);
@@ -52,7 +54,13 @@ export class HUDSystem implements System {
         this.altitudeText.position.set(25, 25);
         this.speedText.position.set(25, 50);
         this.pitchText.position.set(25, 68);
-        this.container.addChild(this.altitudeText, this.speedText, this.pitchText);
+        this.leadText = new Text({
+            text: '',
+            style: { ...style, fontSize: 11, fill: '#ffdd44' },
+        });
+        this.leadText.position.set(25, 86);
+        this.leadText.visible = false;
+        this.container.addChild(this.altitudeText, this.speedText, this.pitchText, this.leadText);
 
         // 3. Voice Power Meter
         const labelStyle = new TextStyle({ ...style, fontSize: 10 });
@@ -61,7 +69,7 @@ export class HUDSystem implements System {
             style: labelStyle,
         });
         meterLabel.alpha = 0.7;
-        meterLabel.position.set(25, 92);
+        meterLabel.position.set(25, 108);
         this.container.addChild(meterLabel);
 
         const barW = 190;
@@ -79,7 +87,7 @@ export class HUDSystem implements System {
             progress: 0,
         });
         this.voiceMeter.setSize(barW, barH);
-        this.voiceMeter.position.set(25, 112);
+        this.voiceMeter.position.set(25, 128);
         this.container.addChild(this.voiceMeter);
     }
 
@@ -101,6 +109,17 @@ export class HUDSystem implements System {
 
         if (velocity) {
             this.speedText.text = `FORWARD: ${Math.round(velocity.vx)} px/s`;
+        }
+
+        if (RunContext.vsAiActive && RunContext.playerEntity && RunContext.aiEntity) {
+            const at = world.getComponent<TransformComponent>(RunContext.aiEntity, TransformComponent.TYPE_ID);
+            if (transform && at) {
+                const d = transform.x - at.x;
+                this.leadText.visible = true;
+                this.leadText.text = `LEAD: ${d >= 0 ? '+' : ''}${Math.round(d)} px`;
+            }
+        } else {
+            this.leadText.visible = false;
         }
 
         if (GameState.paused) {

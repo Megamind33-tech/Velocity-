@@ -6,7 +6,9 @@ export const GameEvents = {
     LEVEL_COMPLETE: 'LEVEL_COMPLETE',
     OBSTACLE_DODGED: 'OBSTACLE_DODGED',
     QUEST_PROGRESS: 'QUEST_PROGRESS',
-    QUEST_COMPLETED: 'QUEST_COMPLETED'
+    QUEST_COMPLETED: 'QUEST_COMPLETED',
+    VS_AI_PLAYER_WON: 'VS_AI_PLAYER_WON',
+    RUN_RETURN_MENU: 'RUN_RETURN_MENU',
 } as const;
 
 export type GameEvent = typeof GameEvents[keyof typeof GameEvents];

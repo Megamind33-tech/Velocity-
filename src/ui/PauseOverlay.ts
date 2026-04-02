@@ -5,6 +5,7 @@ import { GAME_UI } from './theme/GameUITheme';
 import { createMenuButton } from './gameUiPrimitives';
 
 export interface PauseOverlayOptions {
+    /** End run (cleanup) then leave — e.g. mode hub or main menu */
     onQuitToMenu?: () => void;
 }
 

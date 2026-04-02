@@ -134,7 +134,10 @@ export class SongSelectRoot extends Container {
     /**
      * @param mapRegion — world tour stop: filter by `song.regionId` (musical locale).
      */
-    setTracks(visibleSongs: Song[], opts?: { mapRegion?: TourRegionId | null }): void {
+    setTracks(
+        visibleSongs: Song[],
+        opts?: { mapRegion?: TourRegionId | null; modeHint?: string; modeTitle?: string }
+    ): void {
         this.clearList();
 
         const pool =
@@ -146,9 +149,12 @@ export class SongSelectRoot extends Container {
             const reg = getRegionById(opts.mapRegion);
             this.header.text = reg ? reg.label : 'TOUR STOP';
             this.hint.text = reg ? reg.vocalFocus : 'Regional vocal focus';
+        } else if (opts?.modeTitle) {
+            this.header.text = opts.modeTitle;
+            this.hint.text = opts.modeHint ?? 'Stars unlock charts';
         } else {
             this.header.text = 'PICK YOUR CHART';
-            this.hint.text = 'Stars unlock charts · Credits open secrets';
+            this.hint.text = opts?.modeHint ?? 'Stars unlock charts · Credits open secrets';
         }
 
         const items: ListItem[] = [];

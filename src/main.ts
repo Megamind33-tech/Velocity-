@@ -17,6 +17,7 @@ import { HUDSystem } from './engine/systems/HUDSystem';
 import { VoiceInputManager } from './engine/input/VoiceInputManager';
 import { LeaderboardSystem } from './engine/systems/LeaderboardSystem';
 import { QuestSystem } from './engine/systems/QuestSystem';
+import type { Entity } from './engine/Entity';
 import { TransformComponent } from './engine/components/TransformComponent';
 import { VelocityComponent } from './engine/components/VelocityComponent';
 import { SpriteComponent } from './engine/components/SpriteComponent';
@@ -32,14 +33,21 @@ import { SONGS, type Song } from './data/songs';
 import { LocalPlayerStats } from './player/LocalPlayerStats';
 import { VOICE_FLIGHT } from './data/constants';
 import { RunContext } from './engine/RunContext';
+import { GameState } from './engine/GameState';
 import { CareerProgress } from './player/CareerProgress';
-import { toUnlockRules, visibleCharts } from './player/songUnlock';
+import { toUnlockRules } from './player/songUnlock';
 import { SongSelectRoot } from './ui/SongSelectRoot';
 import { loadGameFont } from './ui/loadGameFont';
 import { WorldMapRoot } from './scenes/WorldMapRoot';
 import { WorldMapProgress } from './player/WorldMapProgress';
 import type { TourRegionId } from './data/worldTour';
-import { chartsForTourRegion } from './player/songFilter';
+import { ModeSelectRoot } from './ui/ModeSelectRoot';
+import { ModeProgress } from './player/ModeProgress';
+import type { GameMode } from './data/gameModes';
+import { visibleChartsForMode, chartsForModeAndRegion } from './player/chartQuery';
+import { AiRivalSystem } from './engine/systems/AiRivalSystem';
+import { VsAiRaceSystem } from './engine/systems/VsAiRaceSystem';
+import { AiRivalComponent } from './engine/components/AiRivalComponent';
 
 function showInitFailure(message: string, detail?: string): void {
     const el = document.createElement('div');
@@ -94,6 +102,9 @@ async function init() {
     world.addSystem(hudSystem);
     world.addSystem(new LeaderboardSystem());
     world.addSystem(new QuestSystem());
+    const vsAiRaceSystem = new VsAiRaceSystem();
+    world.addSystem(new AiRivalSystem());
+    world.addSystem(vsAiRaceSystem);
 
     const droneGfx = new Graphics();
     droneGfx.poly([-25, 0, -10, -15, 15, -15, 30, 0, 15, 15, -10, 15]);
@@ -101,8 +112,15 @@ async function init() {
     droneGfx.stroke({ color: 0x00f0ff, width: 2 });
     droneGfx.circle(-20, 0, 8).fill({ color: 0xff3d9a, alpha: 0.55 });
     droneGfx.circle(-20, 0, 4).fill({ color: 0xffdd44 });
-
     const texture = app.renderer.generateTexture(droneGfx);
+
+    const aiDroneGfx = new Graphics();
+    aiDroneGfx.poly([-22, 0, -8, -12, 12, -12, 26, 0, 12, 12, -8, 12]);
+    aiDroneGfx.fill({ color: 0x331122 });
+    aiDroneGfx.stroke({ color: 0xff3366, width: 2 });
+    aiDroneGfx.circle(-16, 0, 6).fill({ color: 0xff6644, alpha: 0.7 });
+    const aiTexture = app.renderer.generateTexture(aiDroneGfx);
+
     const playerSprite = new Sprite(texture);
     playerSprite.anchor.set(0.5);
     gameLayer.addChild(playerSprite);
@@ -123,15 +141,25 @@ async function init() {
     let preparedSongId: string | null = null;
     let selectedSong: Song | null = null;
     let mapRegion: TourRegionId | null = null;
+    let activeMode: GameMode | null = null;
+    let lastRunSong: Song | null = null;
+    let aiEntity: Entity | null = null;
+    let aiSprite: Sprite | null = null;
 
     const mainMenu = new MainMenuRoot(app, {
-        onPlay: () => beginPlayFlow(),
-        onTour: () => beginTourFlow(),
+        onPlay: () => beginModeSelect(),
         onStats: () => showStatsScreen(),
     });
     app.stage.addChild(mainMenu);
 
     let worldMap: WorldMapRoot;
+
+    const modeSelect = new ModeSelectRoot(app, {
+        onBack: () => showMainMenu(),
+        onPick: (mode) => openMode(mode),
+    });
+    modeSelect.visible = false;
+    app.stage.addChild(modeSelect);
 
     const songSelect = new SongSelectRoot(app, {
         onBack: () => {
@@ -139,6 +167,10 @@ async function init() {
                 mapRegion = null;
                 songSelect.hide();
                 worldMap.show();
+                layoutAll();
+            } else if (activeMode != null) {
+                songSelect.hide();
+                modeSelect.show();
                 layoutAll();
             } else {
                 showMainMenu();
@@ -153,17 +185,12 @@ async function init() {
             layoutAll();
         },
         onUnlockApplied: () => {
-            if (mapRegion != null) {
-                const pool = chartsForTourRegion(visibleCharts(SONGS), mapRegion);
-                songSelect.setTracks(pool.length > 0 ? pool : visibleCharts(SONGS), { mapRegion });
-            } else {
-                songSelect.setTracks(visibleCharts(SONGS));
-            }
+            refreshSongListTracks();
             songSelect.refreshProgress();
             layoutAll();
         },
     });
-    songSelect.setTracks(visibleCharts(SONGS));
+    songSelect.setTracks(visibleChartsForMode(SONGS, 'training'));
     songSelect.visible = false;
     app.stage.addChild(songSelect);
 
@@ -174,8 +201,8 @@ async function init() {
             if (legIndex > furthest) return;
             mapRegion = regionId;
             worldMap.hide();
-            const pool = chartsForTourRegion(visibleCharts(SONGS), regionId);
-            songSelect.setTracks(pool.length > 0 ? pool : visibleCharts(SONGS), { mapRegion });
+            const pool = chartsForModeAndRegion(SONGS, 'tour', regionId);
+            songSelect.setTracks(pool.length > 0 ? pool : visibleChartsForMode(SONGS, 'tour'), { mapRegion });
             songSelect.show();
             layoutAll();
         },
@@ -200,14 +227,8 @@ async function init() {
         onBack: () => {
             micGate.visible = false;
             gameLayer.visible = false;
-            if (mapRegion != null) {
-                const pool = chartsForTourRegion(visibleCharts(SONGS), mapRegion);
-                songSelect.setTracks(pool.length > 0 ? pool : visibleCharts(SONGS), { mapRegion });
-                songSelect.show();
-            } else {
-                songSelect.setTracks(visibleCharts(SONGS));
-                songSelect.show();
-            }
+            refreshSongListTracks();
+            songSelect.show();
             layoutAll();
         },
     });
@@ -219,6 +240,7 @@ async function init() {
         const w = app.screen.width;
         const h = app.screen.height;
         mainMenu.layout(w, h, top);
+        modeSelect.layout(w, h, top);
         songSelect.layout(w, h, top);
         worldMap.layout(w, h, top);
         statsRoot.layout(w, h, top);
@@ -226,14 +248,99 @@ async function init() {
         pauseOverlay?.layout(w, h);
     }
 
-    function showMainMenu(): void {
-        mainMenu.show();
+    function modeSelectMeta(m: GameMode): { title: string; hint: string } {
+        switch (m) {
+            case 'training':
+                return {
+                    title: 'TRAINING FLIGHTS',
+                    hint: 'Regional drills — master pitch & breath before you race.',
+                };
+            case 'vsAi':
+                return {
+                    title: 'VS AI — SKY DUEL',
+                    hint: 'Pull +220 px ahead for 2.2s to win the leg. Same charts, rival pressure.',
+                };
+            case 'p2p':
+                return {
+                    title: 'P2P — GHOST DUEL',
+                    hint: 'Async lane for two humans. Live rooms ship in a later build.',
+                };
+            default:
+                return { title: 'CHARTS', hint: '' };
+        }
+    }
+
+    function refreshSongListTracks(): void {
+        if (mapRegion != null && activeMode === 'tour') {
+            const pool = chartsForModeAndRegion(SONGS, 'tour', mapRegion);
+            songSelect.setTracks(pool.length > 0 ? pool : visibleChartsForMode(SONGS, 'tour'), { mapRegion });
+        } else if (activeMode != null && activeMode !== 'tour') {
+            const meta = modeSelectMeta(activeMode);
+            songSelect.setTracks(visibleChartsForMode(SONGS, activeMode), {
+                modeTitle: meta.title,
+                modeHint: meta.hint,
+            });
+        } else {
+            songSelect.setTracks(visibleChartsForMode(SONGS, 'training'), {
+                modeTitle: 'TRAINING FLIGHTS',
+                modeHint: 'Regional drills — start your vocal career here.',
+            });
+        }
+    }
+
+    function beginModeSelect(): void {
+        mainMenu.hide();
         statsRoot.hide();
         songSelect.hide();
         worldMap.hide();
         micGate.visible = false;
         gameLayer.visible = false;
+        modeSelect.refreshLocks();
+        modeSelect.show();
+        layoutAll();
+    }
+
+    function openMode(mode: GameMode): void {
+        if (!ModeProgress.canPlayMode(mode)) return;
+        activeMode = mode;
+        modeSelect.hide();
+        if (mode === 'tour') {
+            beginTourFlow();
+            return;
+        }
+        mapRegion = null;
+        const meta = modeSelectMeta(mode);
+        songSelect.setTracks(visibleChartsForMode(SONGS, mode), {
+            modeTitle: meta.title,
+            modeHint: meta.hint,
+        });
+        songSelect.show();
+        layoutAll();
+    }
+
+    function destroyAiRival(): void {
+        if (aiEntity != null) {
+            world.destroyEntity(aiEntity);
+            aiEntity = null;
+        }
+        if (aiSprite) {
+            gameLayer.removeChild(aiSprite);
+            aiSprite.destroy();
+            aiSprite = null;
+        }
+        RunContext.aiEntity = null;
+        RunContext.vsAiActive = false;
+        vsAiRaceSystem.reset();
+    }
+
+    function endActiveRun(): void {
         velocityEngine.setSimulationEnabled(false);
+        VoiceInputManager.getInstance().pauseMic();
+        GameState.setPaused(false);
+        RunContext.playerEntity = null;
+        destroyAiRival();
+        runPrepared = false;
+        preparedSongId = null;
         if (pauseOverlay) {
             app.stage.removeChild(pauseOverlay);
             pauseOverlay.destroy();
@@ -252,15 +359,49 @@ async function init() {
         RunContext.resetDefaults(VOICE_FLIGHT.CRUISE_SPEED_X);
         vel.vx = RunContext.cruiseSpeedPx;
         vel.vy = 0;
-        runPrepared = false;
-        preparedSongId = null;
-        selectedSong = null;
+        gameLayer.visible = false;
+    }
+
+    function finishRunFromPause(): void {
+        const song = lastRunSong;
+        endActiveRun();
+        if (song?.gameMode === 'training') {
+            ModeProgress.setTrainingComplete();
+        }
+        if (song?.gameMode === 'p2p') {
+            ModeProgress.setP2PComplete();
+        }
+        micGate.visible = false;
+        refreshSongListTracks();
+        if (mapRegion != null) {
+            worldMap.show();
+        } else if (activeMode != null) {
+            modeSelect.refreshLocks();
+            modeSelect.show();
+        } else {
+            showMainMenu();
+        }
+        layoutAll();
+    }
+
+    function showMainMenu(): void {
+        mainMenu.show();
+        statsRoot.hide();
+        modeSelect.hide();
+        songSelect.hide();
+        worldMap.hide();
+        micGate.visible = false;
+        activeMode = null;
         mapRegion = null;
+        endActiveRun();
+        selectedSong = null;
+        lastRunSong = null;
         layoutAll();
     }
 
     function showStatsScreen(): void {
         mainMenu.hide();
+        modeSelect.hide();
         songSelect.hide();
         worldMap.hide();
         statsRoot.show();
@@ -268,24 +409,15 @@ async function init() {
     }
 
     function beginTourFlow(): void {
+        if (!ModeProgress.canPlayMode('tour')) return;
         mainMenu.hide();
         statsRoot.hide();
+        modeSelect.hide();
         songSelect.hide();
         micGate.visible = false;
         gameLayer.visible = false;
+        activeMode = 'tour';
         worldMap.show();
-        layoutAll();
-    }
-
-    function beginPlayFlow(): void {
-        mainMenu.hide();
-        statsRoot.hide();
-        worldMap.hide();
-        mapRegion = null;
-        songSelect.setTracks(visibleCharts(SONGS));
-        songSelect.show();
-        gameLayer.visible = false;
-        micGate.visible = false;
         layoutAll();
     }
 
@@ -301,7 +433,13 @@ async function init() {
         micGate.visible = false;
         LocalPlayerStats.recordRunStarted();
 
-        const playable = visibleCharts(SONGS).filter((s) => CareerProgress.canPlaySong(toUnlockRules(s)));
+        const pool =
+            mapRegion != null && activeMode === 'tour'
+                ? chartsForModeAndRegion(SONGS, 'tour', mapRegion)
+                : activeMode != null
+                  ? visibleChartsForMode(SONGS, activeMode)
+                  : visibleChartsForMode(SONGS, 'training');
+        const playable = pool.filter((s) => CareerProgress.canPlaySong(toUnlockRules(s)));
         const song = selectedSong && playable.some((p) => p.id === selectedSong!.id) ? selectedSong : playable[0];
         if (!song) {
             console.warn('Velocity: no playable chart');
@@ -309,13 +447,38 @@ async function init() {
             return;
         }
         selectedSong = song;
+        lastRunSong = song;
 
+        destroyAiRival();
+
+        RunContext.screenHeight = app.screen.height;
+        RunContext.playerEntity = player;
         RunContext.applySongTune(song.cruiseSpeedMultiplier, song.parallaxPalette);
         const velStart = world.getComponent<VelocityComponent>(player, VelocityComponent.TYPE_ID)!;
         velStart.vx = RunContext.cruiseSpeedPx;
+        velStart.vy = 0;
+
+        const vs = song.gameMode === 'vsAi';
+        RunContext.vsAiActive = vs;
+        if (vs) {
+            const aiSpr = new Sprite(aiTexture);
+            aiSpr.anchor.set(0.5);
+            gameLayer.addChild(aiSpr);
+            aiSprite = aiSpr;
+            const ai = world.createEntity();
+            aiEntity = ai;
+            const px = world.getComponent<TransformComponent>(player, TransformComponent.TYPE_ID)!;
+            world.addComponent(ai, new TransformComponent(px.x - 140, px.y + 20));
+            world.addComponent(ai, new VelocityComponent(RunContext.cruiseSpeedPx, 0));
+            world.addComponent(ai, new FlightDynamicsComponent(1.0, 0.05, 3000));
+            world.addComponent(ai, new SpriteComponent(aiSpr));
+            world.addComponent(ai, new AiRivalComponent());
+            RunContext.aiEntity = ai;
+            vsAiRaceSystem.reset();
+        }
 
         const levelId = levelIdForSong(song);
-        const needNewWorld = !runPrepared || preparedSongId !== song.id;
+        const needNewWorld = !runPrepared || preparedSongId !== song.id || vs;
 
         if (needNewWorld) {
             parallaxSystem.reset();
@@ -346,15 +509,17 @@ async function init() {
 
         if (!pauseOverlay) {
             pauseOverlay = new PauseOverlay(app, {
-                onQuitToMenu: () => showMainMenu(),
+                onQuitToMenu: () => finishRunFromPause(),
             });
             app.stage.addChild(pauseOverlay);
         }
         pauseOverlay.layout(app.screen.width, app.screen.height);
 
+        gameLayer.visible = true;
+        GameState.setPaused(false);
         velocityEngine.setSimulationEnabled(true);
         VoiceInputManager.getInstance().resumeMic();
-        if (song.tourLegIndex != null) {
+        if (song.gameMode === 'tour' && song.tourLegIndex != null) {
             WorldMapProgress.recordSequentialClear(song.tourLegIndex);
         }
         EventBus.getInstance().emit(GameEvents.LEVEL_START, levelId);
@@ -371,6 +536,10 @@ async function init() {
         } catch (e) {
             console.warn('Velocity: profile sync skipped.', e);
         }
+    });
+
+    eventBus.on(GameEvents.VS_AI_PLAYER_WON, () => {
+        ModeProgress.setVsAiWin();
     });
 
     showMainMenu();

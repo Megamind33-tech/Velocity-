@@ -5,6 +5,7 @@ import { VoiceInputManager } from '../input/VoiceInputManager';
 import { GameState } from '../GameState';
 import { VOICE_FLIGHT } from '../../data/constants';
 import { DemoTouchFlight } from '../../debug/DemoTouchFlight';
+import { RunContext } from '../RunContext';
 
 /**
  * Vocal-only vertical steering: high pitch → up, low pitch → down.
@@ -32,8 +33,12 @@ export class VoiceInputSystem implements System {
 
         const matchingEntities = world.getEntities(this.queryMask);
 
+        const playerOnly = RunContext.playerEntity;
+
         for (let i = 0; i < matchingEntities.length; i++) {
             const entity = matchingEntities[i];
+            if (playerOnly != null && entity !== playerOnly) continue;
+
             const velocity = world.getComponent<VelocityComponent>(entity, VelocityComponent.TYPE_ID)!;
 
             let verticalAccel = 0;

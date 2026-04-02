@@ -6,6 +6,7 @@ import { LocalPlayerStats } from '../player/LocalPlayerStats';
 import { CareerProgress } from '../player/CareerProgress';
 import { WorldMapProgress } from '../player/WorldMapProgress';
 import { WorldMapProfile } from '../player/WorldMapProfile';
+import { ModeProgress } from '../player/ModeProgress';
 import { getRegionById } from '../data/worldTour';
 import { getSafeAreaInsets } from './safeArea';
 
@@ -47,7 +48,7 @@ export class PlayerStatsRoot extends Container {
             fill: '#ccd8ff',
             letterSpacing: 0.5,
         });
-        for (let i = 0; i < 8; i++) {
+        for (let i = 0; i < 9; i++) {
             const t = new Text({ text: '', style: lineStyle });
             t.anchor.set(0, 0);
             this.lines.push(t);
@@ -63,7 +64,7 @@ export class PlayerStatsRoot extends Container {
         this.backdrop.layout(width, height);
 
         const pw = Math.min(340, width - 28);
-        const ph = 340;
+        const ph = 372;
         const px = (width - pw) / 2;
         const py = safeTop + 56;
 
@@ -85,8 +86,15 @@ export class PlayerStatsRoot extends Container {
         const cred = CareerProgress.getBonusCredits();
         const home = getRegionById(WorldMapProfile.getHomeRegion());
         const leg = WorldMapProgress.getFurthestSelectableNode(7);
+        const chain = [
+            ModeProgress.isTrainingComplete() ? 'TR✓' : 'TR—',
+            ModeProgress.hasVsAiWin() ? 'AI✓' : 'AI—',
+            ModeProgress.isP2PComplete() ? 'P2✓' : 'P2—',
+            ModeProgress.canPlayMode('tour') ? 'TOUR✓' : 'TOUR—',
+        ].join(' ');
 
         const rows = [
+            `MODE CHAIN       ${chain}`,
             `HOME REGION      ${home?.label ?? '—'}`,
             `TOUR LEG OPEN    ${leg}`,
             `CAREER STARS     ${stars}`,
@@ -117,7 +125,14 @@ export class PlayerStatsRoot extends Container {
         const cred = CareerProgress.getBonusCredits();
         const home = getRegionById(WorldMapProfile.getHomeRegion());
         const leg = WorldMapProgress.getFurthestSelectableNode(7);
+        const chain = [
+            ModeProgress.isTrainingComplete() ? 'TR✓' : 'TR—',
+            ModeProgress.hasVsAiWin() ? 'AI✓' : 'AI—',
+            ModeProgress.isP2PComplete() ? 'P2✓' : 'P2—',
+            ModeProgress.canPlayMode('tour') ? 'TOUR✓' : 'TOUR—',
+        ].join(' ');
         const rows = [
+            `MODE CHAIN       ${chain}`,
             `HOME REGION      ${home?.label ?? '—'}`,
             `TOUR LEG OPEN    ${leg}`,
             `CAREER STARS     ${stars}`,

@@ -5,7 +5,6 @@ import { MenuBackdrop } from './MenuBackdrop';
 
 export interface MainMenuHandlers {
     onPlay: () => void;
-    onTour: () => void;
     onStats: () => void;
 }
 
@@ -18,7 +17,6 @@ export class MainMenuRoot extends Container {
     private title!: Text;
     private tagline!: Text;
     private btnPlay!: Container;
-    private btnTour!: Container;
     private btnStats!: Container;
     private safeTop = 0;
 
@@ -77,24 +75,21 @@ export class MainMenuRoot extends Container {
 
         if (this.btnPlay) {
             this.removeChild(this.btnPlay);
-            this.removeChild(this.btnTour);
             this.removeChild(this.btnStats);
         }
-        this.btnPlay = createMenuButton('PLAY', bw, bh, () => this.handlers.onPlay(), { primary: true });
-        this.btnTour = createMenuButton('TOUR', bw, bh, () => this.handlers.onTour());
+        this.btnPlay = createMenuButton('MODES', bw, bh, () => this.handlers.onPlay(), { primary: true });
         this.btnStats = createMenuButton('STATS', bw, bh, () => this.handlers.onStats());
 
-        const stackH = bh * 3 + gap * 2;
-        const startY = Math.max(titleY + 96, height * 0.4 - stackH / 2);
+        const stackH = bh * 2 + gap;
+        const startY = Math.max(titleY + 100, height * 0.42 - stackH / 2);
         this.btnPlay.position.set((width - bw) / 2, startY);
-        this.btnTour.position.set((width - bw) / 2, startY + bh + gap);
-        this.btnStats.position.set((width - bw) / 2, startY + (bh + gap) * 2);
+        this.btnStats.position.set((width - bw) / 2, startY + bh + gap);
 
-        this.addChild(this.btnPlay, this.btnTour, this.btnStats);
+        this.addChild(this.btnPlay, this.btnStats);
 
         this.panel.clear();
         const pw = Math.min(320, width - 24);
-        const ph = 124;
+        const ph = 118;
         const px = (width - pw) / 2;
         const py = titleY - 12;
         this.panel.roundRect(px, py, pw, ph, 16);
