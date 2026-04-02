@@ -1,34 +1,25 @@
 /**
- * Velocity UI art — modern “stage / rhythm” direction:
- * - Kenney UI Pack: Sci-Fi (glass, neon trims, CC0) for buttons & bars
- * - Kenney UI Pack: Adventure (panel_grey_blue) for framed windows — reads electronic, not parchment
- *
- * Vector sources live in each pack’s Vector/ folder for custom recolor in Figma/Inkscape.
+ * Kenney UI Pack only — https://kenney.nl/assets/ui-pack (CC0)
+ * Paths: PNG/{Blue,Grey,Yellow,Red}/Default + PNG/Extra/Default
  */
 
 import { Assets, Texture } from 'pixi.js';
 
-const BASE_SF = `${import.meta.env.BASE_URL}kenney-ui-pack-sci-fi/PNG`;
-const BASE_ADV = `${import.meta.env.BASE_URL}kenney-ui-pack-adventure/PNG/Default/`;
-
-/** Sci-fi header button (192×64) — large rectangle, one style per color. */
-const SF_BTN = 'button_square_header_large_rectangle.png';
+const BASE = `${import.meta.env.BASE_URL}kenney-ui-pack/PNG`;
 
 export type VelocityUiTextureKey =
-    | 'panel_blue'
-    | 'button_sf_primary'
-    | 'button_sf_neutral'
-    | 'button_sf_accent'
-    | 'button_sf_danger'
-    | 'bar_gloss_mid';
+    | 'button_primary'
+    | 'button_secondary'
+    | 'button_accent'
+    | 'button_danger'
+    | 'panel_frame';
 
 const MANIFEST: Record<VelocityUiTextureKey, string> = {
-    panel_blue: `${BASE_ADV}panel_grey_bolts_blue.png`,
-    button_sf_primary: `${BASE_SF}/Blue/Default/${SF_BTN}`,
-    button_sf_neutral: `${BASE_SF}/Grey/Default/${SF_BTN}`,
-    button_sf_accent: `${BASE_SF}/Yellow/Default/${SF_BTN}`,
-    button_sf_danger: `${BASE_SF}/Red/Default/${SF_BTN}`,
-    bar_gloss_mid: `${BASE_SF}/Blue/Default/bar_square_gloss_small_m.png`,
+    button_primary: `${BASE}/Blue/Default/button_rectangle_depth_gloss.png`,
+    button_secondary: `${BASE}/Grey/Default/button_rectangle_depth_flat.png`,
+    button_accent: `${BASE}/Yellow/Default/button_rectangle_depth_gloss.png`,
+    button_danger: `${BASE}/Red/Default/button_rectangle_depth_gloss.png`,
+    panel_frame: `${BASE}/Extra/Default/input_outline_rectangle.png`,
 };
 
 const cache = new Map<VelocityUiTextureKey, Texture>();
@@ -40,8 +31,7 @@ export async function preloadVelocityUiTextures(): Promise<void> {
         const keys = Object.keys(MANIFEST) as VelocityUiTextureKey[];
         await Promise.all(
             keys.map(async (key) => {
-                const url = MANIFEST[key];
-                const tex = await Assets.load<Texture>(url);
+                const tex = await Assets.load<Texture>(MANIFEST[key]);
                 cache.set(key, tex);
             })
         );
