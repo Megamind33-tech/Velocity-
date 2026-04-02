@@ -19,6 +19,10 @@ export class LevelSystem implements System {
     private spawnRange: number = 2000;
     private cleanupRange: number = 800;
     private gateTexture: Texture | null = null;
+    /** Set in initLevel — full run cleared when gatesCleared >= totalGatesPlanned */
+    totalGatesPlanned = 0;
+    gatesCleared = 0;
+    runAllGatesClearedEmitted = false;
     
     // Object Pool for recycling Gate sprites
     private spritePool: ObjectPool<Sprite>;
@@ -42,7 +46,10 @@ export class LevelSystem implements System {
      */
     public initLevel(levelId: number, song: Song, player: Entity): void {
         this.playerEntity = player;
+        this.gatesCleared = 0;
+        this.runAllGatesClearedEmitted = false;
         this.gatesToSpawn = this.generator.generate(levelId, song, this.app.screen.height);
+        this.totalGatesPlanned = song.notes.length;
         
         // Pre-create gate texture
         if (!this.gateTexture) {
@@ -66,6 +73,13 @@ export class LevelSystem implements System {
         }
         this.gatesToSpawn = [];
         this.playerEntity = null;
+        this.totalGatesPlanned = 0;
+        this.gatesCleared = 0;
+        this.runAllGatesClearedEmitted = false;
+    }
+
+    public onGateCleared(): void {
+        this.gatesCleared++;
     }
 
     public update(entities: Entity[], world: World, delta: number): void {

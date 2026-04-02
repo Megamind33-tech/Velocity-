@@ -12,6 +12,7 @@ import { FlightDynamicsSystem } from './engine/systems/FlightDynamicsSystem';
 import { VoiceInputSystem } from './engine/systems/VoiceInputSystem';
 import { AutoForwardSystem } from './engine/systems/AutoForwardSystem';
 import { LevelSystem } from './engine/systems/LevelSystem';
+import { GatePassSystem } from './engine/systems/GatePassSystem';
 import { ParallaxSystem } from './engine/systems/ParallaxSystem';
 import { HUDSystem } from './engine/systems/HUDSystem';
 import { VoiceInputManager } from './engine/input/VoiceInputManager';
@@ -98,6 +99,7 @@ async function init() {
     world.addSystem(new MovementSystem());
     world.addSystem(new SpriteSystem());
     world.addSystem(levelSystem);
+    world.addSystem(new GatePassSystem(levelSystem));
     world.addSystem(parallaxSystem);
     world.addSystem(hudSystem);
     world.addSystem(new LeaderboardSystem());
@@ -143,6 +145,7 @@ async function init() {
     let mapRegion: TourRegionId | null = null;
     let activeMode: GameMode | null = null;
     let lastRunSong: Song | null = null;
+    let currentRunLevelId = 1;
     let aiEntity: Entity | null = null;
     let aiSprite: Sprite | null = null;
 
@@ -478,6 +481,7 @@ async function init() {
         }
 
         const levelId = levelIdForSong(song);
+        currentRunLevelId = levelId;
         const needNewWorld = !runPrepared || preparedSongId !== song.id || vs;
 
         if (needNewWorld) {
@@ -519,20 +523,21 @@ async function init() {
         GameState.setPaused(false);
         velocityEngine.setSimulationEnabled(true);
         VoiceInputManager.getInstance().resumeMic();
-        if (song.gameMode === 'tour' && song.tourLegIndex != null) {
-            WorldMapProgress.recordSequentialClear(song.tourLegIndex);
-        }
-        EventBus.getInstance().emit(GameEvents.LEVEL_START, levelId);
+        EventBus.getInstance().emit(GameEvents.LEVEL_START, currentRunLevelId);
     }
 
     window.addEventListener('resize', () => layoutAll());
 
     const eventBus = EventBus.getInstance();
-    eventBus.on(GameEvents.LEVEL_START, async (levelId) => {
+    eventBus.on(GameEvents.LEVEL_COMPLETE, async () => {
         CareerProgress.addStars(1);
+        const song = lastRunSong;
+        if (song?.gameMode === 'tour' && song.tourLegIndex != null) {
+            WorldMapProgress.recordSequentialClear(song.tourLegIndex);
+        }
         const uid = getPlayerIdForSync();
         try {
-            await syncProfile(uid, Number(levelId), 100 * Number(levelId), 3);
+            await syncProfile(uid, Number(currentRunLevelId), 100 * Number(currentRunLevelId), 3);
         } catch (e) {
             console.warn('Velocity: profile sync skipped.', e);
         }
