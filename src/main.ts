@@ -1,5 +1,5 @@
 import './index.css';
-import { Application, Assets, Sprite, Texture, Graphics } from 'pixi.js';
+import { Application, Assets, Sprite, Texture, Graphics, Text, TextStyle } from 'pixi.js';
 import { WorldMapScene } from './scenes/WorldMapScene';
 import { EventBus } from './events/EventBus';
 import { GameEvents } from './events/GameEvents';
@@ -9,13 +9,15 @@ import { World } from './engine/World';
 import { Engine } from './engine/Engine';
 import { MovementSystem } from './engine/systems/MovementSystem';
 import { SpriteSystem } from './engine/systems/SpriteSystem';
+import { FlightDynamicsSystem } from './engine/systems/FlightDynamicsSystem';
+import { VoiceInputSystem } from './engine/systems/VoiceInputSystem';
+import { VoiceInputManager } from './engine/input/VoiceInputManager';
 import { LeaderboardSystem } from './engine/systems/LeaderboardSystem';
 import { QuestSystem } from './engine/systems/QuestSystem';
 import { TransformComponent } from './engine/components/TransformComponent';
 import { VelocityComponent } from './engine/components/VelocityComponent';
 import { SpriteComponent } from './engine/components/SpriteComponent';
 import { FlightDynamicsComponent } from './engine/components/FlightDynamicsComponent';
-import { FlightDynamicsSystem } from './engine/systems/FlightDynamicsSystem';
 import { TaskOverlay } from './ui/TaskOverlay';
 
 async function init() {
@@ -38,6 +40,7 @@ async function init() {
     const velocityEngine = new Engine(app, world);
 
     // 4. Register Systems
+    world.addSystem(new VoiceInputSystem());
     world.addSystem(new FlightDynamicsSystem());
     world.addSystem(new MovementSystem());
     world.addSystem(new SpriteSystem());
@@ -59,20 +62,42 @@ async function init() {
 
     const player = world.createEntity();
     world.addComponent(player, new TransformComponent(app.screen.width / 4, app.screen.height / 2));
-    world.addComponent(player, new VelocityComponent(300, 0)); // Initial horizontal speed
-    world.addComponent(player, new FlightDynamicsComponent(1.0, 0.02, 1200));
+    world.addComponent(player, new VelocityComponent(200, 0)); // Horizontal engine speed
+    world.addComponent(player, new FlightDynamicsComponent(1.0, 0.05, 3000)); // Stronger thrust for voice
     world.addComponent(player, new SpriteComponent(playerSprite));
 
-    // 6. Thrust Simulation (Spacebar)
-    window.addEventListener('keydown', (e) => {
-        if (e.code === 'Space') {
-            const vel = world.getComponent<VelocityComponent>(player, VelocityComponent.TYPE_ID);
-            const flight = world.getComponent<FlightDynamicsComponent>(player, FlightDynamicsComponent.TYPE_ID);
-            if (vel && flight) {
-                // Apply upward burst
-                vel.vy -= flight.thrustPower * 0.1; 
-                console.log('Thrust applied!');
-            }
+    // 6. Mobile Voice Start Interaction (Required for AudioContext)
+    const overlay = new Graphics();
+    overlay.rect(0, 0, app.screen.width, app.screen.height);
+    overlay.fill({ color: 0x000000, alpha: 0.7 });
+    overlay.interactive = true;
+    app.stage.addChild(overlay);
+
+    const startText = new Text({
+        text: 'TAP TO START VOICE FLIGHT',
+        style: new TextStyle({
+            fill: '#00ffcc',
+            fontSize: 24,
+            fontWeight: 'bold',
+            fontFamily: 'Arial'
+        })
+    });
+    startText.anchor.set(0.5);
+    startText.position.set(app.screen.width / 2, app.screen.height / 2);
+    app.stage.addChild(startText);
+
+    overlay.on('pointerdown', async () => {
+        const success = await VoiceInputManager.getInstance().init();
+        if (success) {
+            app.stage.removeChild(overlay);
+            app.stage.removeChild(startText);
+            
+            // Start components and loop
+            velocityEngine.start();
+            console.log('Velocity Engine: Voice loop started.');
+        } else {
+            startText.text = 'MIC PERMISSION DENIED';
+            startText.style.fill = '#ff0000';
         }
     });
 
@@ -91,8 +116,8 @@ async function init() {
         await syncProfile(user.uid, Number(levelId), 100 * Number(levelId), 3);
     });
 
-    // 9. Start Game Loop
-    velocityEngine.start();
+    // 9. Loop is started after user interaction (overlay.on('pointerdown'))
+    // velocityEngine.start();
 
     console.log('Velocity Engine: Full ECS Loop active with test entity.');
 }
