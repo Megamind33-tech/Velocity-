@@ -1,4 +1,23 @@
 /* ============================================================================
+   Kenney Future — game-native typeface from Kenney UI Pack (CC0)
+   Source: public/kenney-ui-pack/Font/
+   ============================================================================ */
+@font-face {
+  font-family: 'Kenney Future';
+  src: url('/kenney-ui-pack/Font/Kenney Future.ttf') format('truetype');
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Kenney Future Narrow';
+  src: url('/kenney-ui-pack/Font/Kenney Future Narrow.ttf') format('truetype');
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* ============================================================================
    Mobile & Tablet Viewport Configuration (Mobile/Tablet Only)
 
    Target Devices:

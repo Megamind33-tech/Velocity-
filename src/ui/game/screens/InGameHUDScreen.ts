@@ -1,256 +1,388 @@
 /**
- * In-game HUD — Kenney outline panels + slide bar + uniform pause (UI Pack only)
+ * In-game HUD — Kenney nine-slice chrome + authoritative type hierarchy.
+ *
+ * DESIGN RULES (HUD Dominance):
+ *   - Score value: 26 px gold — dominant reading target
+ *   - Level value: 18 px cyan — secondary, clearly subordinate
+ *   - Alt / Speed: 13 px — support detail, present but not competing
+ *   - SCORE / LV / ALT / SPD labels: 9 px muted — pure scaffold, never rivals
+ *   - Vocal bar: 20 px height — visible signal without crushing gameplay
+ *   - Pause: 44×44 square Kenney chrome — minimum touch target, icon-only
+ *   - Stats plate: 76 px tall — room for 2-row layout without crowding
+ *   - Everything edge-safe, no center overlap with gameplay field
  */
 
-import { Application, Container, Graphics, NineSliceSprite, Text, TextStyle } from 'pixi.js';
+import { Application, Container, Graphics, NineSliceSprite, Sprite, Text, TextStyle } from 'pixi.js';
 import { BaseGameScreen } from '../GameUIManager';
 import { GAME_COLORS, GAME_FONTS, GAME_SIZES } from '../GameUITheme';
 import { getHudDataSource, requestGamePause } from '../gameFlowBridge';
 import { GameState } from '../../../engine/GameState';
 import { ResponsiveUIManager } from '../../ResponsiveUIManager';
 import { createKenneyHProgressBar, createKenneyPanelNineSlice } from '../kenneyNineSlice';
-import { createVelocityGameButton } from '../velocityUiButtons';
-import { velocityUiArtReady } from '../velocityUiArt';
+import { getVelocityUiTexture, velocityUiArtReady } from '../velocityUiArt';
+import { VELOCITY_UI_SLICE } from '../velocityUiSlice';
+
+// ─── Constants ────────────────────────────────────────────────────────────────
+
+const STATS_H   = 76;   // taller plate for 2-row layout
+const PAUSE_W   = 44;   // square, minimum touch target
+const PAUSE_H   = 44;
+const VOCAL_H   = 20;   // tall enough to register at a glance
+const PAD_MIN   = 8;
+
+// Type sizes pulled from GameUITheme
+const SZ_LABEL  = GAME_SIZES.font.hud_label;     // 9 — scaffold label
+const SZ_MAJOR  = GAME_SIZES.font.hud_major;     // 26 — score counter
+const SZ_SECOND = GAME_SIZES.font.hud_secondary; // 18 — level
+const SZ_DETAIL = GAME_SIZES.font.hud_detail;    // 13 — alt / spd
+
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+
+function labelStyle(fill: number): TextStyle {
+    return new TextStyle({
+        fill,
+        fontSize: SZ_LABEL,
+        fontFamily: GAME_FONTS.narrow,
+        fontWeight: 'bold',
+        letterSpacing: 1.5,
+    });
+}
+
+function majorStyle(fill: number): TextStyle {
+    return new TextStyle({
+        fill,
+        fontSize: SZ_MAJOR,
+        fontFamily: GAME_FONTS.arcade,
+        fontWeight: 'bold',
+        letterSpacing: 1,
+        dropShadow: { alpha: 0.7, blur: 3, color: 0x000000, distance: 2 },
+    });
+}
+
+function secondaryStyle(fill: number): TextStyle {
+    return new TextStyle({
+        fill,
+        fontSize: SZ_SECOND,
+        fontFamily: GAME_FONTS.arcade,
+        fontWeight: 'bold',
+        letterSpacing: 1,
+        dropShadow: { alpha: 0.55, blur: 2, color: 0x000000, distance: 1 },
+    });
+}
+
+function detailStyle(fill: number): TextStyle {
+    return new TextStyle({
+        fill,
+        fontSize: SZ_DETAIL,
+        fontFamily: GAME_FONTS.narrow,
+        fontWeight: 'bold',
+        letterSpacing: 0.5,
+        dropShadow: { alpha: 0.5, blur: 2, color: 0x000000, distance: 1 },
+    });
+}
+
+// ─── Class ────────────────────────────────────────────────────────────────────
 
 export class InGameHUDScreen extends BaseGameScreen {
+    // Stats plate
     private statsPlate!: Container;
     private statsKenney: NineSliceSprite | null = null;
     private statsFallback!: Graphics;
-    private scoreText!: Text;
-    private levelText!: Text;
+
+    // Score — split label + major value
+    private scoreLbl!: Text;
+    private scoreVal!: Text;
+
+    // Level — split label + secondary value
+    private levelLbl!: Text;
+    private levelVal!: Text;
+
+    // Detail row — Alt / Speed
     private altText!: Text;
     private spdText!: Text;
+
+    // Pause button — square Kenney chrome with play/pause icon
+    private pauseBtn!: Container;
+    private pauseBtnBg: NineSliceSprite | null = null;
+
+    // Vocal bar
     private vocalPlate!: Container;
     private vocalKenney: NineSliceSprite | null = null;
     private vocalFallback!: Graphics;
     private vocalBar!: Container & { setProgress: (p01: number) => void };
-    private pauseBtn!: Container;
+    private vocalLabel!: Text;
+
     private lastStatsKey = '';
-    private lastVocalW = 0;
+    private lastVocalW   = -1;
 
     constructor(app: Application) {
         super(app);
         this.setupUI();
     }
 
+    // ── Vocal bar factory ───────────────────────────────────────────────────
+
     private makeVocalBar(w: number): Container & { setProgress: (p01: number) => void } {
-        const h = 10;
-        const kenney = createKenneyHProgressBar(w, h);
+        const kenney = createKenneyHProgressBar(w, VOCAL_H);
         if (kenney) {
             kenney.setProgress(0);
             return kenney;
         }
-        const root = new Container();
-        const bg = new Graphics();
-        bg.roundRect(0, 0, w, h, 3);
+        const root = new Container() as Container & { setProgress: (p01: number) => void };
+        const bg   = new Graphics();
+        bg.roundRect(0, 0, w, VOCAL_H, 4);
         bg.fill({ color: GAME_COLORS.hud_bg, alpha: 0.9 });
-        bg.stroke({ color: GAME_COLORS.primary, width: 1, alpha: 0.4 });
+        bg.stroke({ color: GAME_COLORS.primary, width: 1, alpha: 0.45 });
         const fill = new Graphics();
         root.addChild(bg, fill);
-        const out = root as Container & { setProgress: (p01: number) => void };
-        out.setProgress = (p01: number) => {
+        root.setProgress = (p01: number) => {
             fill.clear();
             const p = Math.max(0, Math.min(1, p01));
-            fill.roundRect(0, 0, w * p, h, 3);
-            fill.fill({ color: GAME_COLORS.primary, alpha: 0.85 });
+            fill.roundRect(0, 0, w * p, VOCAL_H, 4);
+            fill.fill({ color: GAME_COLORS.primary, alpha: 0.88 });
         };
-        return out;
+        return root;
     }
 
+    // ── Square pause button ─────────────────────────────────────────────────
+
+    private makePauseButton(): Container {
+        const root = new Container();
+        root.label = 'pauseBtn';
+
+        const squareTex = getVelocityUiTexture('button_square_secondary');
+        const BS = VELOCITY_UI_SLICE.button;
+
+        if (squareTex) {
+            const bg = new NineSliceSprite({
+                texture: squareTex,
+                leftWidth: BS.L, rightWidth: BS.R,
+                topHeight: BS.T, bottomHeight: BS.B,
+                width: PAUSE_W, height: PAUSE_H,
+            });
+            bg.tint = 0xd0dce8;
+            bg.alpha = 0.92;
+            this.pauseBtnBg = bg;
+            root.addChild(bg);
+        } else {
+            const bg = new Graphics();
+            bg.roundRect(0, 0, PAUSE_W, PAUSE_H, 8);
+            bg.fill({ color: GAME_COLORS.hud_bg, alpha: 0.88 });
+            bg.stroke({ color: GAME_COLORS.border_secondary, width: 1.5, alpha: 0.6 });
+            root.addChild(bg);
+        }
+
+        // Pause icon — two vertical bars drawn as Graphics (no external image needed)
+        const icon = new Graphics();
+        const bw = 5;
+        const bh = 16;
+        const cx = PAUSE_W / 2;
+        const cy = PAUSE_H / 2;
+        icon.roundRect(cx - bw - 2, cy - bh / 2, bw, bh, 2);
+        icon.fill({ color: 0x2a3a4a, alpha: 0.9 });
+        icon.roundRect(cx + 2, cy - bh / 2, bw, bh, 2);
+        icon.fill({ color: 0x2a3a4a, alpha: 0.9 });
+        root.addChild(icon);
+
+        root.eventMode = 'static';
+        root.cursor = 'pointer';
+        root.on('pointerdown', () => root.scale.set(0.95));
+        root.on('pointerup', () => { root.scale.set(1); requestGamePause(); });
+        root.on('pointerupoutside', () => root.scale.set(1));
+        root.on('pointercancel',    () => root.scale.set(1));
+
+        return root;
+    }
+
+    // ── Setup ───────────────────────────────────────────────────────────────
+
     private setupUI(): void {
-        this.statsPlate = new Container();
+        // Stats plate (top-left)
+        this.statsPlate   = new Container();
         this.statsFallback = new Graphics();
         this.container.addChild(this.statsPlate, this.statsFallback);
 
-        const hudGlow = {
-            alpha: 0.75,
-            blur: 3,
-            color: GAME_COLORS.bg_darkest,
-            distance: 0,
-        };
-        this.scoreText = new Text({
-            text: 'SCORE 0',
-            style: new TextStyle({
-                fill: GAME_COLORS.hud_score_value,
-                fontSize: 14,
-                fontFamily: GAME_FONTS.arcade,
-                fontWeight: 'bold',
-                letterSpacing: 1,
-                dropShadow: { ...hudGlow, color: 0x003322 },
-            }),
-        });
-        this.levelText = new Text({
-            text: 'LV 1',
-            style: new TextStyle({
-                fill: GAME_COLORS.hud_level_value,
-                fontSize: 14,
-                fontFamily: GAME_FONTS.arcade,
-                fontWeight: 'bold',
-                letterSpacing: 1,
-                dropShadow: { ...hudGlow, color: 0x001a22 },
-            }),
-        });
-        this.levelText.anchor.set(1, 0);
-        this.altText = new Text({
-            text: 'ALT 0m',
-            style: new TextStyle({
-                fill: GAME_COLORS.hud_alt,
-                fontSize: 11,
-                fontFamily: GAME_FONTS.arcade,
-                fontWeight: 'bold',
-                dropShadow: hudGlow,
-            }),
-        });
-        this.spdText = new Text({
-            text: '·  SPD 0',
-            style: new TextStyle({
-                fill: GAME_COLORS.hud_spd,
-                fontSize: 11,
-                fontFamily: GAME_FONTS.arcade,
-                fontWeight: 'bold',
-                dropShadow: hudGlow,
-            }),
-        });
-        this.container.addChild(this.scoreText, this.levelText, this.altText, this.spdText);
+        // Score — row 1 left
+        this.scoreLbl = new Text({ text: 'SCORE', style: labelStyle(GAME_COLORS.text_muted) });
+        this.scoreVal = new Text({ text: '0',     style: majorStyle(GAME_COLORS.hud_score_value) });
 
-        this.pauseBtn = createVelocityGameButton('II', 'secondary', () => requestGamePause(), {
-            width: 52,
-            height: 32,
-        });
+        // Level — row 1 right (right-anchored)
+        this.levelLbl = new Text({ text: 'LV', style: labelStyle(GAME_COLORS.text_muted) });
+        this.levelLbl.anchor.set(1, 0);
+        this.levelVal = new Text({ text: '1', style: secondaryStyle(GAME_COLORS.hud_level_value) });
+        this.levelVal.anchor.set(1, 0);
+
+        // Detail row — row 2
+        this.altText = new Text({ text: 'ALT 0m',  style: detailStyle(GAME_COLORS.hud_alt) });
+        this.spdText = new Text({ text: 'SPD 0',   style: detailStyle(GAME_COLORS.hud_spd) });
+
+        this.container.addChild(this.scoreLbl, this.scoreVal, this.levelLbl, this.levelVal, this.altText, this.spdText);
+
+        // Pause button (top-right)
+        this.pauseBtn = this.makePauseButton();
         this.container.addChild(this.pauseBtn);
 
-        this.vocalPlate = new Container();
+        // Vocal bar (bottom strip)
+        this.vocalPlate   = new Container();
         this.vocalFallback = new Graphics();
         this.container.addChild(this.vocalPlate, this.vocalFallback);
 
-        const vocalLabel = new Text({
-            text: 'VOCAL',
-            style: new TextStyle({
-                fill: GAME_COLORS.hud_vocal_label,
-                fontSize: 10,
-                fontFamily: GAME_FONTS.arcade,
-                fontWeight: 'bold',
-                letterSpacing: 2,
-                dropShadow: { alpha: 0.8, blur: 2, color: 0x220033, distance: 0 },
-            }),
+        this.vocalLabel = new Text({
+            text: 'VOCAL INPUT',
+            style: labelStyle(GAME_COLORS.hud_vocal_label),
         });
-        vocalLabel.position.set(10, 6);
-        this.vocalPlate.addChild(vocalLabel);
+        this.vocalLabel.position.set(10, 2);
+        this.vocalPlate.addChild(this.vocalLabel);
 
         this.vocalBar = this.makeVocalBar(100);
-        this.vocalBar.position.set(10, 18);
+        this.vocalBar.position.set(10, 14);
         this.vocalPlate.addChild(this.vocalBar);
 
         this.layoutChrome();
     }
 
-    private layoutChrome(): void {
-        const width = this.app.screen.width;
-        const height = this.app.screen.height;
-        const safe = ResponsiveUIManager.getInstance().getSafeAreaPadding();
-        const pad = Math.max(GAME_SIZES.spacing.sm, safe.left, safe.right, 8);
-        const topY = Math.max(GAME_SIZES.spacing.sm, safe.top + 4);
-        const pauseW = 52;
-        const pauseH = 32;
-        const gap = 8;
-        const statsW = Math.min(220, Math.max(140, width - pad * 2 - pauseW - gap));
-        const statsH = 56;
+    // ── Layout ──────────────────────────────────────────────────────────────
 
+    private layoutChrome(): void {
+        const width  = this.app.screen.width;
+        const height = this.app.screen.height;
+        const safe   = ResponsiveUIManager.getInstance().getSafeAreaPadding();
+        const pad    = Math.max(PAD_MIN, safe.left, safe.right, GAME_SIZES.spacing.sm);
+        const topY   = Math.max(PAD_MIN, safe.top + 4);
+
+        const gap     = 8;
+        const statsW  = Math.min(240, Math.max(160, width - pad * 2 - PAUSE_W - gap));
+        const statsH  = STATS_H;
+
+        // ── Stats plate chrome ──────────────────────────────────────────────
         const statsKey = `${statsW}x${statsH}`;
         if (statsKey !== this.lastStatsKey) {
             this.lastStatsKey = statsKey;
             this.statsPlate.removeChildren();
             this.statsKenney = null;
+
             const k = velocityUiArtReady() && createKenneyPanelNineSlice(statsW, statsH);
             if (k) {
                 this.statsKenney = k;
-                k.alpha = 0.88;
-                k.tint = 0x2a2a40;
+                k.alpha = 0.90;
+                k.tint  = 0x1e2c3a;  // cooler dark tint — reads as HUD authority
                 this.statsPlate.addChild(k);
             }
+
             this.statsFallback.clear();
             if (!k) {
-                this.statsFallback.roundRect(0, 0, statsW, statsH, 8);
-                this.statsFallback.fill({ color: GAME_COLORS.hud_bg, alpha: 0.82 });
-                this.statsFallback.stroke({ color: GAME_COLORS.primary, width: 1, alpha: 0.45 });
+                this.statsFallback.roundRect(0, 0, statsW, statsH, 10);
+                this.statsFallback.fill({ color: GAME_COLORS.hud_bg, alpha: 0.88 });
+                this.statsFallback.stroke({ color: GAME_COLORS.primary, width: 1.5, alpha: 0.5 });
             }
         }
+
         this.statsPlate.position.set(pad, topY);
         this.statsFallback.position.set(pad, topY);
         this.statsFallback.visible = !this.statsKenney;
 
-        this.scoreText.position.set(pad + 10, topY + 8);
-        this.levelText.position.set(pad + statsW - 10, topY + 8);
-        const row2y = topY + 32;
-        this.altText.position.set(pad + 10, row2y);
-        this.spdText.position.set(pad + 10 + this.altText.width + 6, row2y);
+        // ── Score — row 1, left ─────────────────────────────────────────────
+        const inset = 10;
+        this.scoreLbl.position.set(pad + inset, topY + 6);
+        this.scoreVal.position.set(pad + inset, topY + 16);
 
-        this.pauseBtn.position.set(width - pad - pauseW, topY + (statsH - pauseH) / 2);
+        // ── Level — row 1, right ────────────────────────────────────────────
+        const rightEdge = pad + statsW - inset;
+        this.levelLbl.position.set(rightEdge, topY + 6);
+        this.levelVal.position.set(rightEdge, topY + 16);
 
-        const vocalW = width - pad * 2;
-        const vocalH = 40;
-        const bottomPad = Math.max(pad, safe.bottom + 8);
-        const vocalY = height - bottomPad - vocalH;
+        // ── Detail row — row 2 (below major values) ─────────────────────────
+        const detailY = topY + 16 + SZ_MAJOR + 4;
+        this.altText.position.set(pad + inset, detailY);
+        this.spdText.position.set(pad + inset + this.altText.width + 10, detailY);
+
+        // ── Pause button — top-right ────────────────────────────────────────
+        this.pauseBtn.position.set(width - pad - PAUSE_W, topY + (statsH - PAUSE_H) / 2);
+
+        // ── Vocal bar — bottom strip ────────────────────────────────────────
+        const vocalW     = Math.max(80, width - pad * 2);
+        const vocalH     = VOCAL_H + 16 + 4; // label + bar + padding
+        const bottomPad  = Math.max(pad, safe.bottom + 8);
+        const vocalY     = height - bottomPad - vocalH;
 
         if (vocalW !== this.lastVocalW) {
             this.lastVocalW = vocalW;
+
+            // Rebuild plate
             this.vocalBar.destroy({ children: true });
             this.vocalPlate.removeChildren();
             this.vocalKenney = null;
+
             const vk = velocityUiArtReady() && createKenneyPanelNineSlice(vocalW, vocalH);
             if (vk) {
                 this.vocalKenney = vk;
-                vk.alpha = 0.88;
-                vk.tint = 0x2a2a40;
+                vk.alpha = 0.90;
+                vk.tint  = 0x1e2c3a;
                 this.vocalPlate.addChild(vk);
             }
-            const vocalLabel = new Text({
-                text: 'VOCAL',
-                style: new TextStyle({
-                    fill: GAME_COLORS.hud_vocal_label,
-                    fontSize: 10,
-                    fontFamily: GAME_FONTS.arcade,
-                    fontWeight: 'bold',
-                    letterSpacing: 2,
-                    dropShadow: { alpha: 0.8, blur: 2, color: 0x220033, distance: 0 },
-                }),
+
+            // Re-add label
+            this.vocalLabel = new Text({
+                text: 'VOCAL INPUT',
+                style: labelStyle(GAME_COLORS.hud_vocal_label),
             });
-            vocalLabel.position.set(10, 6);
-            this.vocalPlate.addChild(vocalLabel);
-            const barW = Math.max(60, vocalW - 24);
+            this.vocalLabel.position.set(12, 4);
+            this.vocalPlate.addChild(this.vocalLabel);
+
+            // Re-add bar
+            const barW   = Math.max(60, vocalW - 24);
             this.vocalBar = this.makeVocalBar(barW);
-            this.vocalBar.position.set(10, 18);
+            this.vocalBar.position.set(12, 16);
             this.vocalPlate.addChild(this.vocalBar);
         }
+
         this.vocalPlate.position.set(pad, vocalY);
 
+        // Fallback plate
         this.vocalFallback.clear();
         this.vocalFallback.visible = !this.vocalKenney;
         if (this.vocalFallback.visible) {
             this.vocalFallback.roundRect(0, 0, vocalW, vocalH, 8);
-            this.vocalFallback.fill({ color: GAME_COLORS.hud_bg, alpha: 0.78 });
-            this.vocalFallback.stroke({ color: GAME_COLORS.primary, width: 1, alpha: 0.35 });
+            this.vocalFallback.fill({ color: GAME_COLORS.hud_bg, alpha: 0.82 });
+            this.vocalFallback.stroke({ color: GAME_COLORS.primary, width: 1, alpha: 0.4 });
             this.vocalFallback.position.set(pad, vocalY);
         }
     }
 
+    // ── Update loop ─────────────────────────────────────────────────────────
+
     override update(_deltaTime: number): void {
         if (!this.container.visible) return;
+
         this.pauseBtn.visible = !GameState.paused;
+
         const h = getHudDataSource();
-        this.scoreText.text = `SCORE ${h.getScore()}`;
-        this.levelText.text = `LV ${h.getLevelId()}`;
-        this.vocalBar.setProgress(Math.round(h.getVocal01() * 100) / 100);
+
+        const score  = h.getScore();
+        const levelId = h.getLevelId();
+
+        this.scoreVal.text = String(score);
+        this.levelVal.text = String(levelId);
+
+        // Re-align detail row after score value width change
+        this.spdText.position.set(
+            this.altText.x + this.altText.width + 10,
+            this.altText.y,
+        );
+
         this.altText.text = `ALT ${h.getAltitudeDisplay()}m`;
-        this.spdText.text = `·  SPD ${Math.round(h.getForwardSpeed())}`;
-        this.spdText.position.set(this.altText.x + this.altText.width + 6, this.altText.y);
+        this.spdText.text = `SPD ${Math.round(h.getForwardSpeed())}`;
+
+        this.vocalBar.setProgress(Math.round(h.getVocal01() * 100) / 100);
     }
+
+    // ── Lifecycle ────────────────────────────────────────────────────────────
 
     show(): void {
         super.show();
     }
 
-    resize(width: number, height: number): void {
+    resize(_width: number, _height: number): void {
         this.layoutChrome();
     }
 }
