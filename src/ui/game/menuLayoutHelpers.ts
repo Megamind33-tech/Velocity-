@@ -1,7 +1,14 @@
 /**
- * Reusable Pixi menu layout primitives — Velocity mobile game UI.
- * Phases 1–7: role-based buttons, HUD chips, status strip, hero panel.
- * Portrait-mobile first. Kenney sprites + Graphics overlays; no DOM/CSS.
+ * menuLayoutHelpers — reusable Pixi menu layout primitives.
+ *
+ * Shape vocabulary (not all rectangles):
+ *   - Capsule HUD chips (radius = h/2)
+ *   - Segmented pilot strip (circular rank badge + bar + route chip)
+ *   - CTA button with corner tick marks
+ *   - Utility buttons with interior surface lift
+ *   - Avatar badge with glow ring + shine arc
+ *   - Info pill (fully rounded capsule)
+ *   - Utility row (backplate + gear + bold label)
  */
 
 import {
@@ -12,7 +19,7 @@ import {
     NineSliceSprite,
     Text,
 } from 'pixi.js';
-import { GAME_COLORS, GAME_FONTS, GAME_SIZES } from './GameUITheme';
+import { GAME_COLORS, GAME_FONTS } from './GameUITheme';
 import { createKenneyFramedPanelWithContent } from './kenneyNineSlice';
 import {
     economyButtonLabelStyle,
@@ -41,18 +48,13 @@ export const MENU_TIER_HEIGHT: Record<MenuButtonTier, number> = {
     utility:   40,
 };
 
-// ─── Phase 5: Role-based palette ──────────────────────────────────────────────
-// primary  = Mission Select (cyan, dominant)
-// utility  = Leaderboard, Achievements, Settings (steel-blue, calm)
-// economy  = Store, Rewards (warm gold, rewarding)
+// ─── Role palette ─────────────────────────────────────────────────────────────
 
 const ROLE_PALETTE = {
     primary: {
         bg:     0x051318,
         border: 0x00ffcc,
         shine:  0x55ffee,
-        text:   0xffffff,
-        shadow: 0x003322,
         tint:   0x22ccbb,
         radius: 10,
     },
@@ -60,8 +62,6 @@ const ROLE_PALETTE = {
         bg:     0x0b1520,
         border: 0x4d7fa8,
         shine:  0x6699bb,
-        text:   0xc8e4ff,
-        shadow: 0x000e1e,
         tint:   0x5588aa,
         radius: 8,
     },
@@ -69,8 +69,6 @@ const ROLE_PALETTE = {
         bg:     0x130e00,
         border: 0xffcc44,
         shine:  0xffe077,
-        text:   0xfff0cc,
-        shadow: 0x2a1400,
         tint:   0xffaa22,
         radius: 8,
     },
@@ -84,27 +82,35 @@ function tierToRole(tier: MenuButtonTier): ButtonRole {
     return 'utility';
 }
 
-// ─── Kenney nine-slice constants ──────────────────────────────────────────────
 const KS = { L: 56, R: 56, T: 20, B: 20 } as const;
 
-// ─── Phase 3 + 5: Role-based button factory ───────────────────────────────────
+// ─── Rank table (exported for callers) ───────────────────────────────────────
+
+const RANK_TABLE: [number, string][] = [
+    [20, 'ELITE'],
+    [15, 'VETERAN'],
+    [10, 'ACE'],
+    [6,  'AVIATOR'],
+    [3,  'PILOT'],
+    [1,  'CADET'],
+];
+
+/** Compute pilot rank name from highest unlocked level. */
+export function getPilotRank(maxUnlocked: number): string {
+    for (const [threshold, name] of RANK_TABLE) {
+        if (maxUnlocked >= threshold) return name;
+    }
+    return 'CADET';
+}
+
+// ─── Button factory ───────────────────────────────────────────────────────────
+
 /**
- * createMenuButton — role-differentiated game button.
+ * Role-based menu button.
  *
- * Tiers:
- *   cta       → primary: cyan border + shine, dominant weight
- *   secondary → utility: steel-blue, calm but polished
- *   economy   → economy: warm gold shine, rewarding feel
- *   utility   → utility: same as secondary, lower alpha
- *
- * Layers (bottom → top):
- *   1. Dark base fill
- *   2. Kenney NineSlice mid (role-tinted) when art is loaded
- *   3. Role border stroke
- *   4. Top shine strip
- *   5. CTA inner glow ring (primary only)
- *   6. Label text (Phase 4 typography)
- *   7. Press/release scale states (Phase 6)
+ * primary (CTA):  cyan border + shine + corner tick marks — dominant
+ * utility:        steel-blue + subtle interior surface lift — calm, polished
+ * economy:        warm gold + handled by menuRewardComponents for split layout
  */
 export function createMenuButton(
     label:   string,
@@ -121,14 +127,23 @@ export function createMenuButton(
     root.eventMode = 'static';
     root.cursor    = 'pointer';
 
-    // 1. Dark base plate
+    // 1. Dark base
     const base = new Graphics();
     base.roundRect(0, 0, width, h, P.radius);
     base.fill({ color: P.bg, alpha: 0.97 });
     base.eventMode = 'none';
     root.addChild(base);
 
-    // 2. Kenney NineSlice mid-layer (role-tinted) if art is loaded
+    // 2. Subtle interior surface lift for utility buttons (reduces flat feel)
+    if (role === 'utility') {
+        const lift = new Graphics();
+        lift.roundRect(2, 2, width - 4, h - 4, P.radius - 1);
+        lift.fill({ color: 0xffffff, alpha: 0.035 });
+        lift.eventMode = 'none';
+        root.addChild(lift);
+    }
+
+    // 3. Kenney NineSlice mid-layer (role-tinted) when art is loaded
     if (velocityUiArtReady()) {
         const key: VelocityUiTextureKey =
             role === 'primary' ? 'button_primary' :
@@ -146,24 +161,16 @@ export function createMenuButton(
             spr.eventMode = 'none';
             root.addChild(spr);
 
-            // Phase 5: ColorMatrixFilter for role emphasis
+            // ColorMatrixFilter per role
             const cmf = new ColorMatrixFilter();
-            if (role === 'primary') {
-                cmf.saturate(0.3, true);
-                cmf.brightness(1.06, true);
-            } else if (role === 'economy') {
-                cmf.saturate(0.35, true);
-                cmf.brightness(1.04, true);
-            } else {
-                // utility: cool desaturated tone
-                cmf.saturate(-0.2, true);
-                cmf.brightness(0.98, true);
-            }
+            if (role === 'primary')      { cmf.saturate(0.3, true); cmf.brightness(1.06, true); }
+            else if (role === 'economy') { cmf.saturate(0.35, true); cmf.brightness(1.04, true); }
+            else                         { cmf.saturate(-0.2, true); cmf.brightness(0.98, true); }
             spr.filters = [cmf];
         }
     }
 
-    // 3. Role border
+    // 4. Role border
     const border = new Graphics();
     border.roundRect(1, 1, width - 2, h - 2, P.radius - 1);
     border.stroke({
@@ -174,7 +181,7 @@ export function createMenuButton(
     border.eventMode = 'none';
     root.addChild(border);
 
-    // 4. Top shine strip — physical highlight band
+    // 5. Top shine strip
     const shineH = role === 'primary' ? 3 : 2;
     const shine  = new Graphics();
     shine.roundRect(6, 2, width - 12, shineH, 2);
@@ -185,16 +192,34 @@ export function createMenuButton(
     shine.eventMode = 'none';
     root.addChild(shine);
 
-    // 5. CTA inner glow ring (primary only — Phase 5 discipline)
+    // 6. CTA extras: inner glow ring + corner tick marks (game-UI identity detail)
     if (role === 'primary') {
+        // Inner glow ring
         const glow = new Graphics();
         glow.roundRect(3, 3, width - 6, h - 6, P.radius - 2);
         glow.stroke({ color: P.border, width: 1, alpha: 0.16 });
         glow.eventMode = 'none';
         root.addChild(glow);
+
+        // Corner tick marks — L-shaped brackets at each corner
+        const tl = 7;   // tick length
+        const tm = 4;   // tick margin from edge
+        const ta = 0.55;
+        const ticks = new Graphics();
+        // Top-left
+        ticks.moveTo(tm, tm + tl).lineTo(tm, tm).lineTo(tm + tl, tm);
+        // Top-right
+        ticks.moveTo(width - tm - tl, tm).lineTo(width - tm, tm).lineTo(width - tm, tm + tl);
+        // Bottom-left
+        ticks.moveTo(tm, h - tm - tl).lineTo(tm, h - tm).lineTo(tm + tl, h - tm);
+        // Bottom-right
+        ticks.moveTo(width - tm - tl, h - tm).lineTo(width - tm, h - tm).lineTo(width - tm, h - tm - tl);
+        ticks.stroke({ color: P.border, width: 1.5, alpha: ta });
+        ticks.eventMode = 'none';
+        root.addChild(ticks);
     }
 
-    // 6. Label — shared text style by role (blur-free, contrast-first)
+    // 7. Label
     const labelStyle =
         role === 'primary' ? primaryButtonLabelStyle() :
         role === 'economy' ? economyButtonLabelStyle() :
@@ -204,7 +229,7 @@ export function createMenuButton(
     t.position.set(width / 2, h / 2);
     root.addChild(t);
 
-    // 7. Interaction states — Phase 6
+    // 8. Interaction states
     const stop = (e: FederatedPointerEvent) => e.stopPropagation();
     root.on('pointerdown',     (e: FederatedPointerEvent) => { stop(e); root.scale.set(0.97); });
     root.on('pointerup',       (e: FederatedPointerEvent) => { stop(e); root.scale.set(1.0);  onClick(); });
@@ -212,109 +237,128 @@ export function createMenuButton(
     root.on('pointercancel',   () => root.scale.set(1.0));
 
     if (tier === 'utility') root.alpha = 0.90;
-
     return root;
 }
 
-// ─── HUD chip ─────────────────────────────────────────────────────────────────
+// ─── Capsule HUD stat chip ────────────────────────────────────────────────────
+
 /**
- * Compact HUD stat chip — backplate, accent line, micro-label, bold value.
- * Typography via shared style factories; no inline blur.
+ * Capsule-shaped HUD chip — radius = h/2 gives fully rounded ends.
+ * Shape is visually distinct from rectangular panels.
+ * Children: [bg, accentLine, label, value] — indices match MainMenuScreen refs.
  */
 export function createHudChip(
-    label: string,
-    value: string,
-    width: number,
+    label:       string,
+    value:       string,
+    width:       number,
     accentColor: number = GAME_COLORS.accent_gold,
 ): Container {
     const root = new Container();
-    const h    = 36;
+    const h    = 38;
+    const r    = h / 2;   // CAPSULE
 
-    // Backplate
+    // Capsule backplate
     const bg = new Graphics();
-    bg.roundRect(0, 0, width, h, 8);
+    bg.roundRect(0, 0, width, h, r);
     bg.fill({ color: 0x060e1a, alpha: 0.84 });
-    bg.stroke({ color: GAME_COLORS.primary, width: 1, alpha: 0.35 });
+    bg.stroke({ color: accentColor, width: 1, alpha: 0.42 });
     root.addChild(bg);
 
-    // Top accent line (role colour)
+    // Top accent strip (inset from rounded ends)
     const accentLine = new Graphics();
-    accentLine.roundRect(4, 0, width - 8, 2, 1);
-    accentLine.fill({ color: accentColor, alpha: 0.50 });
+    accentLine.roundRect(r / 2, 0, width - r, 2, 1);
+    accentLine.fill({ color: accentColor, alpha: 0.52 });
     root.addChild(accentLine);
 
-    // Micro-label — crisp, not muddy
+    // Micro-label
     const lab = new Text({ text: label, style: hudLabelStyle() });
-    lab.position.set(7, 5);
+    lab.position.set(r / 2 + 2, 5);
     root.addChild(lab);
 
-    // Value — bold, accent-coloured, sharp 1 px shadow
+    // Value
     const val = new Text({ text: value, style: hudValueStyle(accentColor) });
-    val.position.set(7, 17);
+    val.position.set(r / 2 + 2, 17);
     root.addChild(val);
 
     return root;
 }
 
-// ─── Phase 4 + STATUS-strip fix: Pilot status strip ──────────────────────────
-// Replaces the dead "STATUS" label slab with a real, data-driven status row.
-
-const RANK_TABLE: [number, string][] = [
-    [20, 'ELITE'],
-    [15, 'VETERAN'],
-    [10, 'ACE'],
-    [6,  'AVIATOR'],
-    [3,  'PILOT'],
-    [1,  'CADET'],
-];
-
-function getPilotRank(maxUnlocked: number): string {
-    for (const [threshold, name] of RANK_TABLE) {
-        if (maxUnlocked >= threshold) return name;
-    }
-    return 'CADET';
-}
+// ─── Segmented pilot status strip ────────────────────────────────────────────
 
 /**
- * createPilotStatusStrip — replaces the old empty STATUS backplate.
+ * Replaces the flat STATUS slab.
  *
- * Layout (left → right):
- *   [PILOT label + rank name]  [────progress bar────]  [unlocked/total ROUTES]
+ * Segments (left → right):
+ *   [circular rank badge] | [PILOT / rank name] | [──bar──] | [1/20 ROUTES]
+ *
+ * The circular badge gives this strip shape variety vs the rectangular panels.
  */
 export function createPilotStatusStrip(
     width: number,
     opts: { maxUnlocked: number; unlockedCount: number; totalLevels: number },
 ): Container {
     const { maxUnlocked, unlockedCount, totalLevels } = opts;
-    const h    = 44;
+    const h    = 48;
     const rank = getPilotRank(maxUnlocked);
     const root = new Container();
 
-    // Backplate
+    // ── Backplate ──────────────────────────────────────────────────────────
     const bg = new Graphics();
     bg.roundRect(0, 0, width, h, 10);
     bg.fill({ color: 0x060c18, alpha: 0.90 });
     bg.stroke({ color: 0x253548, width: 1, alpha: 0.75 });
     root.addChild(bg);
 
-    // Top accent stripe
     const topLine = new Graphics();
     topLine.roundRect(22, 0, width - 44, 1.5, 1);
     topLine.fill({ color: GAME_COLORS.primary, alpha: 0.18 });
     root.addChild(topLine);
 
-    // Left block — "PILOT" micro-label (top) + rank name (bottom)
+    // ── Circular rank badge (left anchor — shape variety) ─────────────────
+    const badgeR  = 17;
+    const badgeCX = 14 + badgeR;
+    const badgeCY = h / 2;
+
+    const badgeBg = new Graphics();
+    badgeBg.circle(badgeCX, badgeCY, badgeR);
+    badgeBg.fill({ color: 0x0a1820, alpha: 0.95 });
+    badgeBg.stroke({ color: GAME_COLORS.primary, width: 1.5, alpha: 0.65 });
+    root.addChild(badgeBg);
+
+    // Rank initial letter
+    const initial = rank.charAt(0);
+    const initText = new Text({
+        text:  initial,
+        style: {
+            fill:       GAME_COLORS.primary,
+            fontSize:   14,
+            fontWeight: 'bold',
+            fontFamily: GAME_FONTS.arcade,
+        },
+    });
+    initText.anchor.set(0.5);
+    initText.position.set(badgeCX, badgeCY);
+    root.addChild(initText);
+
+    // Segment separator after badge
+    const sep1 = new Graphics();
+    sep1.moveTo(badgeCX + badgeR + 6, 8).lineTo(badgeCX + badgeR + 6, h - 8);
+    sep1.stroke({ color: GAME_COLORS.primary, width: 1, alpha: 0.18 });
+    root.addChild(sep1);
+
+    // ── Left text block: PILOT label + rank name ──────────────────────────
+    const textX = badgeCX + badgeR + 12;
     const pilotLabel = new Text({ text: 'PILOT', style: hudLabelStyle() });
-    pilotLabel.position.set(12, 6);
+    pilotLabel.position.set(textX, 8);
     root.addChild(pilotLabel);
 
     const rankText = new Text({ text: rank, style: pilotRankStyle() });
-    rankText.position.set(12, 20);
+    rankText.position.set(textX, 22);
     root.addChild(rankText);
 
-    // Right block — value (right-anchored) + "ROUTES" micro-label left of it
+    // ── Right block: route count ──────────────────────────────────────────
     const routesText = new Text({
-        text: `${unlockedCount}/${totalLevels}`,
+        text:  `${unlockedCount}/${totalLevels}`,
         style: hudValueStyle(GAME_COLORS.accent_gold),
     });
     routesText.anchor.set(1, 0.5);
@@ -326,45 +370,49 @@ export function createPilotStatusStrip(
     routesLabel.position.set(width - 10 - routesText.width - 6, h / 2);
     root.addChild(routesLabel);
 
-    // Center progress bar
-    const barPadLeft  = 94;
-    const barPadRight = Math.max(78, routesText.width + routesLabel.width + 28);
-    const barW  = Math.max(40, width - barPadLeft - barPadRight);
+    // Segment separator before routes
+    const routesZoneX = width - 10 - routesText.width - routesLabel.width - 16;
+    const sep2 = new Graphics();
+    sep2.moveTo(routesZoneX, 8).lineTo(routesZoneX, h - 8);
+    sep2.stroke({ color: GAME_COLORS.primary, width: 1, alpha: 0.18 });
+    root.addChild(sep2);
+
+    // ── Progress bar (center zone) ────────────────────────────────────────
+    const barX  = textX + Math.max(rankText.width, pilotLabel.width) + 10;
+    const barW  = Math.max(32, routesZoneX - barX - 8);
     const barH  = 6;
-    const barX  = barPadLeft;
     const barY  = (h - barH) / 2;
     const prog  = totalLevels > 0 ? Math.min(1, unlockedCount / totalLevels) : 0;
 
     const barBg = new Graphics();
     barBg.roundRect(barX, barY, barW, barH, 3);
     barBg.fill({ color: 0x0a1c2e, alpha: 0.92 });
-    barBg.stroke({ color: 0x1a3a55, width: 1, alpha: 0.7 });
+    barBg.stroke({ color: 0x1a3a55, width: 1, alpha: 0.70 });
     root.addChild(barBg);
 
     if (prog > 0) {
         const fillW  = Math.max(4, (barW - 2) * prog);
-        const barFill = new Graphics();
-        barFill.roundRect(barX + 1, barY + 1, fillW, barH - 2, 2);
-        barFill.fill({ color: GAME_COLORS.primary, alpha: 0.88 });
-        root.addChild(barFill);
+        const fill   = new Graphics();
+        fill.roundRect(barX + 1, barY + 1, fillW, barH - 2, 2);
+        fill.fill({ color: GAME_COLORS.primary, alpha: 0.88 });
+        root.addChild(fill);
     }
 
     return root;
 }
 
-// ─── Compact info pill ────────────────────────────────────────────────────────
-/** Small pill used inside the hero panel (e.g. mic tip). */
+// ─── Info pill ────────────────────────────────────────────────────────────────
+
+/** Capsule info pill (fully rounded). Text is helperTextStyle. */
 export function createInfoPill(text: string, maxWidth: number): Container {
     const root = new Container();
     const padX = 10;
     const padY = 4;
-    // helperTextStyle gives 0xaec8d8 fill — legible, not ghosted
-    const t = new Text({ text, style: helperTextStyle() });
-    const w = Math.min(maxWidth, t.width + padX * 2);
-    const h = t.height + padY * 2;
-    const g = new Graphics();
-    g.roundRect(0, 0, w, h, h / 2);
-    // Slightly lighter fill so text isn't fighting darkness-on-darkness
+    const t    = new Text({ text, style: helperTextStyle() });
+    const w    = Math.min(maxWidth, t.width + padX * 2);
+    const h    = t.height + padY * 2;
+    const g    = new Graphics();
+    g.roundRect(0, 0, w, h, h / 2);  // capsule
     g.fill({ color: 0x0d1e30, alpha: 0.72 });
     g.stroke({ color: GAME_COLORS.primary, width: 1, alpha: 0.32 });
     root.addChild(g);
@@ -373,8 +421,9 @@ export function createInfoPill(text: string, maxWidth: number): Container {
     return root;
 }
 
-// ─── Phase 2 (improved): Avatar/pilot badge ───────────────────────────────────
-/** Circular pilot badge: outer accent ring + initial letter. */
+// ─── Avatar / pilot badge ─────────────────────────────────────────────────────
+
+/** Circular pilot badge with glow ring, inner shine arc, and initial letter. */
 export function createAvatarBadge(size: number, initial: string = 'V'): Container {
     const root = new Container();
     const cx   = size / 2;
@@ -383,8 +432,8 @@ export function createAvatarBadge(size: number, initial: string = 'V'): Containe
 
     // Outer glow ring
     const glow = new Graphics();
-    glow.circle(cx, cy, r + 2);
-    glow.fill({ color: GAME_COLORS.primary, alpha: 0.12 });
+    glow.circle(cx, cy, r + 3);
+    glow.fill({ color: GAME_COLORS.primary, alpha: 0.10 });
     root.addChild(glow);
 
     // Background disc
@@ -400,9 +449,9 @@ export function createAvatarBadge(size: number, initial: string = 'V'): Containe
     shine.stroke({ color: 0xffffff, width: 1.5, alpha: 0.22 });
     root.addChild(shine);
 
-    // Initial letter — same discipline as hudValueStyle: sharp 1 px shadow, no blur haze
+    // Initial letter
     const letter = new Text({
-        text: initial,
+        text:  initial,
         style: {
             fill:       GAME_COLORS.primary,
             fontSize:   Math.floor(size * 0.42),
@@ -418,11 +467,9 @@ export function createAvatarBadge(size: number, initial: string = 'V'): Containe
     return root;
 }
 
-// ─── Hero panel ───────────────────────────────────────────────────────────────
-/**
- * Hero panel: framed inner area for title + subtitle + pill.
- * Returns { root, content } — content is positioned ready for children.
- */
+// ─── Hero panel (kept for backward-compat — MainMenuScreen now uses buildHeroModule) ─
+
+/** @deprecated Use buildHeroModule from menuHeroComposer instead. */
 export function createHeroPanel(
     width:  number,
     height: number,
@@ -431,50 +478,40 @@ export function createHeroPanel(
     const pair = createKenneyFramedPanelWithContent(width, height);
 
     if (pair) {
-        // Slightly brighter tint so title has a clean, non-muddy surface
         pair.root.alpha = 0.96;
         pair.root.tint  = 0x2e3f55;
         const innerW = Math.max(80, width - 44);
         const innerH = Math.max(60, height - 48);
-        // Bottom accent glow line — slightly stronger for definition
-        const glow = new Graphics();
-        glow.roundRect(0, innerH * 0.84, innerW, 2, 1);
-        glow.fill({ color: GAME_COLORS.primary, alpha: 0.25 });
-        pair.content.addChildAt(glow, 0);
+        const glowLine = new Graphics();
+        glowLine.roundRect(0, innerH * 0.84, innerW, 2, 1);
+        glowLine.fill({ color: GAME_COLORS.primary, alpha: 0.25 });
+        pair.content.addChildAt(glowLine, 0);
         root.addChild(pair.root);
         return { root, content: pair.content };
     }
 
-    // Fallback: pure Graphics — lighter navy for cleaner title contrast
     const g = new Graphics();
     g.roundRect(0, 0, width, height, 14);
     g.fill({ color: 0x121e30, alpha: 0.95 });
     g.stroke({ color: GAME_COLORS.primary, width: 2, alpha: 0.55 });
     root.addChild(g);
-
-    // Top shine — slightly stronger
     const shine = new Graphics();
     shine.roundRect(8, 2, width - 16, 2, 1);
     shine.fill({ color: 0x55eedd, alpha: 0.38 });
     root.addChild(shine);
-
     const content = new Container();
     content.position.set(18, 16);
     root.addChild(content);
     return { root, content };
 }
 
-// ─── Stats strip backplate (kept for backward-compat) ─────────────────────────
-/** @deprecated Use createPilotStatusStrip for data-driven display. */
+// ─── Stats strip backplate (backward-compat) ─────────────────────────────────
+
+/** @deprecated Use createPilotStatusStrip. */
 export function createStatsStripBackplate(width: number, height: number): Container {
     const root = new Container();
     const pair = createKenneyFramedPanelWithContent(width, height);
-    if (pair) {
-        pair.root.alpha = 0.88;
-        pair.root.tint  = 0x1e2d40;
-        root.addChild(pair.root);
-        return root;
-    }
+    if (pair) { pair.root.alpha = 0.88; pair.root.tint = 0x1e2d40; root.addChild(pair.root); return root; }
     const g = new Graphics();
     g.roundRect(0, 0, width, height, 10);
     g.fill({ color: 0x080f1a, alpha: 0.88 });
@@ -483,11 +520,9 @@ export function createStatsStripBackplate(width: number, height: number): Contai
     return root;
 }
 
-// ─── Phase 3 (improved): Utility row (Settings) ───────────────────────────────
-/**
- * Low-priority tappable row — settings and similar utility controls.
- * Less visual weight than any button tier; still polished and tappable.
- */
+// ─── Utility row (Settings) ───────────────────────────────────────────────────
+
+/** Low-priority settings row — bold, readable, still clearly subordinate. */
 export function createUtilityRow(
     label:   string,
     onClick: () => void,
@@ -498,7 +533,6 @@ export function createUtilityRow(
     root.cursor    = 'pointer';
     const h = 38;
 
-    // Subtle backplate
     const bg = new Graphics();
     bg.roundRect(0, 0, width, h, 8);
     bg.fill({ color: 0xffffff, alpha: 0.035 });
@@ -506,19 +540,16 @@ export function createUtilityRow(
     bg.eventMode = 'none';
     root.addChild(bg);
 
-    // Label — footerUtilityLabelStyle: bold, 2.5 letter-spacing, not ghosted
     const t = new Text({ text: label, style: footerUtilityLabelStyle() });
     t.anchor.set(0.5, 0.5);
     t.position.set(width / 2, h / 2);
     root.addChild(t);
 
-    // Gear icon — slightly brighter than before; vertically baseline-matched to label
     const icon = new Text({
-        text: '⚙',
+        text:  '⚙',
         style: { fill: 0x7799aa, fontSize: 12 },
     });
     icon.anchor.set(1, 0.5);
-    // Right edge of icon sits 6 px left of label's left edge
     icon.position.set(width / 2 - t.width / 2 - 6, h / 2);
     root.addChild(icon);
 

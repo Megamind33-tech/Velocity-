@@ -1,7 +1,6 @@
 /**
  * Main menu — portrait game layout.
- * Phases 1–7: structured containers, premium HUD, role-based buttons,
- * strong typography, palette discipline, idle animation, final polish.
+ * Wires all UI modules: hero, HUD chips, pilot strip, CTA, utility, reward buttons.
  */
 
 import { Application, Container, Text } from 'pixi.js';
@@ -12,58 +11,57 @@ import { getMainMenuProgress, getMenuHighScore } from '../../../data/localProgre
 import { ResponsiveUIManager } from '../../ResponsiveUIManager';
 import {
     createAvatarBadge,
-    createHeroPanel,
     createHudChip,
-    createInfoPill,
     createMenuButton,
     createPilotStatusStrip,
     createUtilityRow,
+    getPilotRank,
     MENU_TIER_HEIGHT,
 } from '../menuLayoutHelpers';
-import { heroSubtitleStyle, heroTitleStyle } from '../menuTextStyles';
+import { buildHeroModule } from '../menuHeroComposer';
+import { createRewardButton } from '../menuRewardComponents';
 import { mountVelocityShell, resizeVelocityShell, type VelocityShellParts } from '../velocityScreenShell';
 
 // ─── Layout rhythm ────────────────────────────────────────────────────────────
 const GAP = { xs: 6, sm: 10, md: 14, lg: 20, xl: 26 } as const;
 
-// ─── Idle animation constants (Phase 6) ──────────────────────────────────────
-// CTA breathes at this angular frequency (rad/s equivalent, applied per frame dt)
+// ─── Idle animation constants ─────────────────────────────────────────────────
 const CTA_PULSE_SPEED    = 0.048;
-const CTA_PULSE_STRENGTH = 0.013; // max scale delta from 1.0
+const CTA_PULSE_STRENGTH = 0.013;
 const ECO_PULSE_SPEED    = 0.072;
-const ECO_PULSE_STRENGTH = 0.018; // alpha delta around base alpha
+const ECO_PULSE_STRENGTH = 0.018;
 
 export class MainMenuScreen extends BaseGameScreen {
     private shell!: VelocityShellParts;
 
     // Phase 1: role-based containers
-    readonly topHudContainer        = new Container();
-    readonly titleHeroContainer     = new Container();
-    readonly statsStripContainer    = new Container();
-    readonly mainMenuContainer      = new Container();
-    readonly secondaryMenuContainer = new Container();
-    readonly economyRowContainer    = new Container();
+    readonly topHudContainer          = new Container();
+    readonly titleHeroContainer       = new Container();
+    readonly statsStripContainer      = new Container();
+    readonly mainMenuContainer        = new Container();
+    readonly secondaryMenuContainer   = new Container();
+    readonly economyRowContainer      = new Container();
     readonly floatingActionsContainer = new Container();
 
-    // Phase 6: live references for animation
+    // Animation refs
     private _ctaBtn:      Container | null = null;
     private _storeBtn:    Container | null = null;
     private _rewardsBtn:  Container | null = null;
     private _tick = 0;
 
-    // Phase 4: live stat text refs for refresh
+    // Live HUD text refs (child indices: 0=bg, 1=accentLine, 2=label, 3=value)
     private _chipScoreVal!: Text;
     private _chipRankVal!:  Text;
     private _chipStreakVal!: Text;
 
     constructor(app: Application) {
         super(app);
-        this.topHudContainer.label        = 'topHudContainer';
-        this.titleHeroContainer.label     = 'titleHeroContainer';
-        this.statsStripContainer.label    = 'statsStripContainer';
-        this.mainMenuContainer.label      = 'mainMenuContainer';
-        this.secondaryMenuContainer.label = 'secondaryMenuContainer';
-        this.economyRowContainer.label    = 'economyRowContainer';
+        this.topHudContainer.label          = 'topHudContainer';
+        this.titleHeroContainer.label       = 'titleHeroContainer';
+        this.statsStripContainer.label      = 'statsStripContainer';
+        this.mainMenuContainer.label        = 'mainMenuContainer';
+        this.secondaryMenuContainer.label   = 'secondaryMenuContainer';
+        this.economyRowContainer.label      = 'economyRowContainer';
         this.floatingActionsContainer.label = 'floatingActionsContainer';
 
         this.setupUI();
@@ -72,11 +70,7 @@ export class MainMenuScreen extends BaseGameScreen {
     // ─── Setup ───────────────────────────────────────────────────────────────
 
     private setupUI(): void {
-        const w = this.app.screen.width;
-        const h = this.app.screen.height;
-
-        this.shell = mountVelocityShell(this.container, this.app, 0.50);
-
+        this.shell = mountVelocityShell(this.container, this.app, 0.48);
         this.container.addChild(
             this.topHudContainer,
             this.titleHeroContainer,
@@ -86,8 +80,7 @@ export class MainMenuScreen extends BaseGameScreen {
             this.economyRowContainer,
             this.floatingActionsContainer,
         );
-
-        this.rebuildLayout(w, h);
+        this.rebuildLayout(this.app.screen.width, this.app.screen.height);
     }
 
     // ─── Layout metrics ───────────────────────────────────────────────────────
@@ -110,9 +103,8 @@ export class MainMenuScreen extends BaseGameScreen {
         const mx   = this.marginX(screenW, cw);
         let   y    = safe.top + GAP.sm;
 
-        resizeVelocityShell(this.shell, this.container, screenW, screenH, 0.50);
+        resizeVelocityShell(this.shell, this.container, screenW, screenH, 0.48);
 
-        // Clear all containers
         this.topHudContainer.removeChildren();
         this.titleHeroContainer.removeChildren();
         this.statsStripContainer.removeChildren();
@@ -121,26 +113,24 @@ export class MainMenuScreen extends BaseGameScreen {
         this.economyRowContainer.removeChildren();
         this.floatingActionsContainer.removeChildren();
 
-        // Reset animation refs
         this._ctaBtn     = null;
         this._storeBtn   = null;
         this._rewardsBtn = null;
 
-        // ── Phase 2: Top HUD ─────────────────────────────────────────────────
-        // [BEST chip][SECTOR chip][ROUTES chip]          [avatar badge]
-        const hudH      = 38;
+        // ── Top HUD: capsule chips + avatar badge ─────────────────────────
+        const hudH      = 40;   // chipHeight=38 + 2px breathing room
         const badgeSize = 44;
         const chipW     = Math.floor((cw - GAP.sm * 2 - badgeSize - GAP.sm) / 3);
+        const prog      = getMainMenuProgress();
 
-        const chipScore  = createHudChip('BEST',   String(getMenuHighScore()),          chipW, GAME_COLORS.accent_gold);
-        const prog       = getMainMenuProgress();
-        const chipRank   = createHudChip('SECTOR', `${prog.maxUnlocked}`,               chipW, GAME_COLORS.primary);
-        const chipStreak = createHudChip('ROUTES', `${prog.unlockedCount}`,             chipW, 0x88ddff);
+        const chipScore  = createHudChip('BEST',   String(getMenuHighScore()),  chipW, GAME_COLORS.accent_gold);
+        const chipRank   = createHudChip('SECTOR', `${prog.maxUnlocked}`,       chipW, GAME_COLORS.primary);
+        const chipStreak = createHudChip('ROUTES', `${prog.unlockedCount}`,     chipW, 0x88ddff);
 
         chipRank.position.set(chipW + GAP.sm, 0);
         chipStreak.position.set((chipW + GAP.sm) * 2, 0);
 
-        // Capture live text refs (child index: 0=bg, 1=accentLine, 2=label, 3=value)
+        // indices: 0=bg, 1=accentLine, 2=label, 3=value
         this._chipScoreVal  = chipScore.children[3]  as Text;
         this._chipRankVal   = chipRank.children[3]   as Text;
         this._chipStreakVal  = chipStreak.children[3] as Text;
@@ -152,49 +142,29 @@ export class MainMenuScreen extends BaseGameScreen {
         this.topHudContainer.position.set(mx, y);
         y += hudH + GAP.md;
 
-        // ── Phase 4: Title hero panel ─────────────────────────────────────────
-        const heroH      = Math.min(130, Math.max(104, Math.floor(screenH * 0.165)));
-        const hero       = createHeroPanel(cw, heroH);
-        const innerCentX = Math.max(160, cw - badgeSize - GAP.sm) / 2;
-
-        // VELOCITY — hero identity, maximum contrast, no blur haze
-        const titleFontSize = Math.min(36, Math.max(28, Math.floor(screenH * 0.048)));
-        const title = new Text({
-            text:  'VELOCITY',
-            style: heroTitleStyle(titleFontSize),
+        // ── Hero module — voice/flight identity zone ───────────────────────
+        const heroH = Math.min(140, Math.max(112, Math.floor(screenH * 0.175)));
+        const hero  = buildHeroModule(cw, heroH, {
+            title:     'VELOCITY',
+            subtitle:  'Voice-Powered Flight',
+            hint:      'Mic required · tap to begin',
+            pilotRank: getPilotRank(prog.maxUnlocked),
         });
-        title.anchor.set(0.5, 0);
-        title.position.set(innerCentX, 8);
-
-        // Subtitle — legible secondary; tighter spacing below title
-        const sub = new Text({
-            text:  'Voice-Powered Flight',
-            style: heroSubtitleStyle(),
-        });
-        sub.anchor.set(0.5, 0);
-        sub.position.set(innerCentX, title.y + titleFontSize + 8);
-
-        // Tip pill — context, lowest hierarchy
-        const pill = createInfoPill('Mic required · tap to begin', cw - 52);
-        pill.position.set(innerCentX - pill.width / 2, sub.y + 20);
-
-        hero.content.addChild(title, sub, pill);
-        this.titleHeroContainer.addChild(hero.root);
+        this.titleHeroContainer.addChild(hero);
         this.titleHeroContainer.position.set(mx, y);
         y += heroH + GAP.sm;
 
-        // ── Phase 4 (STATUS fix): Pilot status strip ──────────────────────────
-        const stripH = 44;
-        const strip  = createPilotStatusStrip(cw, {
+        // ── Pilot status strip — segmented with circular badge ─────────────
+        const strip = createPilotStatusStrip(cw, {
             maxUnlocked:   prog.maxUnlocked,
             unlockedCount: prog.unlockedCount,
             totalLevels:   prog.totalLevels,
         });
         this.statsStripContainer.addChild(strip);
         this.statsStripContainer.position.set(mx, y);
-        y += stripH + GAP.lg;
+        y += 48 + GAP.lg;   // strip height = 48
 
-        // ── Phase 3: Primary CTA — Mission Select ─────────────────────────────
+        // ── Mission Select — dominant CTA ─────────────────────────────────
         const cta = createMenuButton(
             'MISSION SELECT', 'cta', 'primary',
             () => gameFlow().openMissionSelect(),
@@ -205,7 +175,7 @@ export class MainMenuScreen extends BaseGameScreen {
         this.mainMenuContainer.position.set(mx, y);
         y += MENU_TIER_HEIGHT.cta + GAP.md;
 
-        // ── Phase 3: Utility buttons — Leaderboard, Achievements ─────────────
+        // ── Utility: Leaderboard + Achievements ───────────────────────────
         const lb = createMenuButton(
             'LEADERBOARD', 'secondary', 'secondary',
             () => this.uiManager.showScreen('leaderboard', true),
@@ -221,26 +191,27 @@ export class MainMenuScreen extends BaseGameScreen {
         this.secondaryMenuContainer.position.set(mx, y);
         y += MENU_TIER_HEIGHT.secondary * 2 + GAP.sm + GAP.md;
 
-        // ── Phase 3: Economy row — Store + Rewards ────────────────────────────
+        // ── Economy row — reward buttons with icon sockets ────────────────
         const ecoW    = Math.floor((cw - GAP.sm) / 2);
-        const store   = createMenuButton(
-            'STORE',   'economy', 'accent',
+        const ecoH    = MENU_TIER_HEIGHT.economy;
+        const store   = createRewardButton(
+            'store', 'STORE',
             () => this.uiManager.showScreen('store', true),
-            ecoW,
+            ecoW, ecoH,
         );
-        const rewards = createMenuButton(
-            'REWARDS', 'economy', 'accent',
+        const rewards = createRewardButton(
+            'rewards', 'REWARDS',
             () => this.uiManager.showScreen('rewards', true),
-            ecoW,
+            ecoW, ecoH,
         );
         rewards.position.set(ecoW + GAP.sm, 0);
         this._storeBtn   = store;
         this._rewardsBtn = rewards;
         this.economyRowContainer.addChild(store, rewards);
         this.economyRowContainer.position.set(mx, y);
-        y += MENU_TIER_HEIGHT.economy + GAP.xl;
+        y += ecoH + GAP.xl;
 
-        // ── Phase 3: Settings — lowest visual priority ────────────────────────
+        // ── Settings — lowest visual priority ─────────────────────────────
         const settings = createUtilityRow(
             'SETTINGS',
             () => this.uiManager.showScreen('settings', true),
@@ -252,21 +223,17 @@ export class MainMenuScreen extends BaseGameScreen {
         this._refreshChipTexts();
     }
 
-    // ─── Stats refresh ────────────────────────────────────────────────────────
+    // ─── Chip text refresh ────────────────────────────────────────────────────
 
     private _refreshChipTexts(): void {
         if (this._chipScoreVal)  this._chipScoreVal.text  = String(getMenuHighScore());
-        const prog = getMainMenuProgress();
-        if (this._chipRankVal)   this._chipRankVal.text   = `${prog.maxUnlocked}`;
-        if (this._chipStreakVal) this._chipStreakVal.text  = `${prog.unlockedCount}`;
+        const p = getMainMenuProgress();
+        if (this._chipRankVal)   this._chipRankVal.text   = `${p.maxUnlocked}`;
+        if (this._chipStreakVal) this._chipStreakVal.text  = `${p.unlockedCount}`;
     }
 
-    // ─── Phase 6: Idle animation update ──────────────────────────────────────
-    /**
-     * Called each frame by GameUIManager.update().
-     * CTA: gentle scale breathing so it reads as the live action.
-     * Economy: soft alpha pulse — reward-aware without being loud.
-     */
+    // ─── Idle animation ───────────────────────────────────────────────────────
+
     update(deltaTime: number): void {
         if (!this.container.visible) return;
 
@@ -278,19 +245,14 @@ export class MainMenuScreen extends BaseGameScreen {
             this._ctaBtn.scale.set(s);
         }
 
-        // Economy buttons — mild alpha shimmer (reward hint, different phase)
-        if (this._storeBtn) {
-            // Don't override alpha if pointer is held (scale !== 1 implies pressed)
-            if (this._storeBtn.scale.x > 0.98) {
-                this._storeBtn.alpha =
-                    0.92 + Math.sin(this._tick * ECO_PULSE_SPEED + Math.PI * 0.5) * ECO_PULSE_STRENGTH;
-            }
+        // Economy buttons — alpha shimmer at offset phases
+        if (this._storeBtn && this._storeBtn.scale.x > 0.98) {
+            this._storeBtn.alpha =
+                0.92 + Math.sin(this._tick * ECO_PULSE_SPEED + Math.PI * 0.5) * ECO_PULSE_STRENGTH;
         }
-        if (this._rewardsBtn) {
-            if (this._rewardsBtn.scale.x > 0.98) {
-                this._rewardsBtn.alpha =
-                    0.92 + Math.sin(this._tick * ECO_PULSE_SPEED + Math.PI * 1.5) * ECO_PULSE_STRENGTH;
-            }
+        if (this._rewardsBtn && this._rewardsBtn.scale.x > 0.98) {
+            this._rewardsBtn.alpha =
+                0.92 + Math.sin(this._tick * ECO_PULSE_SPEED + Math.PI * 1.5) * ECO_PULSE_STRENGTH;
         }
     }
 
@@ -298,18 +260,8 @@ export class MainMenuScreen extends BaseGameScreen {
 
     show(): void {
         super.show();
-        this._refreshChipTexts();
-        // Rebuild pilot strip with fresh progress on every show
-        const prog = getMainMenuProgress();
-        const cw   = this.contentWidth(this.app.screen.width);
-        this.statsStripContainer.removeChildren();
-        this.statsStripContainer.addChild(
-            createPilotStatusStrip(cw, {
-                maxUnlocked:   prog.maxUnlocked,
-                unlockedCount: prog.unlockedCount,
-                totalLevels:   prog.totalLevels,
-            }),
-        );
+        // Rebuild on show so pilot rank, score, and progress are always fresh
+        this.rebuildLayout(this.app.screen.width, this.app.screen.height);
     }
 
     resize(width: number, height: number): void {
