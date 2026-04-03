@@ -18,7 +18,7 @@ import { LEVEL_DEFINITIONS, type LevelDefinition } from '../../../data/levelDefi
 import { gameFlow } from '../gameFlowBridge';
 import type { GameUIManager } from '../GameUIManager';
 import { getVelocityUiTexture, type VelocityUiTextureKey } from '../velocityUiArt';
-import { VELOCITY_UI_SLICE } from '../velocityUiSlice';
+import { velocityUiButtonSlice } from '../velocityUiSlice';
 import {
     kenneyAvatarPlate,
     kenneyButton,
@@ -88,12 +88,6 @@ function icoProfile(g: Graphics, cx: number, cy: number, s: number): void {
     g.circle(cx, cy - s * 0.08, s * 0.32);
     g.stroke({ color: C.cyan, width: 2, alpha: 0.9 });
     g.arc(cx, cy + s * 0.42, s * 0.38, Math.PI * 1.12, Math.PI * 1.88);
-    g.stroke({ color: C.cyan, width: 2, alpha: 0.9 });
-}
-function icoMic(g: Graphics, cx: number, cy: number, s: number): void {
-    g.roundRect(cx - s * 0.1, cy - s * 0.26, s * 0.2, s * 0.34, 3);
-    g.stroke({ color: C.cyan, width: 2, alpha: 0.9 });
-    g.arc(cx, cy + s * 0.18, s * 0.2, 0.25, Math.PI - 0.25);
     g.stroke({ color: C.cyan, width: 2, alpha: 0.9 });
 }
 function icoWing(g: Graphics, cx: number, cy: number, s: number): void {
@@ -317,17 +311,16 @@ export function buildHeroFlightCard(
         const ox = 0;
 
         const btnH = 40;
-        const micW = 96;
-        /** mic + gap + class + gap + fly ≤ contentW */
-        const budget = Math.max(120, contentW - micW - GRID * 2);
-        let flyW = Math.min(200, Math.max(96, Math.floor(budget * 0.58)));
-        let clsW = budget - flyW;
-        if (clsW < 64) {
-            clsW = 64;
-            flyW = Math.min(200, Math.max(88, budget - clsW));
+        /** class chip + gap + FLY NOW — no mic row */
+        const rowBudget = Math.max(160, contentW - GRID * 2);
+        let flyW = Math.min(200, Math.max(100, Math.floor(rowBudget * 0.42)));
+        let clsW = rowBudget - flyW - GRID;
+        if (clsW < 120) {
+            clsW = 120;
+            flyW = Math.min(200, Math.max(96, rowBudget - clsW - GRID));
         }
-        if (clsW > 148) clsW = 148;
-        flyW = budget - clsW;
+        clsW = Math.min(Math.floor(rowBudget * 0.62), clsW);
+        flyW = rowBudget - clsW - GRID;
 
         const bottomPad = 8;
         let rowY = innerH - btnH - bottomPad;
@@ -424,40 +417,27 @@ export function buildHeroFlightCard(
             content.addChild(f);
         }
 
-        const mic = new Container();
-        const mb = new Graphics();
-        mb.roundRect(0, 0, micW, useBtnH, 12);
-        mb.fill({ color: 0x080e16, alpha: 1 });
-        mb.stroke({ color: 0x33aa66, width: 1.5, alpha: 0.65 });
-        mic.addChild(mb);
-        const mlab = new Text({ text: 'Mic live', style: style(12, '700', C.text) });
-        mlab.position.set(32, Math.floor((useBtnH - 14) / 2));
-        mic.addChild(mlab);
-        const mg = new Graphics();
-        icoMic(mg, 15, useBtnH / 2, 13);
-        mic.addChild(mg);
-        mic.position.set(ox, rowY);
-        content.addChild(mic);
-
         const cls = new Container();
         const cb = new Graphics();
         cb.roundRect(0, 0, clsW, useBtnH, 12);
         cb.fill({ color: 0x080e16, alpha: 1 });
         cb.stroke({ color: C.gold, width: 1.5, alpha: 0.55 });
         cls.addChild(cb);
+        const wingX = 14;
+        const textPad = 36;
+        const wg = new Graphics();
+        icoWing(wg, wingX, useBtnH / 2, 13);
+        cls.addChild(wg);
         const clab = new Text({
-            text: trunc(`Class: ${rank}`, 16),
+            text: trunc(`Class: ${rank}`, Math.max(8, Math.floor((clsW - textPad - 8) / 7))),
             style: style(12, '700', C.text),
         });
-        clab.position.set(32, Math.floor((useBtnH - 14) / 2));
+        clab.position.set(textPad, Math.floor((useBtnH - 14) / 2));
         cls.addChild(clab);
-        const wg = new Graphics();
-        icoWing(wg, 15, useBtnH / 2, 13);
-        cls.addChild(wg);
-        cls.position.set(ox + micW + GRID, rowY);
+        cls.position.set(ox, rowY);
         content.addChild(cls);
 
-        const flyX = ox + micW + GRID + clsW + GRID;
+        const flyX = ox + clsW + GRID;
         const fly =
             kenneyButton('FLY NOW', flyW, useBtnH, 'button_primary', false, onFlyNow) ??
             fallbackPrimaryBtn(flyW, useBtnH, 'FLY NOW', onFlyNow);
@@ -509,7 +489,8 @@ export function buildModeTabs(
     const tabW = Math.floor((cw - innerPad * 2) / n);
     const buttons: Container[] = [];
     const useKenney = !!getVelocityUiTexture('button_primary') && !!getVelocityUiTexture('button_secondary');
-    const BS = VELOCITY_UI_SLICE.button;
+    const slOff = velocityUiButtonSlice('button_secondary');
+    const slOn = velocityUiButtonSlice('button_primary');
 
     for (let i = 0; i < n; i++) {
         const b = new Container();
@@ -519,15 +500,19 @@ export function buildModeTabs(
         if (useKenney) {
             const spr = new NineSliceSprite({
                 texture: getVelocityUiTexture('button_secondary')!,
-                leftWidth: BS.L,
-                rightWidth: BS.R,
-                topHeight: BS.T,
-                bottomHeight: BS.B,
+                leftWidth: slOff.L,
+                rightWidth: slOff.R,
+                topHeight: slOff.T,
+                bottomHeight: slOff.B,
                 width: tabW - 6,
                 height: H - 12,
             });
-            spr.alpha = 0.85;
+            spr.alpha = 0.88;
             b.addChild(spr);
+            const dim0 = new Graphics();
+            dim0.roundRect(4, 3, tabW - 6 - 8, H - 12 - 6, 6);
+            dim0.fill({ color: 0x040810, alpha: 0.4 });
+            spr.addChild(dim0);
         } else {
             const gr = new Graphics();
             gr.roundRect(0, 0, tabW - 6, H - 12, 10);
@@ -555,10 +540,22 @@ export function buildModeTabs(
             const tx = b.children[1] as Text;
             const bg0 = b.children[0];
             if (useKenney && bg0 instanceof NineSliceSprite) {
-                bg0.texture = getVelocityUiTexture(i === active ? 'button_primary' : 'button_secondary')!;
-                bg0.tint = i === active ? 0x22ddcc : 0xffffff;
-                bg0.alpha = i === active ? 0.95 : 0.82;
-                tx.style = i === active ? style(13, '800', 0x001810) : style(13, '600', C.muted);
+                const on = i === active;
+                const k = on ? 'button_primary' : 'button_secondary';
+                const sl = velocityUiButtonSlice(k);
+                bg0.texture = getVelocityUiTexture(k)!;
+                bg0.leftWidth = sl.L;
+                bg0.rightWidth = sl.R;
+                bg0.topHeight = sl.T;
+                bg0.bottomHeight = sl.B;
+                bg0.tint = on ? 0xc8f4ff : 0xe8eef5;
+                bg0.alpha = on ? 0.96 : 0.9;
+                while (bg0.children.length > 0) bg0.removeChildAt(0);
+                const dim = new Graphics();
+                dim.roundRect(4, 3, tabW - 6 - 8, H - 12 - 6, 6);
+                dim.fill({ color: 0x040810, alpha: 0.4 });
+                bg0.addChild(dim);
+                tx.style = on ? style(13, '800', 0xf8fbff) : style(13, '600', C.muted);
             } else if (bg0 instanceof Graphics) {
                 bg0.clear();
                 bg0.roundRect(0, 0, tabW - 6, H - 12, 10);
@@ -659,19 +656,20 @@ function missionRow(
         root.addChild(btn);
     } else {
         const lock = new Container();
-        const tex = getVelocityUiTexture('button_secondary');
+        const tex = getVelocityUiTexture('button_plate');
         if (tex) {
+            const sl = velocityUiButtonSlice('button_plate');
             const spr = new NineSliceSprite({
                 texture: tex,
-                leftWidth: VELOCITY_UI_SLICE.button.L,
-                rightWidth: VELOCITY_UI_SLICE.button.R,
-                topHeight: VELOCITY_UI_SLICE.button.T,
-                bottomHeight: VELOCITY_UI_SLICE.button.B,
+                leftWidth: sl.L,
+                rightWidth: sl.R,
+                topHeight: sl.T,
+                bottomHeight: sl.B,
                 width: btnW,
                 height: btnH,
             });
-            spr.alpha = 0.45;
-            spr.tint = 0x444455;
+            spr.alpha = 0.55;
+            spr.tint = 0x6a7585;
             lock.addChild(spr);
         } else {
             const lb = new Graphics();

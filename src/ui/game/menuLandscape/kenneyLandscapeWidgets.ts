@@ -14,13 +14,12 @@ import {
 import { getVelocityUiTexture, type VelocityUiTextureKey } from '../velocityUiArt';
 import { GAME_COLORS, GAME_FONTS } from '../GameUITheme';
 import { createKenneyFramedPanelWithContent, createKenneyHProgressBar } from '../kenneyNineSlice';
-import { VELOCITY_UI_SLICE } from '../velocityUiSlice';
+import { VELOCITY_UI_SLICE, velocityUiButtonSlice } from '../velocityUiSlice';
 
-const BS = VELOCITY_UI_SLICE.button;
 const PS = VELOCITY_UI_SLICE.panel;
 
-/** Subtle cool lift on primary — full cyan tint washes SunGraphica metal plates. */
-const PRIMARY_TINT = 0xb8f0ff;
+/** Subtle cool lift on primary CTA chrome. */
+const PRIMARY_TINT = 0xc8f4ff;
 
 function press(root: Container, onClick: () => void): void {
     root.eventMode = 'static';
@@ -39,7 +38,47 @@ function press(root: Container, onClick: () => void): void {
     root.on('pointercancel', () => root.scale.set(1));
 }
 
-/** Nine-slice button; returns null if textures not loaded. */
+function sungraphicaButtonNineSlice(
+    key: 'button_primary' | 'button_secondary' | 'button_accent' | 'button_danger' | 'button_plate',
+    w: number,
+    h: number,
+): NineSliceSprite | null {
+    const tex = getVelocityUiTexture(key);
+    if (!tex) return null;
+    const sl = velocityUiButtonSlice(key);
+    const spr = new NineSliceSprite({
+        texture: tex,
+        leftWidth: sl.L,
+        rightWidth: sl.R,
+        topHeight: sl.T,
+        bottomHeight: sl.B,
+        width: w,
+        height: h,
+    });
+    if (key === 'button_plate') {
+        spr.tint = 0xffffff;
+        spr.alpha = 0.92;
+        return spr;
+    }
+    if (key === 'button_primary') {
+        spr.tint = PRIMARY_TINT;
+        spr.alpha = 0.97;
+    } else if (key === 'button_accent') {
+        spr.tint = 0xfff0c8;
+        spr.alpha = 0.96;
+    } else {
+        spr.tint = 0xe8eef5;
+        spr.alpha = 0.94;
+    }
+    /** Mute baked English on pause-menu exports so our label reads clean. */
+    const dim = new Graphics();
+    dim.roundRect(6, 5, w - 12, h - 10, Math.min(10, h * 0.22));
+    dim.fill({ color: 0x040810, alpha: 0.42 });
+    spr.addChild(dim);
+    return spr;
+}
+
+/** Nine-slice button (SunGraphica pause chrome + overlay); returns null if textures not loaded. */
 export function kenneyButton(
     label: string,
     w: number,
@@ -48,39 +87,20 @@ export function kenneyButton(
     textLight: boolean,
     onClick: () => void,
 ): Container | null {
-    const tex = getVelocityUiTexture(key);
-    if (!tex) return null;
+    const spr = sungraphicaButtonNineSlice(key, w, h);
+    if (!spr) return null;
     const root = new Container();
-    const spr = new NineSliceSprite({
-        texture: tex,
-        leftWidth: BS.L,
-        rightWidth: BS.R,
-        topHeight: BS.T,
-        bottomHeight: BS.B,
-        width: w,
-        height: h,
-    });
-    if (key === 'button_primary') {
-        spr.tint = PRIMARY_TINT;
-        spr.alpha = 0.98;
-    } else if (key === 'button_accent') {
-        spr.tint = 0xffe8a8;
-        spr.alpha = 0.95;
-    } else {
-        spr.tint = 0xffffff;
-        spr.alpha = 0.9;
-    }
     root.addChild(spr);
 
     const t = new Text({
         text: label,
         style: new TextStyle({
-            fill: textLight ? 0xffffff : 0x0a1218,
+            fill: textLight ? 0xf8fbff : 0x0a1018,
             fontSize: Math.min(14, Math.floor(h * 0.34)),
             fontWeight: '700',
             fontFamily: GAME_FONTS.standard,
             align: 'center',
-            dropShadow: { alpha: 0.35, blur: 1, color: 0x000000, distance: 1 },
+            dropShadow: { alpha: 0.55, blur: 2, color: 0x000000, distance: 1 },
         }),
     });
     t.anchor.set(0.5);
@@ -99,19 +119,9 @@ export function kenneyStatChip(
     w: number,
     h: number,
 ): Container | null {
-    const tex = getVelocityUiTexture('button_secondary');
-    if (!tex) return null;
+    const spr = sungraphicaButtonNineSlice('button_plate', w, h);
+    if (!spr) return null;
     const root = new Container();
-    const spr = new NineSliceSprite({
-        texture: tex,
-        leftWidth: BS.L,
-        rightWidth: BS.R,
-        topHeight: BS.T,
-        bottomHeight: BS.B,
-        width: w,
-        height: h,
-    });
-    spr.alpha = 0.9;
     root.addChild(spr);
 
     const ig = new Graphics();
@@ -147,19 +157,10 @@ export function kenneyStatChip(
 
 /** Square chrome hit target (settings, etc.) — no label. */
 export function kenneyChromeHit(w: number, h: number, onClick: () => void): Container | null {
-    const tex = getVelocityUiTexture('button_secondary');
-    if (!tex) return null;
+    const spr = sungraphicaButtonNineSlice('button_plate', w, h);
+    if (!spr) return null;
     const root = new Container();
-    const spr = new NineSliceSprite({
-        texture: tex,
-        leftWidth: BS.L,
-        rightWidth: BS.R,
-        topHeight: BS.T,
-        bottomHeight: BS.B,
-        width: w,
-        height: h,
-    });
-    spr.alpha = 0.88;
+    spr.alpha = 0.9;
     root.addChild(spr);
     press(root, onClick);
     return root;
@@ -237,20 +238,11 @@ export function kenneyProgressBar(w: number, h: number): (Container & { setProgr
 
 /** Mission row plate. */
 export function kenneyRowPanel(cw: number, rowH: number): Container | null {
-    const tex = getVelocityUiTexture('button_secondary');
-    if (!tex) return null;
+    const spr = sungraphicaButtonNineSlice('button_plate', cw, rowH);
+    if (!spr) return null;
     const root = new Container();
-    const spr = new NineSliceSprite({
-        texture: tex,
-        leftWidth: BS.L,
-        rightWidth: BS.R,
-        topHeight: BS.T,
-        bottomHeight: BS.B,
-        width: cw,
-        height: rowH,
-    });
-    spr.alpha = 0.75;
-    spr.tint = 0xccddee;
+    spr.alpha = 0.78;
+    spr.tint = 0xd8e4f0;
     root.addChild(spr);
     const rim = new Graphics();
     rim.roundRect(0.5, 0.5, cw - 1, rowH - 1, 14);

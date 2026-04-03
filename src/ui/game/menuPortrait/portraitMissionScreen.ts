@@ -17,7 +17,7 @@ import { LEVEL_DEFINITIONS, type LevelDefinition } from '../../../data/levelDefi
 import { gameFlow } from '../gameFlowBridge';
 import type { GameUIManager } from '../GameUIManager';
 import { getVelocityUiTexture } from '../velocityUiArt';
-import { VELOCITY_UI_SLICE } from '../velocityUiSlice';
+import { velocityUiButtonSlice } from '../velocityUiSlice';
 import { kenneyButton, kenneyProgressBar } from '../menuLandscape/kenneyLandscapeWidgets';
 import { P_COLORS, P_ICON, P_MOTION, P_OPACITY, P_RADIUS, P_SHADOW, P_SPACE, P_TYPO, P_Z } from './missionPortraitTokens';
 import {
@@ -25,7 +25,6 @@ import {
     drawIconHome,
     drawIconLock,
     drawIconMap,
-    drawIconMic,
     drawIconProfile,
     drawIconRouteNode,
     drawIconStore,
@@ -85,7 +84,7 @@ function trunc(s: string, max: number): string {
 export type PortraitAnimHandles = {
     heroGlow: Graphics;
     heroMotif: Graphics;
-    micPulse: Graphics;
+    rankGlow: Graphics;
     routeSweep: Graphics;
     rewardShimmer: Graphics;
     tabGlows: Graphics[];
@@ -258,7 +257,7 @@ type FeaturedProps = {
 
 function buildFeaturedMissionCard(p: FeaturedProps): {
     root: Container;
-    anim: Pick<PortraitAnimHandles, 'heroGlow' | 'heroMotif' | 'micPulse' | 'routeSweep' | 'rewardShimmer'>;
+    anim: Pick<PortraitAnimHandles, 'heroGlow' | 'heroMotif' | 'rankGlow' | 'routeSweep' | 'rewardShimmer'>;
     flyCta: Container | null;
     routeBarW: number;
 } {
@@ -347,45 +346,38 @@ function buildFeaturedMissionCard(p: FeaturedProps): {
     root.addChild(rewardShimmer);
 
     const rowY = p.cardH - pad - 44;
-    const micW = 102;
-    const rankW = Math.min(132, p.cw - pad * 2 - micW - 8 - 148);
-    const flyW = Math.min(160, p.cw - pad * 2 - micW - rankW - P_SPACE.s8 * 2);
-
-    const micRoot = new Container();
-    const mb = new Graphics();
-    mb.roundRect(0, 0, micW, 40, P_RADIUS.chip);
-    mb.fill({ color: P_COLORS.bgElevated, alpha: 1 });
-    mb.stroke({ color: P_COLORS.stateLive, width: 1.5, alpha: 0.65 });
-    micRoot.addChild(mb);
-    const micPulse = new Graphics();
-    micPulse.circle(16, 20, 11);
-    micPulse.stroke({ color: P_COLORS.stateLive, width: 1, alpha: 0.35 });
-    micRoot.addChild(micPulse);
-    const micG = new Graphics();
-    drawIconMic(micG, 16, 20, 14);
-    micRoot.addChild(micG);
-    const mt = new Text({ text: 'Mic live', style: ts(P_TYPO.chip, P_COLORS.textPrimary) });
-    mt.position.set(32, 12);
-    micRoot.addChild(mt);
-    micRoot.position.set(pad, rowY);
-    root.addChild(micRoot);
+    const chipH = 40;
+    const rowInner = p.cw - pad * 2;
+    let flyW = Math.min(168, Math.max(112, Math.floor(rowInner * 0.38)));
+    let rankW = rowInner - flyW - P_SPACE.s8;
+    if (rankW < 140) {
+        rankW = 140;
+        flyW = Math.max(100, rowInner - rankW - P_SPACE.s8);
+    }
+    rankW = Math.min(rankW, rowInner - flyW - P_SPACE.s8);
 
     const rankRoot = new Container();
     const rb = new Graphics();
-    rb.roundRect(0, 0, rankW, 40, P_RADIUS.chip);
+    rb.roundRect(0, 0, rankW, chipH, P_RADIUS.chip);
     rb.fill({ color: P_COLORS.bgElevated, alpha: 1 });
     rb.stroke({ color: P_COLORS.accentGoldSoft, width: 1.5, alpha: 0.55 });
     rankRoot.addChild(rb);
+    const rankGlow = new Graphics();
+    rankGlow.roundRect(0, 0, rankW, chipH, P_RADIUS.chip);
+    rankGlow.stroke({ color: P_COLORS.accentGold, width: 2, alpha: 0.35 });
+    rankRoot.addChild(rankGlow);
+    const wingX = 14;
+    const textPad = 36;
     const wg = new Graphics();
-    drawIconWing(wg, 15, 20, 13);
+    drawIconWing(wg, wingX, chipH / 2, 13);
     rankRoot.addChild(wg);
     const rt = new Text({
-        text: trunc(`Class: ${p.rank}`, 14),
+        text: trunc(`Class: ${p.rank}`, Math.max(10, Math.floor((rankW - textPad - 8) / 7))),
         style: ts(P_TYPO.chip, P_COLORS.textPrimary),
     });
-    rt.position.set(32, 12);
+    rt.position.set(textPad, Math.floor((chipH - 14) / 2));
     rankRoot.addChild(rt);
-    rankRoot.position.set(pad + micW + P_SPACE.s8, rowY);
+    rankRoot.position.set(pad, rowY);
     root.addChild(rankRoot);
 
     const starLbl = new Text({
@@ -403,7 +395,7 @@ function buildFeaturedMissionCard(p: FeaturedProps): {
 
     return {
         root,
-        anim: { heroGlow, heroMotif, micPulse, routeSweep, rewardShimmer },
+        anim: { heroGlow, heroMotif, rankGlow, routeSweep, rewardShimmer },
         flyCta: fly,
         routeBarW: barW,
     };
@@ -444,7 +436,8 @@ function buildSegmentTabs(
     const tabGlows: Graphics[] = [];
     const buttons: Container[] = [];
 
-    const useK = !!getVelocityUiTexture('button_primary');
+    const useK = !!getVelocityUiTexture('button_primary') && !!getVelocityUiTexture('button_secondary');
+    const slOff = velocityUiButtonSlice('button_secondary');
 
     for (let i = 0; i < n; i++) {
         const b = new Container();
@@ -459,16 +452,20 @@ function buildSegmentTabs(
         if (useK) {
             const spr = new NineSliceSprite({
                 texture: getVelocityUiTexture('button_secondary')!,
-                leftWidth: VELOCITY_UI_SLICE.button.L,
-                rightWidth: VELOCITY_UI_SLICE.button.R,
-                topHeight: VELOCITY_UI_SLICE.button.T,
-                bottomHeight: VELOCITY_UI_SLICE.button.B,
+                leftWidth: slOff.L,
+                rightWidth: slOff.R,
+                topHeight: slOff.T,
+                bottomHeight: slOff.B,
                 width: tabW - 4,
                 height: H - 12,
             });
-            spr.alpha = 0.82;
-            spr.tint = 0xffffff;
+            spr.alpha = 0.88;
+            spr.tint = 0xe8eef5;
             b.addChild(spr);
+            const dim0 = new Graphics();
+            dim0.roundRect(3, 2, tabW - 4 - 6, H - 12 - 4, 6);
+            dim0.fill({ color: 0x040810, alpha: 0.4 });
+            spr.addChild(dim0);
             bg = spr;
         } else {
             const gr = new Graphics();
@@ -507,9 +504,21 @@ function buildSegmentTabs(
             const tx = b.children[2] as Text;
             const mid = b.children[1];
             if (mid instanceof NineSliceSprite) {
-                mid.texture = getVelocityUiTexture(i === active ? 'button_primary' : 'button_secondary')!;
-                mid.tint = i === active ? 0x22ddcc : 0xffffff;
-                mid.alpha = i === active ? 0.95 : 0.78;
+                const on = i === active;
+                const k = on ? 'button_primary' : 'button_secondary';
+                const sl = velocityUiButtonSlice(k);
+                mid.texture = getVelocityUiTexture(k)!;
+                mid.leftWidth = sl.L;
+                mid.rightWidth = sl.R;
+                mid.topHeight = sl.T;
+                mid.bottomHeight = sl.B;
+                mid.tint = on ? 0xc8f4ff : 0xe8eef5;
+                mid.alpha = on ? 0.96 : 0.88;
+                while (mid.children.length > 0) mid.removeChildAt(0);
+                const dim = new Graphics();
+                dim.roundRect(3, 2, tabW - 4 - 6, H - 12 - 4, 6);
+                dim.fill({ color: 0x040810, alpha: 0.4 });
+                mid.addChild(dim);
             } else if (mid instanceof Graphics) {
                 mid.clear();
                 mid.roundRect(0, 0, tabW - 4, H - 12, P_RADIUS.chip - 2);
@@ -523,10 +532,7 @@ function buildSegmentTabs(
                     alpha: i === active ? 0.9 : 0.4,
                 });
             }
-            tx.style = ts(
-                P_TYPO.tab,
-                i === active ? P_COLORS.statePressed : P_COLORS.textSecondary,
-            );
+            tx.style = ts(P_TYPO.tab, i === active ? P_COLORS.textPrimary : P_COLORS.textSecondary);
             if (i === active) (tx.style as TextStyle).fontWeight = '800';
             else (tx.style as TextStyle).fontWeight = '700';
         });
@@ -916,8 +922,7 @@ export function buildPortraitMissionScreen(p: BuildPortraitMissionScreenParams):
     const tick = (t: number): void => {
         ambient.tick(t);
         anim.heroGlow.alpha = 0.2 + Math.sin(t * 0.9) * 0.12;
-        anim.micPulse.alpha = 0.35 + Math.sin(t * 2.2) * 0.2;
-        anim.micPulse.scale.set(1 + Math.sin(t * 2.2) * 0.06);
+        anim.rankGlow.alpha = 0.35 + Math.sin(t * 2.2) * 0.25;
 
         anim.routeSweep.clear();
         const sweepX = (Math.sin(t * 1.1) * 0.5 + 0.5) * Math.max(20, routeBarW - 10);

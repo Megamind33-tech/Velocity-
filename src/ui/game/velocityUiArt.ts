@@ -2,8 +2,9 @@
  * Game UI textures — SunGraphica Sci-Fi Game UI (itch.io, credit: SunGraphica).
  * `public/sungraphica-ui/`
  *
- * Buttons use **neutral LEVELS layers only** — never pause-menu exports with baked text
- * (RESUME / SETTING / etc.) or nine-slice will repeat the artwork across the whole control.
+ * **Buttons:** Pause-menu exports are full-width chrome (often with baked English words).
+ * Code draws our labels on top and applies a small center dimmer so baked text does not
+ * fight gameplay copy. **Chips / rows** use neutral `button_plate` only.
  */
 
 import { Assets, Texture } from 'pixi.js';
@@ -16,6 +17,7 @@ function assetPath(...segments: string[]): string {
 
 const SF = ['Sci Fi Game UI FREE'] as const;
 const LEVELS = [...SF, 'LEVELS'] as const;
+const PAUSE = [...SF, 'PAUSE MENU'] as const;
 const ICON1 = ['FREE Icon', 'Icon set 1', '1x'] as const;
 
 export type VelocityUiTextureKey =
@@ -23,6 +25,8 @@ export type VelocityUiTextureKey =
     | 'button_secondary'
     | 'button_accent'
     | 'button_danger'
+    /** Neutral plate — stat chips, list rows, inactive chrome (no baked UI words). */
+    | 'button_plate'
     | 'panel_frame'
     | 'panel_fill'
     | 'slide_track'
@@ -45,19 +49,15 @@ export type VelocityUiTextureKey =
     | 'menu_settings_repeat';
 
 const MANIFEST: Record<VelocityUiTextureKey, string> = {
-    /**
-     * All variants share the same neutral chrome; menus tint `button_primary` cyan in code.
-     * Asset: small rounded plate, no typography.
-     */
-    button_primary: `${BASE}/${assetPath(...LEVELS, 'LEVELS_0000s_0004_Layer-5.png')}`,
-    button_secondary: `${BASE}/${assetPath(...LEVELS, 'LEVELS_0000s_0004_Layer-5.png')}`,
-    button_accent: `${BASE}/${assetPath(...LEVELS, 'LEVELS_0000s_0004_Layer-5.png')}`,
-    button_danger: `${BASE}/${assetPath(...LEVELS, 'LEVELS_0000s_0004_Layer-5.png')}`,
+    button_primary: `${BASE}/${assetPath(...PAUSE, 'PAUSE-MENU_0000s_0009_RESUME.png')}`,
+    button_secondary: `${BASE}/${assetPath(...PAUSE, 'PAUSE-MENU_0000s_0005_SETTING.png')}`,
+    button_accent: `${BASE}/${assetPath(...PAUSE, 'PAUSE-MENU_0000s_0007_RETRY.png')}`,
+    button_danger: `${BASE}/${assetPath(...PAUSE, 'PAUSE-MENU_0000s_0003_EXIT.png')}`,
+    button_plate: `${BASE}/${assetPath(...LEVELS, 'LEVELS_0000s_0004_Layer-5.png')}`,
 
     panel_frame: `${BASE}/${assetPath(...LEVELS, 'LEVELS_0000s_0001_Layer-8.png')}`,
     panel_fill: `${BASE}/${assetPath(...LEVELS, 'LEVELS_0000s_0018_Layer-1.png')}`,
 
-    /** Wide strips — tile horizontally without repeating a logo in the center. */
     slide_track: `${BASE}/${assetPath(...LEVELS, 'LEVELS_0000s_0007_Layer-3.png')}`,
     slide_fill: `${BASE}/${assetPath(...LEVELS, 'LEVELS_0000s_0009_Layer-2.png')}`,
 
@@ -115,6 +115,7 @@ export function velocityUiCoreReady(): boolean {
     const core: VelocityUiTextureKey[] = [
         'button_primary',
         'button_secondary',
+        'button_plate',
         'panel_frame',
         'panel_fill',
     ];

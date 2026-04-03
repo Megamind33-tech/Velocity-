@@ -2,12 +2,11 @@
  * Nine-slice for SunGraphica sci-fi UI PNGs (see `public/sungraphica-ui/`).
  */
 
-import { Container, FederatedPointerEvent, NineSliceSprite, Text, TextStyle, TilingSprite } from 'pixi.js';
+import { Container, FederatedPointerEvent, Graphics, NineSliceSprite, Text, TextStyle, TilingSprite } from 'pixi.js';
 import { getVelocityUiTexture, type VelocityUiTextureKey } from './velocityUiArt';
 import { GAME_COLORS, GAME_FONTS } from './GameUITheme';
-import { VELOCITY_UI_SLICE } from './velocityUiSlice';
+import { VELOCITY_UI_SLICE, velocityUiButtonSlice } from './velocityUiSlice';
 
-const BS = VELOCITY_UI_SLICE.button;
 const PS = VELOCITY_UI_SLICE.panel;
 
 export function createKenneyPanelNineSlice(width: number, height: number): NineSliceSprite | null {
@@ -46,16 +45,34 @@ export function createKenneyNineSliceButton(
     root.eventMode = 'static';
     root.cursor = 'pointer';
 
+    const sl = velocityUiButtonSlice(key);
     const bg = new NineSliceSprite({
         texture: tex,
-        leftWidth: BS.L,
-        rightWidth: BS.R,
-        topHeight: BS.T,
-        bottomHeight: BS.B,
+        leftWidth: sl.L,
+        rightWidth: sl.R,
+        topHeight: sl.T,
+        bottomHeight: sl.B,
         width,
         height,
     });
+    if (variant === 'primary') {
+        bg.tint = 0xc8f4ff;
+        bg.alpha = 0.97;
+    } else if (variant === 'accent') {
+        bg.tint = 0xfff0c8;
+        bg.alpha = 0.96;
+    } else if (variant === 'danger') {
+        bg.tint = 0xffc8c8;
+        bg.alpha = 0.96;
+    } else {
+        bg.tint = 0xe8eef5;
+        bg.alpha = 0.94;
+    }
     root.addChild(bg);
+    const dim = new Graphics();
+    dim.roundRect(6, 5, width - 12, height - 10, Math.min(10, height * 0.22));
+    dim.fill({ color: 0x040810, alpha: 0.42 });
+    bg.addChild(dim);
 
     const textFill = variant === 'accent' ? 0x1a1206 : 0xf2f6fb;
     const style = new TextStyle({

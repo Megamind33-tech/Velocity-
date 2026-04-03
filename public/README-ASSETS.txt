@@ -7,7 +7,14 @@ Source: https://sungraphica.itch.io/sci-fi-game-user-interface
 Credit: SunGraphica (per pack license)
 
 Runtime mapping: src/ui/game/velocityUiArt.ts
-Nine-slice tuning: src/ui/game/velocityUiSlice.ts
+Nine-slice tuning: src/ui/game/velocityUiSlice.ts (per-texture button insets + panel/slide)
+
+Buttons:
+- primary → PAUSE-MENU … RESUME.png
+- secondary → PAUSE-MENU … SETTING.png
+- accent → PAUSE-MENU … RETRY.png
+- danger → PAUSE-MENU … EXIT.png
+- button_plate (chips/rows) → LEVELS … Layer-5.png
 
 In-game skin (code)
 -------------------
