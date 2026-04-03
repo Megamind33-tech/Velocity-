@@ -14,7 +14,7 @@ import {
     createHudChip,
     createMenuButton,
     createPilotStatusStrip,
-    createUtilityRow,
+    createSettingsDock,
     getPilotRank,
     MENU_TIER_HEIGHT,
 } from '../menuLayoutHelpers';
@@ -24,6 +24,11 @@ import { mountVelocityShell, resizeVelocityShell, type VelocityShellParts } from
 
 // ─── Layout rhythm ────────────────────────────────────────────────────────────
 const GAP = { xs: 6, sm: 10, md: 14, lg: 20, xl: 26 } as const;
+
+/** Pull modules together so the column reads as one cockpit stack, not isolated rows. */
+const OVERLAP_STATS = 18;
+const OVERLAP_CTA   = 12;
+const OVERLAP_SEC   = 8;
 
 // ─── Idle animation constants ─────────────────────────────────────────────────
 const CTA_PULSE_SPEED    = 0.048;
@@ -142,55 +147,58 @@ export class MainMenuScreen extends BaseGameScreen {
         this.topHudContainer.position.set(mx, y);
         y += hudH + GAP.md;
 
-        // ── Hero module — voice/flight identity zone ───────────────────────
-        const heroH = Math.min(140, Math.max(112, Math.floor(screenH * 0.175)));
+        // ── Hero module — signature cockpit identity zone ──────────────────
+        const heroH = Math.min(152, Math.max(122, Math.floor(screenH * 0.19)));
         const hero  = buildHeroModule(cw, heroH, {
             title:     'VELOCITY',
             subtitle:  'Voice-Powered Flight',
-            hint:      'Mic required · tap to begin',
+            hint:      'Mic live · command ready',
             pilotRank: getPilotRank(prog.maxUnlocked),
         });
         this.titleHeroContainer.addChild(hero);
         this.titleHeroContainer.position.set(mx, y);
-        y += heroH + GAP.sm;
+        y += heroH + GAP.xs;
 
-        // ── Pilot status strip — segmented with circular badge ─────────────
+        // ── Pilot status strip — overlaps hero foot (connected progression read) ─
         const strip = createPilotStatusStrip(cw, {
             maxUnlocked:   prog.maxUnlocked,
             unlockedCount: prog.unlockedCount,
             totalLevels:   prog.totalLevels,
         });
         this.statsStripContainer.addChild(strip);
-        this.statsStripContainer.position.set(mx, y);
-        y += 48 + GAP.lg;   // strip height = 48
+        this.statsStripContainer.position.set(mx, y - OVERLAP_STATS);
+        y += 48 + GAP.md - OVERLAP_STATS;
 
-        // ── Mission Select — dominant CTA ─────────────────────────────────
+        // ── Mission Select — launch CTA (energy deck + deploy strip) ───────
         const cta = createMenuButton(
             'MISSION SELECT', 'cta', 'primary',
             () => gameFlow().openMissionSelect(),
             cw,
+            { ctaLaunch: true },
         );
         this._ctaBtn = cta;
         this.mainMenuContainer.addChild(cta);
-        this.mainMenuContainer.position.set(mx, y);
-        y += MENU_TIER_HEIGHT.cta + GAP.md;
+        this.mainMenuContainer.position.set(mx, y - OVERLAP_CTA);
+        y += MENU_TIER_HEIGHT.cta + GAP.sm - OVERLAP_CTA;
 
-        // ── Utility: Leaderboard + Achievements — side-by-side ───────────────
+        // ── Leaderboard + Achievements — prestige columns, tuck under CTA ──
         const secW = Math.floor((cw - GAP.sm) / 2);
         const lb = createMenuButton(
             'LEADERBOARD', 'secondary', 'secondary',
             () => this.uiManager.showScreen('leaderboard', true),
             secW,
+            { social: 'leaderboard' },
         );
         const ach = createMenuButton(
             'ACHIEVEMENTS', 'secondary', 'secondary',
             () => this.uiManager.showScreen('achievements', true),
             secW,
+            { social: 'achievements' },
         );
         ach.position.set(secW + GAP.sm, 0);
         this.secondaryMenuContainer.addChild(lb, ach);
-        this.secondaryMenuContainer.position.set(mx, y);
-        y += MENU_TIER_HEIGHT.secondary + GAP.md;
+        this.secondaryMenuContainer.position.set(mx, y - OVERLAP_SEC);
+        y += MENU_TIER_HEIGHT.secondary + GAP.md - OVERLAP_SEC;
 
         // ── Economy row — reward buttons with icon sockets ────────────────
         const ecoW    = Math.floor((cw - GAP.sm) / 2);
@@ -212,8 +220,8 @@ export class MainMenuScreen extends BaseGameScreen {
         this.economyRowContainer.position.set(mx, y);
         y += ecoH + GAP.xl;
 
-        // ── Settings — lowest visual priority ─────────────────────────────
-        const settings = createUtilityRow(
+        // ── Settings — compact systems dock (finished footer, not empty slab) ─
+        const settings = createSettingsDock(
             'SETTINGS',
             () => this.uiManager.showScreen('settings', true),
             cw,

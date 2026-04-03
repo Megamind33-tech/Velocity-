@@ -83,8 +83,8 @@ function createStarIcon(size: number): Container {
 export type RewardButtonType = 'store' | 'rewards';
 
 const SUB_LABELS: Record<RewardButtonType, string> = {
-    store:   'BROWSE',
-    rewards: 'COLLECT',
+    store:   'GEAR · UPGRADES',
+    rewards: 'CACHES · DROPS',
 };
 
 /**
@@ -143,6 +143,29 @@ export function createRewardButton(
     border.eventMode = 'none';
     root.addChild(border);
 
+    // Corner prestige notches (collectible / vendor fantasy)
+    const notch = new Graphics();
+    notch.moveTo(6, 6).lineTo(14, 6).lineTo(6, 14).closePath();
+    notch.fill({ color: borderCol, alpha: 0.35 });
+    notch.eventMode = 'none';
+    root.addChild(notch);
+    const notch2 = new Graphics();
+    notch2.moveTo(width - 6, 6).lineTo(width - 14, 6).lineTo(width - 6, 14).closePath();
+    notch2.fill({ color: borderCol, alpha: 0.28 });
+    notch2.eventMode = 'none';
+    root.addChild(notch2);
+
+    // Sparkle triad — curiosity cue (top-right label zone)
+    const sx0 = width - 22;
+    const sy0 = 7;
+    for (let i = 0; i < 3; i++) {
+        const sp = new Graphics();
+        sp.circle(sx0 + i * 6, sy0, 1.2 + i * 0.15);
+        sp.fill({ color: 0xffeeaa, alpha: 0.35 - i * 0.08 });
+        sp.eventMode = 'none';
+        root.addChild(sp);
+    }
+
     // ── Top shine strip ───────────────────────────────────────────────────
     const shine = new Graphics();
     shine.roundRect(6, 2, width - 12, 2, 1);
@@ -181,6 +204,20 @@ export function createRewardButton(
     subLabel.anchor.set(0.5, 0);
     subLabel.position.set(labelZoneCX, height / 2 + 4);
     root.addChild(subLabel);
+
+    const tier = new Text({
+        text:  type === 'store' ? 'VENDOR' : 'LOOT',
+        style: {
+            fill:          borderCol,
+            fontSize:      6,
+            fontFamily:    GAME_FONTS.arcade,
+            letterSpacing: 1,
+        },
+    });
+    tier.alpha = 0.55;
+    tier.anchor.set(0.5, 1);
+    tier.position.set(labelZoneCX, height - 5);
+    root.addChild(tier);
 
     // ── Interaction states ────────────────────────────────────────────────
     const stop = (e: FederatedPointerEvent) => e.stopPropagation();
