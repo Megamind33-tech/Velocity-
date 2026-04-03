@@ -1,18 +1,21 @@
 Velocity — UI art (Pixi canvas)
 
-Kenney UI Pack (only pack used in-game)
----------------------------------------
-Folder: public/kenney-ui-pack/
-Source: https://kenney.nl/assets/ui-pack
-License: CC0 — see License.txt in folder
+SunGraphica Sci-Fi Game UI (in-game chrome)
+-------------------------------------------
+Folder: public/sungraphica-ui/
+Source: https://sungraphica.itch.io/sci-fi-game-user-interface
+Credit: SunGraphica (per pack license)
 
-Vector sources: kenney-ui-pack/Vector/
 Runtime mapping: src/ui/game/velocityUiArt.ts
+Nine-slice tuning: src/ui/game/velocityUiSlice.ts
 
 In-game skin (code)
---------------------
+-------------------
 - velocityScreenShell.ts — animated starfield + dimmer behind menus / map / pause
-- velocityModalLayout.ts — framed modals (input fill + outline nine-slice)
-- velocityUiButtons.ts — uniform primary/secondary/accent/danger/success buttons
-- kenneyNineSlice.ts — HUD slide bar (horizontal strip tiling)
-- Parallax during runs uses Kenney slide_track + panel_fill + procedural stars when art is loaded
+- velocityModalLayout.ts — framed modals (nine-slice panel)
+- velocityUiButtons.ts — uniform buttons (nine-slice when textures load)
+- kenneyNineSlice.ts — nine-slice helpers + horizontal progress tiling (SunGraphica textures)
+
+Legacy (not used by velocityUiArt)
+----------------------------------
+- public/kenney-ui-pack/ — kept for reference only; game loads SunGraphica paths above.

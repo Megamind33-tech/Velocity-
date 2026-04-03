@@ -17,6 +17,7 @@ import { LEVEL_DEFINITIONS, type LevelDefinition } from '../../../data/levelDefi
 import { gameFlow } from '../gameFlowBridge';
 import type { GameUIManager } from '../GameUIManager';
 import { getVelocityUiTexture, type VelocityUiTextureKey } from '../velocityUiArt';
+import { VELOCITY_UI_SLICE } from '../velocityUiSlice';
 import { kenneyButton, kenneyProgressBar, spriteIcon } from '../menuLandscape/kenneyLandscapeWidgets';
 import { P_COLORS, P_ICON, P_MOTION, P_OPACITY, P_RADIUS, P_SHADOW, P_SPACE, P_TYPO, P_Z } from './missionPortraitTokens';
 import {
@@ -402,8 +403,8 @@ function buildFeaturedMissionCard(p: FeaturedProps): {
     starLbl.position.set(pad, rowY - 20);
     root.addChild(starLbl);
 
-    const fly =
-        kenneyButton('FLY NOW', flyW, 40, 'button_primary', false, p.onFly) ?? buildFallbackFly(flyW, 40, p.onFly);
+        const fly =
+            kenneyButton('FLY NOW', flyW, 36, 'button_primary', false, p.onFly) ?? buildFallbackFly(flyW, 36, p.onFly);
     fly.label = 'heroFlyCta';
     fly.position.set(p.cw - pad - flyW, rowY);
     root.addChild(fly);
@@ -466,10 +467,10 @@ function buildSegmentTabs(
         if (useK) {
             const spr = new NineSliceSprite({
                 texture: getVelocityUiTexture('button_secondary')!,
-                leftWidth: 56,
-                rightWidth: 56,
-                topHeight: 20,
-                bottomHeight: 20,
+                leftWidth: VELOCITY_UI_SLICE.button.L,
+                rightWidth: VELOCITY_UI_SLICE.button.R,
+                topHeight: VELOCITY_UI_SLICE.button.T,
+                bottomHeight: VELOCITY_UI_SLICE.button.B,
                 width: tabW - 4,
                 height: H - 12,
             });
@@ -587,8 +588,8 @@ function buildMissionCardPortrait(
     else drawIconLock(ic, icX, icY, 20);
     root.addChild(ic);
 
-    const btnW = 100;
-    const btnH = 44;
+    const btnW = 96;
+    const btnH = 38;
     const tx = icX + P_ICON.emblem + P_SPACE.s12;
     const tw = cw - tx - btnW - P_SPACE.s16 - 56;
 

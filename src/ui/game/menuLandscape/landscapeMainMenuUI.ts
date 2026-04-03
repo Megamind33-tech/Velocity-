@@ -1,5 +1,5 @@
 /**
- * Landscape main menu — Kenney UI Pack sci-fi chrome + Velocity cyan identity.
+ * Landscape main menu — SunGraphica sci-fi UI + Velocity cyan identity.
  * Falls back to vector shapes only if textures are not preloaded.
  */
 
@@ -18,6 +18,7 @@ import { LEVEL_DEFINITIONS, type LevelDefinition } from '../../../data/levelDefi
 import { gameFlow } from '../gameFlowBridge';
 import type { GameUIManager } from '../GameUIManager';
 import { getVelocityUiTexture, type VelocityUiTextureKey } from '../velocityUiArt';
+import { VELOCITY_UI_SLICE } from '../velocityUiSlice';
 import {
     kenneyAvatarPlate,
     kenneyButton,
@@ -299,7 +300,7 @@ export function buildHeroFlightCard(
         const content = pair.content;
         const ox = 0;
 
-        const btnH = 44;
+        const btnH = 40;
         const micW = 96;
         /** mic + gap + class + gap + fly ≤ contentW */
         const budget = Math.max(120, contentW - micW - GRID * 2);
@@ -467,7 +468,7 @@ export function buildHeroFlightCard(
     });
     t0.position.set(20, 18);
     fb.addChild(t0);
-    const fly = fallbackPrimaryBtn(Math.min(200, cw - 40), 44, 'FLY NOW', onFlyNow);
+    const fly = fallbackPrimaryBtn(Math.min(200, cw - 40), 40, 'FLY NOW', onFlyNow);
     fly.label = 'heroFlyCta';
     fly.position.set(cw - fly.width - 20, cardH - 56);
     fb.addChild(fly);
@@ -496,7 +497,7 @@ export function buildModeTabs(
     const tabW = Math.floor((cw - innerPad * 2) / n);
     const buttons: Container[] = [];
     const useKenney = !!getVelocityUiTexture('button_primary') && !!getVelocityUiTexture('button_secondary');
-    const KS = { L: 56, R: 56, T: 20, B: 20 };
+    const BS = VELOCITY_UI_SLICE.button;
 
     for (let i = 0; i < n; i++) {
         const b = new Container();
@@ -506,10 +507,10 @@ export function buildModeTabs(
         if (useKenney) {
             const spr = new NineSliceSprite({
                 texture: getVelocityUiTexture('button_secondary')!,
-                leftWidth: KS.L,
-                rightWidth: KS.R,
-                topHeight: KS.T,
-                bottomHeight: KS.B,
+                leftWidth: BS.L,
+                rightWidth: BS.R,
+                topHeight: BS.T,
+                bottomHeight: BS.B,
                 width: tabW - 6,
                 height: H - 12,
             });
@@ -608,8 +609,8 @@ function missionRow(
         root.addChild(icBg);
     }
 
-    const btnW = 108;
-    const btnH = 48;
+    const btnW = 100;
+    const btnH = 42;
     const tx = 14 + iconR * 2 + 14;
     const textMax = cw - tx - btnW - 20 - 72;
 
@@ -653,10 +654,10 @@ function missionRow(
         if (tex) {
             const spr = new NineSliceSprite({
                 texture: tex,
-                leftWidth: 56,
-                rightWidth: 56,
-                topHeight: 20,
-                bottomHeight: 20,
+                leftWidth: VELOCITY_UI_SLICE.button.L,
+                rightWidth: VELOCITY_UI_SLICE.button.R,
+                topHeight: VELOCITY_UI_SLICE.button.T,
+                bottomHeight: VELOCITY_UI_SLICE.button.B,
                 width: btnW,
                 height: btnH,
             });
