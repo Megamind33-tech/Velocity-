@@ -61,10 +61,13 @@ function showInitFailure(message: string, detail?: string): void {
 }
 
 async function init() {
+    const gameRoot = document.getElementById('game-root') ?? document.body;
+
     const app = new Application();
     await app.init({
         background: '#0a0a1a',
-        resizeTo: window,
+        // Match CSS layout box: safe-area padding lives on #game-root, not body.
+        resizeTo: gameRoot,
         resolution: window.devicePixelRatio || 1,
         autoDensity: true,
         preference: 'webgl',
@@ -73,7 +76,7 @@ async function init() {
     canvas.style.display = 'block';
     canvas.style.width = '100%';
     canvas.style.height = '100%';
-    document.body.appendChild(canvas);
+    gameRoot.appendChild(canvas);
 
     startAuthInBackground();
 
