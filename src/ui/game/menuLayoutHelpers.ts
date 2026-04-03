@@ -17,6 +17,7 @@ import {
     FederatedPointerEvent,
     Graphics,
     NineSliceSprite,
+    Sprite,
     Text,
 } from 'pixi.js';
 import { GAME_COLORS, GAME_FONTS } from './GameUITheme';
@@ -375,11 +376,27 @@ export function createHudChip(
     root.addChild(bg);
 
     if (iconSlot) {
-        const sock = new Graphics();
-        sock.roundRect(3, 5, iconSocketW - 2, h - 10, 4);
-        sock.stroke({ color: accentColor, width: 1, alpha: 0.28 });
-        sock.fill({ color: 0x000000, alpha: 0.2 });
-        root.addChild(sock);
+        let sockDone = false;
+        if (velocityUiArtReady()) {
+            const sockTex = getVelocityUiTexture('panel_frame');
+            if (sockTex) {
+                const sock = new Sprite(sockTex);
+                sock.position.set(3, 5);
+                sock.width = iconSocketW - 2;
+                sock.height = h - 10;
+                sock.tint = accentColor;
+                sock.alpha = 0.55;
+                root.addChild(sock);
+                sockDone = true;
+            }
+        }
+        if (!sockDone) {
+            const sock = new Graphics();
+            sock.roundRect(3, 5, iconSocketW - 2, h - 10, 4);
+            sock.stroke({ color: accentColor, width: 1, alpha: 0.28 });
+            sock.fill({ color: 0x000000, alpha: 0.2 });
+            root.addChild(sock);
+        }
         const iz = 18;
         const ic =
             iconSlot === 'best'
@@ -514,18 +531,44 @@ export function createPilotStatusStrip(
     const barY  = (h - barH) / 2;
     const prog  = totalLevels > 0 ? Math.min(1, unlockedCount / totalLevels) : 0;
 
-    const barBg = new Graphics();
-    barBg.roundRect(barX, barY, barW, barH, 3);
-    barBg.fill({ color: 0x0a1c2e, alpha: 0.92 });
-    barBg.stroke({ color: 0x1a3a55, width: 1, alpha: 0.70 });
-    root.addChild(barBg);
-
-    if (prog > 0) {
-        const fillW  = Math.max(4, (barW - 2) * prog);
-        const fill   = new Graphics();
-        fill.roundRect(barX + 1, barY + 1, fillW, barH - 2, 2);
-        fill.fill({ color: GAME_COLORS.primary, alpha: 0.88 });
-        root.addChild(fill);
+    let barKenney = false;
+    if (velocityUiArtReady()) {
+        const tr = getVelocityUiTexture('slide_track');
+        const fl = getVelocityUiTexture('slide_fill');
+        if (tr && fl) {
+            barKenney = true;
+            const track = new Sprite(tr);
+            track.position.set(barX, barY);
+            track.width = barW;
+            track.height = barH;
+            track.tint = 0x1a3048;
+            track.alpha = 0.85;
+            root.addChild(track);
+            if (prog > 0) {
+                const fillW = Math.max(4, (barW - 2) * prog);
+                const fillS = new Sprite(fl);
+                fillS.position.set(barX + 1, barY + 1);
+                fillS.width = fillW;
+                fillS.height = barH - 2;
+                fillS.tint = GAME_COLORS.primary;
+                fillS.alpha = 0.88;
+                root.addChild(fillS);
+            }
+        }
+    }
+    if (!barKenney) {
+        const barBg = new Graphics();
+        barBg.roundRect(barX, barY, barW, barH, 3);
+        barBg.fill({ color: 0x0a1c2e, alpha: 0.92 });
+        barBg.stroke({ color: 0x1a3a55, width: 1, alpha: 0.70 });
+        root.addChild(barBg);
+        if (prog > 0) {
+            const fillW  = Math.max(4, (barW - 2) * prog);
+            const fill   = new Graphics();
+            fill.roundRect(barX + 1, barY + 1, fillW, barH - 2, 2);
+            fill.fill({ color: GAME_COLORS.primary, alpha: 0.88 });
+            root.addChild(fill);
+        }
     }
 
     // Slot 10 — route track markers (nodes only, Family A)

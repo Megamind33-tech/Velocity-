@@ -9,7 +9,11 @@
 
 import { Container, Graphics, Text } from 'pixi.js';
 import { GAME_COLORS, GAME_FONTS } from './GameUITheme';
-import { createIconMicStatusDot, createIconPilotClassWings } from './menuFrontMenuIcons';
+import {
+    createHeroRadarHubSprite,
+    createIconMicStatusDot,
+    createIconPilotClassWings,
+} from './menuFrontMenuIcons';
 import { helperTextStyle, heroSubtitleStyle, heroTitleStyle } from './menuTextStyles';
 
 // ─── Waveform constants ───────────────────────────────────────────────────────
@@ -107,10 +111,9 @@ function createRadarDisplay(r: number): Container {
         root.addChild(dot);
     });
 
-    const cDot = new Graphics();
-    cDot.circle(cx, cy, 2.5);
-    cDot.fill({ color: 0xffffff, alpha: 0.85 });
-    root.addChild(cDot);
+    const hub = createHeroRadarHubSprite(r * 0.22);
+    hub.position.set(cx - r * 0.22, cy - r * 0.22);
+    root.addChild(hub);
 
     const border = new Graphics();
     border.circle(cx, cy, r - 0.5);

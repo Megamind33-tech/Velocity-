@@ -1,5 +1,9 @@
 /**
- * Kenney UI Pack only — https://kenney.nl/assets/ui-pack (CC0)
+ * Kenney UI Pack — https://kenney.nl/assets/ui-pack (CC0)
+ * All paths under `public/kenney-ui-pack`. `preloadVelocityUiTextures()` runs at boot.
+ *
+ * Menu semantic keys map Kenney sprites to HUD slots; the pack has no trophy/medal/gear —
+ * stars, circles, repeat, and squares are the closest CC0 matches, tinted per slot.
  */
 
 import { Assets, Texture } from 'pixi.js';
@@ -17,7 +21,21 @@ export type VelocityUiTextureKey =
     | 'slide_fill'
     | 'icon_star'
     | 'node_unlocked'
-    | 'node_locked';
+    | 'node_locked'
+    /** Main menu — semantic icons (Kenney sprites, not procedural). */
+    | 'menu_best_star'
+    | 'menu_sector_circle'
+    | 'menu_routes_repeat'
+    | 'menu_profile_star_outline'
+    | 'menu_status_led'
+    | 'menu_radar_center'
+    | 'menu_pilot_class_star'
+    | 'menu_leaderboard_star'
+    | 'menu_achievements_seal'
+    | 'menu_icon_square_grey'
+    | 'menu_store_icon'
+    | 'menu_rewards_star_outline'
+    | 'menu_settings_repeat';
 
 const MANIFEST: Record<VelocityUiTextureKey, string> = {
     button_primary: `${BASE}/Blue/Default/button_rectangle_depth_gloss.png`,
@@ -31,6 +49,21 @@ const MANIFEST: Record<VelocityUiTextureKey, string> = {
     icon_star: `${BASE}/Blue/Default/star.png`,
     node_unlocked: `${BASE}/Blue/Default/button_round_depth_gloss.png`,
     node_locked: `${BASE}/Grey/Default/button_round_depth_flat.png`,
+
+    menu_best_star: `${BASE}/Yellow/Default/star.png`,
+    menu_sector_circle: `${BASE}/Blue/Default/icon_outline_circle.png`,
+    menu_routes_repeat: `${BASE}/Extra/Default/icon_repeat_outline.png`,
+    menu_profile_star_outline: `${BASE}/Yellow/Default/star_outline_depth.png`,
+    menu_status_led: `${BASE}/Green/Default/icon_circle.png`,
+    menu_radar_center: `${BASE}/Yellow/Default/star.png`,
+    menu_pilot_class_star: `${BASE}/Yellow/Default/star_outline.png`,
+    menu_leaderboard_star: `${BASE}/Yellow/Default/star.png`,
+    menu_achievements_seal: `${BASE}/Blue/Default/star_outline_depth.png`,
+    menu_icon_square_grey: `${BASE}/Grey/Default/icon_square.png`,
+    menu_store_icon: `${BASE}/Yellow/Default/icon_square.png`,
+    menu_rewards_star_outline: `${BASE}/Yellow/Default/star_outline_depth.png`,
+    /** Pack has no gear; dark repeat reads as quiet system control vs outline repeat for routes. */
+    menu_settings_repeat: `${BASE}/Extra/Default/icon_repeat_dark.png`,
 };
 
 const cache = new Map<VelocityUiTextureKey, Texture>();
