@@ -57,8 +57,7 @@ export function createKenneyNineSliceButton(
     });
     root.addChild(bg);
 
-    const textFill =
-        variant === 'accent' ? 0x1a1a22 : 0xffffff;
+    const textFill = variant === 'accent' ? 0x1a1206 : 0xf2f6fb;
     const style = new TextStyle({
         fill: textFill,
         fontSize: Math.min(15, Math.floor(height * 0.36)),
@@ -159,11 +158,20 @@ export function createKenneyHProgressBar(
     if (!trackTex || !fillTex) return null;
 
     const root = new Container() as Container & { setProgress: (p01: number) => void };
-    const track = new TilingSprite({ texture: trackTex, width, height });
-    track.alpha = 0.85;
-    const fill = new TilingSprite({ texture: fillTex, width: 0, height });
-    fill.alpha = 0.95;
-    fill.height = height;
+    const track = new TilingSprite({
+        texture: trackTex,
+        width,
+        height,
+        tileScale: { x: height / Math.max(1, trackTex.height), y: height / Math.max(1, trackTex.height) },
+    });
+    track.alpha = 0.88;
+    const fill = new TilingSprite({
+        texture: fillTex,
+        width: 0,
+        height,
+        tileScale: { x: height / Math.max(1, fillTex.height), y: height / Math.max(1, fillTex.height) },
+    });
+    fill.alpha = 0.92;
     root.addChild(track, fill);
 
     root.setProgress = (p01: number) => {

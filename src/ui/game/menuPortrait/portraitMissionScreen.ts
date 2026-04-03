@@ -16,9 +16,9 @@ import { getMainMenuProgress, isLevelUnlocked } from '../../../data/localProgres
 import { LEVEL_DEFINITIONS, type LevelDefinition } from '../../../data/levelDefinitions';
 import { gameFlow } from '../gameFlowBridge';
 import type { GameUIManager } from '../GameUIManager';
-import { getVelocityUiTexture, type VelocityUiTextureKey } from '../velocityUiArt';
+import { getVelocityUiTexture } from '../velocityUiArt';
 import { VELOCITY_UI_SLICE } from '../velocityUiSlice';
-import { kenneyButton, kenneyProgressBar, spriteIcon } from '../menuLandscape/kenneyLandscapeWidgets';
+import { kenneyButton, kenneyProgressBar } from '../menuLandscape/kenneyLandscapeWidgets';
 import { P_COLORS, P_ICON, P_MOTION, P_OPACITY, P_RADIUS, P_SHADOW, P_SPACE, P_TYPO, P_Z } from './missionPortraitTokens';
 import {
     drawIconHangar,
@@ -336,18 +336,11 @@ function buildFeaturedMissionCard(p: FeaturedProps): {
     const emblemR = 28;
     const ex = p.cw - pad - emblemR;
     const ey = pad + 24;
-    const embTex = getVelocityUiTexture('menu_best_star');
-    if (embTex) {
-        const spr = spriteIcon('menu_best_star', emblemR * 2, P_COLORS.accentGold);
-        if (spr) {
-            spr.position.set(ex, ey);
-            root.addChild(spr);
-        }
-    } else {
-        const eg = new Graphics();
-        drawIconRouteNode(eg, ex, ey, emblemR * 0.55, { color: P_COLORS.accentGold, width: 2, alpha: 0.85 });
-        root.addChild(eg);
-    }
+    const eg = new Graphics();
+    eg.circle(ex, ey, 22);
+    eg.stroke({ color: P_COLORS.accentGold, width: 1.2, alpha: 0.4 });
+    drawIconRouteNode(eg, ex, ey, emblemR * 0.5, { color: P_COLORS.accentGold, width: 2, alpha: 0.9 });
+    root.addChild(eg);
 
     const rewardShimmer = new Graphics();
     rewardShimmer.position.set(ex - emblemR, ey - emblemR);
@@ -364,6 +357,10 @@ function buildFeaturedMissionCard(p: FeaturedProps): {
     mb.fill({ color: P_COLORS.bgElevated, alpha: 1 });
     mb.stroke({ color: P_COLORS.stateLive, width: 1.5, alpha: 0.65 });
     micRoot.addChild(mb);
+    const micPulse = new Graphics();
+    micPulse.circle(16, 20, 11);
+    micPulse.stroke({ color: P_COLORS.stateLive, width: 1, alpha: 0.35 });
+    micRoot.addChild(micPulse);
     const micG = new Graphics();
     drawIconMic(micG, 16, 20, 14);
     micRoot.addChild(micG);
@@ -372,11 +369,6 @@ function buildFeaturedMissionCard(p: FeaturedProps): {
     micRoot.addChild(mt);
     micRoot.position.set(pad, rowY);
     root.addChild(micRoot);
-
-    const micPulse = new Graphics();
-    micPulse.circle(16, 20, 10);
-    micPulse.stroke({ color: P_COLORS.stateLive, width: 1, alpha: 0.4 });
-    micRoot.addChildAt(micPulse, 1);
 
     const rankRoot = new Container();
     const rb = new Graphics();
@@ -661,12 +653,9 @@ function buildLockedButton(w: number, h: number): Container {
     inset.roundRect(2, 2, w - 4, h - 4, P_RADIUS.button - 2);
     inset.stroke({ color: P_COLORS.strokeSubtle, width: 1, alpha: 0.5 });
     c.addChild(inset);
-    const lg = new Graphics();
-    drawIconLock(lg, w / 2 - 28, h / 2, 14);
-    c.addChild(lg);
     const t = new Text({ text: 'LOCKED', style: ts(P_TYPO.button, P_COLORS.textSecondary) });
     t.anchor.set(0.5);
-    t.position.set(w / 2 + 8, h / 2);
+    t.position.set(w / 2, h / 2);
     c.addChild(t);
     return c;
 }
@@ -743,17 +732,15 @@ function buildBottomDockPortrait(
     const items: {
         label: string;
         onTap: () => void;
-        icon: VelocityUiTextureKey;
         draw: (g: Graphics, cx: number, cy: number, s: number) => void;
     }[] = [
-        { label: 'Home', onTap: () => { navIndexBySlot?.(0); onHome(); }, icon: 'icon_star', draw: (g, cx, cy, s) => drawIconHome(g, cx, cy, s) },
+        { label: 'Home', onTap: () => { navIndexBySlot?.(0); onHome(); }, draw: (g, cx, cy, s) => drawIconHome(g, cx, cy, s) },
         {
             label: 'Missions',
             onTap: () => {
                 navIndexBySlot?.(1);
                 gameFlow().openMissionSelect();
             },
-            icon: 'menu_routes_repeat',
             draw: (g, cx, cy, s) => drawIconMap(g, cx, cy, s),
         },
         {
@@ -762,7 +749,6 @@ function buildBottomDockPortrait(
                 navIndexBySlot?.(2);
                 ui.showScreen('store', true);
             },
-            icon: 'node_unlocked',
             draw: (g, cx, cy, s) => drawIconHangar(g, cx, cy, s),
         },
         {
@@ -771,7 +757,6 @@ function buildBottomDockPortrait(
                 navIndexBySlot?.(3);
                 ui.showScreen('store', true);
             },
-            icon: 'menu_store_icon',
             draw: (g, cx, cy, s) => drawIconStore(g, cx, cy, s),
         },
     ];
@@ -795,15 +780,9 @@ function buildBottomDockPortrait(
         dockCradles.push(cradle);
         slot.addChild(cradle);
 
-        const sp = spriteIcon(it.icon, P_ICON.dock, P_COLORS.accentCyan);
-        if (sp) {
-            sp.position.set(cx, 26);
-            slot.addChild(sp);
-        } else {
-            const vecG = new Graphics();
-            it.draw(vecG, cx, 26, 20);
-            slot.addChild(vecG);
-        }
+        const vecG = new Graphics();
+        it.draw(vecG, cx, 26, 20);
+        slot.addChild(vecG);
 
         const t = new Text({ text: it.label, style: ts(P_TYPO.navLabel, P_COLORS.navInactive) });
         t.anchor.set(0.5, 0);

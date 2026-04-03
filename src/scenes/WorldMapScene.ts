@@ -1,11 +1,9 @@
-import { Application, Container, FederatedPointerEvent, Graphics, Rectangle, Sprite, Text, TextStyle } from 'pixi.js';
+import { Application, Container, FederatedPointerEvent, Graphics, Rectangle, Text, TextStyle } from 'pixi.js';
 import { getUnlockedLevelIds } from '../data/localProgress';
 import { GAME_COLORS, GAME_SIZES } from '../ui/game/GameUITheme';
 import { ResponsiveUIManager } from '../ui/ResponsiveUIManager';
 import { mountVelocityShell, resizeVelocityShell, type VelocityShellParts } from '../ui/game/velocityScreenShell';
 import { createVelocityGameButton } from '../ui/game/velocityUiButtons';
-import { getVelocityUiTexture, velocityUiArtReady } from '../ui/game/velocityUiArt';
-
 interface LevelNode {
     id: number;
     x: number;
@@ -188,30 +186,16 @@ export class WorldMapScene {
             fontFamily: 'Orbitron, Arial',
         });
 
-        const texOn = velocityUiArtReady() ? getVelocityUiTexture('node_unlocked') : undefined;
-        const texOff = velocityUiArtReady() ? getVelocityUiTexture('node_locked') : undefined;
-        const d = NODE_RADIUS * 2;
-
         for (const node of this.nodes) {
-            const tex = node.unlocked ? texOn : texOff;
-            if (tex) {
-                const s = new Sprite(tex);
-                s.anchor.set(0.5);
-                s.width = d;
-                s.height = d;
-                s.position.set(node.x, node.y);
-                s.alpha = node.unlocked ? 1 : 0.55;
-                this.scrollLayer.addChild(s);
-            } else {
-                const dot = new Graphics();
-                const color = node.unlocked ? 0x00ffcc : 0x333344;
-                dot.circle(0, 0, NODE_RADIUS);
-                dot.fill(color);
-                dot.setStrokeStyle({ width: 3, color: node.unlocked ? 0xffffff : 0x222233 });
-                dot.stroke();
-                dot.position.set(node.x, node.y);
-                this.scrollLayer.addChild(dot);
-            }
+            const dot = new Graphics();
+            const color = node.unlocked ? 0x00ffcc : 0x333344;
+            dot.circle(0, 0, NODE_RADIUS);
+            dot.fill(color);
+            dot.setStrokeStyle({ width: 3, color: node.unlocked ? 0xffffff : 0x222233 });
+            dot.stroke();
+            dot.position.set(node.x, node.y);
+            dot.alpha = node.unlocked ? 1 : 0.55;
+            this.scrollLayer.addChild(dot);
 
             const txt = new Text({ text: node.id.toString(), style: idStyle });
             txt.anchor.set(0.5);
