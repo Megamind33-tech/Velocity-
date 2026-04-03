@@ -1,5 +1,5 @@
 /**
- * Landscape main menu — SunGraphica sci-fi UI + Velocity cyan identity.
+ * Landscape main menu — Kenney UI Pack + Velocity cyan identity.
  * Falls back to vector shapes only if textures are not preloaded.
  */
 
@@ -18,7 +18,7 @@ import { LEVEL_DEFINITIONS, type LevelDefinition } from '../../../data/levelDefi
 import { gameFlow } from '../gameFlowBridge';
 import type { GameUIManager } from '../GameUIManager';
 import { getVelocityUiTexture, type VelocityUiTextureKey } from '../velocityUiArt';
-import { velocityUiButtonSlice } from '../velocityUiSlice';
+import { VELOCITY_UI_SLICE } from '../velocityUiSlice';
 import {
     kenneyAvatarPlate,
     kenneyButton,
@@ -31,6 +31,7 @@ import {
 } from './kenneyLandscapeWidgets';
 
 const GRID = 8;
+const TAB_BS = VELOCITY_UI_SLICE.button;
 const R_CHIP = 12;
 
 const FONT_UI = GAME_FONTS.standard;
@@ -489,8 +490,6 @@ export function buildModeTabs(
     const tabW = Math.floor((cw - innerPad * 2) / n);
     const buttons: Container[] = [];
     const useKenney = !!getVelocityUiTexture('button_primary') && !!getVelocityUiTexture('button_secondary');
-    const slOff = velocityUiButtonSlice('button_secondary');
-    const slOn = velocityUiButtonSlice('button_primary');
 
     for (let i = 0; i < n; i++) {
         const b = new Container();
@@ -500,19 +499,15 @@ export function buildModeTabs(
         if (useKenney) {
             const spr = new NineSliceSprite({
                 texture: getVelocityUiTexture('button_secondary')!,
-                leftWidth: slOff.L,
-                rightWidth: slOff.R,
-                topHeight: slOff.T,
-                bottomHeight: slOff.B,
+                leftWidth: TAB_BS.L,
+                rightWidth: TAB_BS.R,
+                topHeight: TAB_BS.T,
+                bottomHeight: TAB_BS.B,
                 width: tabW - 6,
                 height: H - 12,
             });
             spr.alpha = 0.88;
             b.addChild(spr);
-            const dim0 = new Graphics();
-            dim0.roundRect(4, 3, tabW - 6 - 8, H - 12 - 6, 6);
-            dim0.fill({ color: 0x040810, alpha: 0.4 });
-            spr.addChild(dim0);
         } else {
             const gr = new Graphics();
             gr.roundRect(0, 0, tabW - 6, H - 12, 10);
@@ -542,19 +537,13 @@ export function buildModeTabs(
             if (useKenney && bg0 instanceof NineSliceSprite) {
                 const on = i === active;
                 const k = on ? 'button_primary' : 'button_secondary';
-                const sl = velocityUiButtonSlice(k);
                 bg0.texture = getVelocityUiTexture(k)!;
-                bg0.leftWidth = sl.L;
-                bg0.rightWidth = sl.R;
-                bg0.topHeight = sl.T;
-                bg0.bottomHeight = sl.B;
-                bg0.tint = on ? 0xc8f4ff : 0xe8eef5;
+                bg0.leftWidth = TAB_BS.L;
+                bg0.rightWidth = TAB_BS.R;
+                bg0.topHeight = TAB_BS.T;
+                bg0.bottomHeight = TAB_BS.B;
+                bg0.tint = on ? 0xb8e8ff : 0xe8eef5;
                 bg0.alpha = on ? 0.96 : 0.9;
-                while (bg0.children.length > 0) bg0.removeChildAt(0);
-                const dim = new Graphics();
-                dim.roundRect(4, 3, tabW - 6 - 8, H - 12 - 6, 6);
-                dim.fill({ color: 0x040810, alpha: 0.4 });
-                bg0.addChild(dim);
                 tx.style = on ? style(13, '800', 0xf8fbff) : style(13, '600', C.muted);
             } else if (bg0 instanceof Graphics) {
                 bg0.clear();
@@ -656,15 +645,14 @@ function missionRow(
         root.addChild(btn);
     } else {
         const lock = new Container();
-        const tex = getVelocityUiTexture('button_plate');
+        const tex = getVelocityUiTexture('button_secondary');
         if (tex) {
-            const sl = velocityUiButtonSlice('button_plate');
             const spr = new NineSliceSprite({
                 texture: tex,
-                leftWidth: sl.L,
-                rightWidth: sl.R,
-                topHeight: sl.T,
-                bottomHeight: sl.B,
+                leftWidth: TAB_BS.L,
+                rightWidth: TAB_BS.R,
+                topHeight: TAB_BS.T,
+                bottomHeight: TAB_BS.B,
                 width: btnW,
                 height: btnH,
             });
