@@ -19,7 +19,8 @@ import { VELOCITY_UI_SLICE } from '../velocityUiSlice';
 const BS = VELOCITY_UI_SLICE.button;
 const PS = VELOCITY_UI_SLICE.panel;
 
-const CYAN_TINT = 0x22ddcc;
+/** Subtle cool lift on primary — full cyan tint washes SunGraphica metal plates. */
+const PRIMARY_TINT = 0xb8f0ff;
 
 function press(root: Container, onClick: () => void): void {
     root.eventMode = 'static';
@@ -59,8 +60,16 @@ export function kenneyButton(
         width: w,
         height: h,
     });
-    spr.tint = key === 'button_primary' ? CYAN_TINT : 0xffffff;
-    spr.alpha = key === 'button_primary' ? 0.95 : 0.88;
+    if (key === 'button_primary') {
+        spr.tint = PRIMARY_TINT;
+        spr.alpha = 0.98;
+    } else if (key === 'button_accent') {
+        spr.tint = 0xffe8a8;
+        spr.alpha = 0.95;
+    } else {
+        spr.tint = 0xffffff;
+        spr.alpha = 0.9;
+    }
     root.addChild(spr);
 
     const t = new Text({
@@ -82,14 +91,13 @@ export function kenneyButton(
     return root;
 }
 
-/** Compact stat chip: secondary button chrome + icon + two text lines. */
+/** Compact stat chip: neutral plate + **vector** icon (pack Asset N.png IDs are not semantic). */
 export function kenneyStatChip(
-    iconKey: VelocityUiTextureKey,
+    drawIcon: (g: Graphics, cx: number, cy: number, s: number) => void,
     label: string,
     value: string,
     w: number,
     h: number,
-    iconTint: number,
 ): Container | null {
     const tex = getVelocityUiTexture('button_secondary');
     if (!tex) return null;
@@ -106,18 +114,9 @@ export function kenneyStatChip(
     spr.alpha = 0.9;
     root.addChild(spr);
 
-    const it = getVelocityUiTexture(iconKey);
-    if (it) {
-        const icon = new Sprite(it);
-        icon.anchor.set(0.5);
-        const im = Math.min(22, h - 16);
-        icon.width = im;
-        icon.height = im;
-        icon.tint = iconTint;
-        icon.position.set(22, h / 2);
-        icon.alpha = 0.95;
-        root.addChild(icon);
-    }
+    const ig = new Graphics();
+    drawIcon(ig, 22, h / 2, 18);
+    root.addChild(ig);
 
     const lb = new Text({
         text: label,
@@ -166,19 +165,23 @@ export function kenneyChromeHit(w: number, h: number, onClick: () => void): Cont
     return root;
 }
 
-/** Circular pilot plate using unlocked-node icon. */
-export function kenneyAvatarPlate(size: number, onClick: () => void): Container | null {
-    const tex = getVelocityUiTexture('node_unlocked');
-    if (!tex) return null;
+/** Profile ring — vector chrome (pack icons are not reliable for this slot). */
+export function kenneyAvatarPlate(size: number, onClick: () => void): Container {
     const root = new Container();
-    const spr = new Sprite(tex);
-    spr.anchor.set(0.5);
-    spr.width = size;
-    spr.height = size;
-    spr.tint = CYAN_TINT;
-    spr.alpha = 0.92;
-    spr.position.set(size / 2, size / 2);
-    root.addChild(spr);
+    const g = new Graphics();
+    const cx = size / 2;
+    const cy = size / 2;
+    const r = size / 2 - 2;
+    g.circle(cx, cy, r);
+    g.fill({ color: 0x0c141e, alpha: 1 });
+    g.stroke({ color: GAME_COLORS.primary, width: 2, alpha: 0.55 });
+    root.addChild(g);
+    const inner = new Graphics();
+    inner.circle(cx, cy - r * 0.08, r * 0.28);
+    inner.stroke({ color: GAME_COLORS.primary, width: 2, alpha: 0.85 });
+    inner.arc(cx, cy + r * 0.38, r * 0.32, Math.PI * 1.12, Math.PI * 1.88);
+    inner.stroke({ color: GAME_COLORS.primary, width: 2, alpha: 0.85 });
+    root.addChild(inner);
     root.eventMode = 'static';
     root.cursor = 'pointer';
     const stop = (e: FederatedPointerEvent) => e.stopPropagation();
@@ -220,7 +223,7 @@ export function kenneyHeroPanel(cw: number, cardH: number): { root: Container; c
     fill.tint = 0x050a12;
     fill.alpha = 1;
     const frame = pair.root.children[1] as NineSliceSprite;
-    frame.tint = CYAN_TINT;
+    frame.tint = GAME_COLORS.primary;
     frame.alpha = 0.72;
     return pair;
 }

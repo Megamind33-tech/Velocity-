@@ -28,7 +28,6 @@ import {
     kenneyRowPanel,
     kenneyStatChip,
     kenneyTabTrack,
-    spriteIcon,
 } from './kenneyLandscapeWidgets';
 
 const GRID = 8;
@@ -106,6 +105,40 @@ function icoWing(g: Graphics, cx: number, cy: number, s: number): void {
     g.lineTo(cx + s * 0.1, cy + s * 0.06);
     g.stroke({ color: C.gold, width: 2, alpha: 0.85 });
 }
+function icoBarsSignal(g: Graphics, cx: number, cy: number, s: number): void {
+    const w = s * 0.12;
+    const xs = [cx - s * 0.28, cx, cx + s * 0.28];
+    const hs = [s * 0.22, s * 0.38, s * 0.3];
+    xs.forEach((x, i) => {
+        const h = hs[i];
+        g.rect(x - w / 2, cy + s * 0.12 - h, w, h);
+        g.fill({ color: C.cyan, alpha: 0.85 });
+    });
+}
+function icoStarBadge(g: Graphics, cx: number, cy: number, s: number): void {
+    const n = 4;
+    const ro = s * 0.32;
+    const ri = s * 0.14;
+    for (let i = 0; i < n * 2; i++) {
+        const a = (i * Math.PI) / n - Math.PI / 2;
+        const r = i % 2 === 0 ? ro : ri;
+        const x = cx + Math.cos(a) * r;
+        const y = cy + Math.sin(a) * r;
+        if (i === 0) g.moveTo(x, y);
+        else g.lineTo(x, y);
+    }
+    g.closePath();
+    g.fill({ color: C.gold, alpha: 0.9 });
+}
+function icoGemPremium(g: Graphics, cx: number, cy: number, s: number): void {
+    g.moveTo(cx, cy - s * 0.32);
+    g.lineTo(cx + s * 0.26, cy - s * 0.06);
+    g.lineTo(cx + s * 0.18, cy + s * 0.28);
+    g.lineTo(cx - s * 0.18, cy + s * 0.28);
+    g.lineTo(cx - s * 0.26, cy - s * 0.06);
+    g.closePath();
+    g.fill({ color: 0xcc88ff, alpha: 0.88 });
+}
 function icoRadar(g: Graphics, cx: number, cy: number, r: number): void {
     g.circle(cx, cy, r);
     g.stroke({ color: C.cyan, width: 2, alpha: 0.85 });
@@ -143,6 +176,12 @@ function icoStore(g: Graphics, cx: number, cy: number, s: number): void {
     g.moveTo(cx, cy - s * 0.28);
     g.lineTo(cx, cy + s * 0.22);
     g.stroke({ color: C.gold, width: 2, alpha: 0.9 });
+}
+function icoLockSmall(g: Graphics, cx: number, cy: number, s: number): void {
+    g.roundRect(cx - s * 0.2, cy - s * 0.02, s * 0.4, s * 0.3, 3);
+    g.stroke({ color: C.muted, width: 2, alpha: 0.85 });
+    g.arc(cx, cy - s * 0.12, s * 0.12, Math.PI, 0);
+    g.stroke({ color: C.muted, width: 2, alpha: 0.85 });
 }
 
 function fallbackPrimaryBtn(w: number, h: number, label: string, onClick: () => void): Container {
@@ -195,47 +234,24 @@ export function buildTopUtilityBar(
     chipW = Math.max(100, chipW);
 
     const av = kenneyAvatarPlate(56, onProfile);
-    if (av) {
-        const ic = spriteIcon('menu_profile_star_outline', 22, C.cyan);
-        if (ic) {
-            ic.position.set(28, 28);
-            av.addChild(ic);
-        } else {
-            const g = new Graphics();
-            icoProfile(g, 28, 28, 34);
-            av.addChild(g);
-        }
-        root.addChild(av);
-    } else {
-        const fb = new Container();
-        const c = new Graphics();
-        c.circle(28, 28, 26);
-        c.fill({ color: C.surface2, alpha: 1 });
-        c.stroke({ color: C.cyan, width: 2, alpha: 0.55 });
-        fb.addChild(c);
-        const g = new Graphics();
-        icoProfile(g, 28, 28, 34);
-        fb.addChild(g);
-        pressable(fb, onProfile);
-        root.addChild(fb);
-    }
+    root.addChild(av);
 
     const x0 = 60 + gap;
     const c1 =
-        kenneyStatChip('menu_sector_circle', 'SIGNAL', `${prog.maxUnlocked}`, chipW, H - 4, C.cyan) ??
-        vectorStatChip(icoRadar, 'SIGNAL', `${prog.maxUnlocked}`, chipW, H - 4);
+        kenneyStatChip(icoBarsSignal, 'SIGNAL', `${prog.maxUnlocked}`, chipW, H - 4) ??
+        vectorStatChip(icoBarsSignal, 'SIGNAL', `${prog.maxUnlocked}`, chipW, H - 4);
     c1.position.set(x0, 2);
     root.addChild(c1);
 
     const c2 =
-        kenneyStatChip('menu_best_star', 'BEST', String(bestScore), chipW, H - 4, C.gold) ??
-        vectorStatChip(icoRadar, 'BEST', String(bestScore), chipW, H - 4);
+        kenneyStatChip(icoStarBadge, 'BEST', String(bestScore), chipW, H - 4) ??
+        vectorStatChip(icoStarBadge, 'BEST', String(bestScore), chipW, H - 4);
     c2.position.set(x0 + chipW + gap, 2);
     root.addChild(c2);
 
     const c3 =
-        kenneyStatChip('menu_rewards_star_outline', 'PREMIUM', `${prog.unlockedCount}`, chipW, H - 4, 0xdd99ff) ??
-        vectorStatChip(icoRadar, 'PREMIUM', `${prog.unlockedCount}`, chipW, H - 4);
+        kenneyStatChip(icoGemPremium, 'PREMIUM', `${prog.unlockedCount}`, chipW, H - 4) ??
+        vectorStatChip(icoGemPremium, 'PREMIUM', `${prog.unlockedCount}`, chipW, H - 4);
     c3.position.set(x0 + (chipW + gap) * 2, 2);
     if (onPremiumTap) {
         c3.eventMode = 'static';
@@ -376,15 +392,11 @@ export function buildHeroFlightCard(
 
         const emblemX = ox + contentW - rightEmblem / 2;
         const emblemY = 34;
-        const radSpr = spriteIcon('menu_radar_center', 48, 0xffeedd);
-        if (radSpr) {
-            radSpr.position.set(emblemX, emblemY);
-            content.addChild(radSpr);
-        } else {
-            const rg = new Graphics();
-            icoRadar(rg, emblemX, emblemY, 22);
-            content.addChild(rg);
-        }
+        const rg = new Graphics();
+        rg.circle(emblemX, emblemY, 26);
+        rg.stroke({ color: C.cyan, width: 1.5, alpha: 0.35 });
+        icoRadar(rg, emblemX, emblemY, 18);
+        content.addChild(rg);
 
         const prog01 = prog.totalLevels > 0 ? prog.unlockedCount / prog.totalLevels : 0;
         const progLbl = new Text({
@@ -596,18 +608,15 @@ function missionRow(
     const iconR = 26;
     const icX = 14 + iconR;
     const icY = rowH / 2;
-    const nodeTex = unlocked ? 'node_unlocked' : 'node_locked';
-    const ns = spriteIcon(nodeTex, iconR * 2, unlocked ? C.cyan : 0x888899);
-    if (ns) {
-        ns.position.set(icX, icY);
-        root.addChild(ns);
-    } else {
-        const icBg = new Graphics();
-        icBg.circle(icX, icY, iconR);
-        icBg.fill({ color: C.surface2, alpha: 1 });
-        icBg.stroke({ color: unlocked ? C.cyan : C.muted, width: 2, alpha: 0.45 });
-        root.addChild(icBg);
-    }
+    const icBg = new Graphics();
+    icBg.circle(icX, icY, iconR);
+    icBg.fill({ color: C.surface2, alpha: 1 });
+    icBg.stroke({ color: unlocked ? C.cyan : C.muted, width: 2, alpha: unlocked ? 0.55 : 0.4 });
+    root.addChild(icBg);
+    const icGlyph = new Graphics();
+    if (unlocked) icoRadar(icGlyph, icX, icY, iconR * 0.55);
+    else icoLockSmall(icGlyph, icX, icY, iconR * 1.1);
+    root.addChild(icGlyph);
 
     const btnW = 100;
     const btnH = 42;
@@ -758,11 +767,9 @@ export function buildBottomNavDock(
         label: string;
         slot: number;
         onTap: () => void;
-        icon: VelocityUiTextureKey;
-        tint: number;
         vec: (g: Graphics, cx: number, cy: number, s: number) => void;
     }[] = [
-        { label: 'Home', slot: 0, onTap: () => { navIndexBySlot?.(0); onHome(); }, icon: 'icon_star', tint: C.gold, vec: icoHome },
+        { label: 'Home', slot: 0, onTap: () => { navIndexBySlot?.(0); onHome(); }, vec: icoHome },
         {
             label: 'Missions',
             slot: 1,
@@ -770,24 +777,18 @@ export function buildBottomNavDock(
                 navIndexBySlot?.(1);
                 gameFlow().openMissionSelect();
             },
-            icon: 'menu_routes_repeat',
-            tint: C.cyan,
             vec: icoMap,
         },
         {
             label: 'Hangar',
             slot: 2,
             onTap: () => { navIndexBySlot?.(2); ui.showScreen('store', true); },
-            icon: 'node_unlocked',
-            tint: C.cyan,
             vec: icoHangar,
         },
         {
             label: 'Store',
             slot: 3,
             onTap: () => { navIndexBySlot?.(3); ui.showScreen('store', true); },
-            icon: 'menu_store_icon',
-            tint: C.gold,
             vec: icoStore,
         },
     ];
@@ -803,15 +804,9 @@ export function buildBottomNavDock(
         slot.cursor = 'pointer';
 
         const cx = slotW / 2;
-        const sp = spriteIcon(it.icon, 26, it.tint);
-        if (sp) {
-            sp.position.set(cx, H / 2 - 8);
-            slot.addChild(sp);
-        } else {
-            const vg = new Graphics();
-            it.vec(vg, cx, H / 2 - 8, 22);
-            slot.addChild(vg);
-        }
+        const vg = new Graphics();
+        it.vec(vg, cx, H / 2 - 8, 22);
+        slot.addChild(vg);
 
         const t = new Text({ text: it.label, style: style(11, '600', C.muted) });
         t.anchor.set(0.5, 0);
