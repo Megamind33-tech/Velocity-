@@ -62,10 +62,12 @@ export function buildVelocityModal(
         text: title,
         style: new TextStyle({
             fill: titleFill,
-            fontSize: GAME_SIZES.font.xl,
+            fontSize: GAME_SIZES.font.xxl,      // 24px — up from 20px; modal authority
             fontWeight: 'bold',
             fontFamily: GAME_FONTS.arcade,
-            dropShadow: { alpha: 0.5, blur: 2, color: GAME_COLORS.bg_darkest, distance: 1 },
+            letterSpacing: 2,
+            stroke: { color: GAME_COLORS.bg_darkest, width: 1.5 },
+            dropShadow: { alpha: 0.65, blur: 3, color: GAME_COLORS.bg_darkest, distance: 2 },
         }),
     });
     titleText.anchor.set(0.5, 0);

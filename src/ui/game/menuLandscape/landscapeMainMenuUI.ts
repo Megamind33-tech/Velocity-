@@ -311,10 +311,11 @@ export function buildHeroFlightCard(
         const content = pair.content;
         const ox = 0;
 
-        const btnH = 40;
+        const btnH = 48;   // was 40 — taller CTA has more visual authority
         /** class chip + gap + FLY NOW — no mic row */
         const rowBudget = Math.max(160, contentW - GRID * 2);
-        let flyW = Math.min(200, Math.max(100, Math.floor(rowBudget * 0.42)));
+        // FLY NOW gets 50% minimum — dominant primary action
+        let flyW = Math.min(220, Math.max(120, Math.floor(rowBudget * 0.50)));
         let clsW = rowBudget - flyW - GRID;
         if (clsW < 120) {
             clsW = 120;
@@ -439,8 +440,10 @@ export function buildHeroFlightCard(
         content.addChild(cls);
 
         const flyX = ox + clsW + GRID;
+        // Accent (yellow/gold) chrome — structurally unique; all other surfaces are blue/grey.
+        // This makes FLY NOW the only warm-toned shape in the composition: instant focal pull.
         const fly =
-            kenneyButton('FLY NOW', flyW, useBtnH, 'button_primary', false, onFlyNow) ??
+            kenneyButton('FLY NOW', flyW, useBtnH, 'button_accent', false, onFlyNow) ??
             fallbackPrimaryBtn(flyW, useBtnH, 'FLY NOW', onFlyNow);
         fly.label = 'heroFlyCta';
         fly.position.set(flyX, rowY);

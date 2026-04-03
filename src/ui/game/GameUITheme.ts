@@ -48,11 +48,16 @@ export const GAME_COLORS = {
 
 /**
  * Font Configuration
+ * Primary: Kenney Future — game-native typeface from Kenney UI Pack (CC0)
+ * Narrow variant for HUD chips where horizontal space is constrained
  */
 export const GAME_FONTS = {
-    arcade: 'Orbitron, Arial, sans-serif',      // Arcade/gaming font
-    standard: 'Arial, sans-serif',               // Standard font
-    monospace: 'Courier New, monospace',         // For scores/numbers
+    /** Kenney Future — primary game typeface. Falls back to Orbitron → system. */
+    arcade: "'Kenney Future', 'Kenney Future Narrow', Orbitron, 'Arial Narrow', Arial, sans-serif",
+    /** Kenney Future Narrow — compact HUD / chip labels. */
+    narrow: "'Kenney Future Narrow', 'Kenney Future', Orbitron, 'Arial Narrow', Arial, sans-serif",
+    standard: "'Kenney Future', Orbitron, Arial, sans-serif",
+    monospace: "'Kenney Future Narrow', 'Courier New', monospace",
 };
 
 /**
@@ -76,6 +81,18 @@ export const GAME_SIZES = {
         xxl: 24,
         xxxl: 32,
         title: 48,
+        /** HUD micro-label (SCORE / LV / ALT / SPD headers) — stays subordinate */
+        hud_label: 9,
+        /** HUD major value (score counter) — must dominate at a glance */
+        hud_major: 26,
+        /** HUD secondary value (level, sector) — readable but below major */
+        hud_secondary: 18,
+        /** HUD detail value (alt, speed) — compact but legible */
+        hud_detail: 13,
+        /** Reward card token amount — creates desire */
+        reward_value: 22,
+        /** Celebration score on Level Complete / Game Over */
+        score_hero: 36,
     },
 
     // Spacing

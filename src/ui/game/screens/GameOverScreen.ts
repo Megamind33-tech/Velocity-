@@ -1,7 +1,16 @@
-import { Application, Text } from 'pixi.js';
+/**
+ * Game Over — CRASH modal with hero score and strong action hierarchy.
+ *
+ * DESIGN RULES:
+ *   - "CRASH" title: red, authoritative — immediate emotional read
+ *   - Score: 36px gold — you know your score before anything else
+ *   - RETRY: primary (blue) — dominant CTA
+ *   - Mission Select / Main Menu: secondary — present but don't compete
+ */
+
+import { Application, Text, TextStyle } from 'pixi.js';
 import { BaseGameScreen } from '../GameUIManager';
-import { createStatDisplay } from '../GameUIComponents';
-import { GAME_COLORS, GAME_SIZES } from '../GameUITheme';
+import { GAME_COLORS, GAME_FONTS, GAME_SIZES } from '../GameUITheme';
 import { gameFlow, getLastRunSummary, runEndActions } from '../gameFlowBridge';
 import {
     buildVelocityModal,
@@ -12,9 +21,22 @@ import {
 } from '../velocityModalLayout';
 import { createVelocityGameButton } from '../velocityUiButtons';
 
+function ts(fill: number, size: number, weight: '400'|'600'|'700'|'800' = '700', spacing = 0): TextStyle {
+    return new TextStyle({
+        fill,
+        fontSize: size,
+        fontWeight: weight,
+        fontFamily: GAME_FONTS.arcade,
+        letterSpacing: spacing,
+        dropShadow: size >= 18
+            ? { alpha: 0.6, blur: 3, color: 0x000000, distance: 2 }
+            : undefined,
+    });
+}
+
 export class GameOverScreen extends BaseGameScreen {
     private layout!: VelocityModalLayout;
-    private scoreValueText!: Text;
+    private scoreValText!: Text;
 
     constructor(app: Application) {
         super(app);
@@ -22,38 +44,66 @@ export class GameOverScreen extends BaseGameScreen {
     }
 
     private setupUI(): void {
-        const width = this.app.screen.width;
-        const height = this.app.screen.height;
-        const panelW = Math.min(360, width - 28);
-        const panelH = Math.min(400, height - 48);
+        const sw     = this.app.screen.width;
+        const sh     = this.app.screen.height;
+        const panelW = Math.min(360, sw - 28);
+        const panelH = Math.min(420, sh - 48);
 
-        this.layout = buildVelocityModal(this.container, this.app, 'CRASH', panelW, panelH, GAME_COLORS.accent_red);
+        this.layout = buildVelocityModal(
+            this.container,
+            this.app,
+            'CRASH',
+            panelW,
+            panelH,
+            GAME_COLORS.accent_red,
+        );
         const { body, innerW } = this.layout;
 
-        const scoreDisplay = createStatDisplay('RUN SCORE', '0', GAME_COLORS.accent_gold);
-        scoreDisplay.position.set((innerW - 200) / 2, 0);
-        body.addChild(scoreDisplay);
-        this.scoreValueText = scoreDisplay.children[1] as Text;
+        let y = 4;
 
-        const btnW = Math.min(268, innerW);
-        const btnH = 48;
-        let y = GAME_SIZES.spacing.xxl + 8;
-
-        const retryBtn = createVelocityGameButton('RETRY', 'success', () => runEndActions().onRetryRun(), {
-            width: btnW,
-            height: btnH,
+        // Score label — small, subordinate
+        const scoreLabel = new Text({
+            text: 'RUN SCORE',
+            style: ts(GAME_COLORS.text_muted, 11, '700', 2),
         });
-        retryBtn.position.set((innerW - btnW) / 2, y);
+        scoreLabel.anchor.set(0.5, 0);
+        scoreLabel.position.set(innerW / 2, y);
+        body.addChild(scoreLabel);
+        y += 16;
+
+        // Score value — hero number, gold
+        this.scoreValText = new Text({
+            text: '0',
+            style: ts(GAME_COLORS.accent_gold, GAME_SIZES.font.score_hero, '800'),
+        });
+        this.scoreValText.anchor.set(0.5, 0);
+        this.scoreValText.position.set(innerW / 2, y);
+        body.addChild(this.scoreValText);
+        y += GAME_SIZES.font.score_hero + 18;
+
+        // Action buttons
+        const btnW = innerW;
+        const btnH = 52;
+
+        const retryBtn = createVelocityGameButton(
+            'RETRY',
+            'success',
+            () => runEndActions().onRetryRun(),
+            { width: btnW, height: btnH },
+        );
+        retryBtn.position.set(0, y);
         body.addChild(retryBtn);
-        y += btnH + 10;
+        y += btnH + 8;
 
-        const mapBtn = createVelocityGameButton('MISSION SELECT', 'secondary', () => gameFlow().openMissionSelect(), {
-            width: btnW,
-            height: btnH,
-        });
-        mapBtn.position.set((innerW - btnW) / 2, y);
+        const mapBtn = createVelocityGameButton(
+            'MISSION SELECT',
+            'secondary',
+            () => gameFlow().openMissionSelect(),
+            { width: btnW, height: 44 },
+        );
+        mapBtn.position.set(0, y);
         body.addChild(mapBtn);
-        y += btnH + 10;
+        y += 44 + 8;
 
         const menuBtn = createVelocityGameButton(
             'MAIN MENU',
@@ -62,15 +112,15 @@ export class GameOverScreen extends BaseGameScreen {
                 gameFlow().openMainMenu();
                 this.uiManager.showScreen('main-menu');
             },
-            { width: btnW, height: btnH }
+            { width: btnW, height: 44 },
         );
-        menuBtn.position.set((innerW - btnW) / 2, y);
+        menuBtn.position.set(0, y);
         body.addChild(menuBtn);
     }
 
     refreshRunSummary(): void {
         const s = getLastRunSummary();
-        this.scoreValueText.text = String(s.score);
+        this.scoreValText.text = String(s.score);
     }
 
     show(): void {
@@ -81,7 +131,7 @@ export class GameOverScreen extends BaseGameScreen {
     resize(width: number, height: number): void {
         syncModalShellResize(this.layout, this.container, width, height);
         const panelW = Math.min(360, width - 28);
-        const panelH = Math.min(400, height - 48);
+        const panelH = Math.min(420, height - 48);
         this.layout.panelW = panelW;
         this.layout.panelH = panelH;
         this.layout.innerW = velocityModalInnerWidth(panelW);
