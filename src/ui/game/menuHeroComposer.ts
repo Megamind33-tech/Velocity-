@@ -9,6 +9,7 @@
 
 import { Container, Graphics, Text } from 'pixi.js';
 import { GAME_COLORS, GAME_FONTS } from './GameUITheme';
+import { createIconMicStatusDot, createIconPilotClassWings } from './menuFrontMenuIcons';
 import { helperTextStyle, heroSubtitleStyle, heroTitleStyle } from './menuTextStyles';
 
 // ─── Waveform constants ───────────────────────────────────────────────────────
@@ -70,12 +71,6 @@ function createRadarDisplay(r: number): Container {
         ring.stroke({ color: GAME_COLORS.primary, width: 0.75, alpha });
         root.addChild(ring);
     });
-
-    const cross = new Graphics();
-    cross.moveTo(cx - r + 3, cy).lineTo(cx + r - 3, cy);
-    cross.moveTo(cx, cy - r + 3).lineTo(cx, cy + r - 3);
-    cross.stroke({ color: GAME_COLORS.primary, width: 0.5, alpha: 0.2 });
-    root.addChild(cross);
 
     const sweepAngle = -Math.PI * 0.22;
     const sweep = new Graphics();
@@ -180,18 +175,6 @@ function createCommandLens(radarR: number): Container {
     return root;
 }
 
-function createFlightInsignia(): Container {
-    const root   = new Container();
-    const widths = [18, 12, 7];
-    widths.forEach((w, i) => {
-        const bar = new Graphics();
-        bar.roundRect(0, i * 9, w, 2.5, 1);
-        bar.fill({ color: GAME_COLORS.primary, alpha: 0.5 - i * 0.1 });
-        root.addChild(bar);
-    });
-    return root;
-}
-
 function createVoiceLinkArc(
     x0: number, y0: number, x1: number, y1: number,
 ): Container {
@@ -215,11 +198,12 @@ function createReadyChip(
     text: string,
 ): { container: Container; chipW: number; chipH: number } {
     const container = new Container();
-    const h     = 22;
-    const padX  = 11;
-    const dotGap = 7;
-    const label = new Text({ text, style: helperTextStyle() });
-    const chipW = label.width + padX + dotGap + padX;
+    const h        = 22;
+    const padX     = 10;
+    const micSlotW = 18;
+    const gap      = 6;
+    const label    = new Text({ text, style: helperTextStyle() });
+    const chipW    = padX + micSlotW + gap + label.width + padX;
 
     const bg = new Graphics();
     bg.roundRect(0, 0, chipW, h, h / 2);
@@ -227,13 +211,12 @@ function createReadyChip(
     bg.stroke({ color: GAME_COLORS.primary, width: 1, alpha: 0.55 });
     container.addChild(bg);
 
-    const dot = new Graphics();
-    dot.circle(padX, h / 2, 2.5);
-    dot.fill({ color: GAME_COLORS.accent_green, alpha: 0.95 });
-    container.addChild(dot);
+    const status = createIconMicStatusDot(h);
+    status.position.set(padX, 0);
+    container.addChild(status);
 
     label.anchor.set(0, 0.5);
-    label.position.set(padX + dotGap, h / 2);
+    label.position.set(padX + micSlotW + gap, h / 2);
     container.addChild(label);
 
     return { container, chipW, chipH: h };
@@ -353,10 +336,6 @@ export function buildHeroModule(
     signalTag.position.set(bodyX + 20, height * 0.2);
     root.addChild(signalTag);
 
-    const insig = createFlightInsignia();
-    insig.position.set(2, Math.floor(height * 0.32));
-    root.addChild(insig);
-
     const titleFontSize = Math.min(32, Math.max(24, Math.floor(height * 0.24)));
     const titleText = new Text({
         text:  opts.title,
@@ -385,11 +364,14 @@ export function buildHeroModule(
     subText.position.set(bodyX + 18, subtitleY);
     root.addChild(subText);
 
-    const pitchLine = new Graphics();
-    pitchLine.moveTo(bodyX + 18, subtitleY + 16);
-    pitchLine.lineTo(bodyX + 18 + Math.min(56, bodyW * 0.28), subtitleY + 16);
-    pitchLine.stroke({ color: GAME_COLORS.primary, width: 1, alpha: 0.25 });
-    root.addChild(pitchLine);
+    const arcX0 = bodyX + 18;
+    const arcX1 = bodyX + 18 + Math.min(72, bodyW * 0.36);
+    const arcY  = subtitleY + 17;
+    const routeArc = new Graphics();
+    routeArc.moveTo(arcX0, arcY + 4);
+    routeArc.quadraticCurveTo((arcX0 + arcX1) / 2, arcY - 10, arcX1, arcY + 2);
+    routeArc.stroke({ color: GAME_COLORS.primary, width: 1, alpha: 0.32 });
+    root.addChild(routeArc);
 
     const pitchLbl = new Text({
         text:  'PITCH · SIGNAL',
@@ -434,7 +416,8 @@ export function buildHeroModule(
                 letterSpacing: 2,
             },
         });
-        const tagW  = Math.max(rankLabel.width, classLabel.width) + 16;
+        const wingSlot = 16;
+        const tagW     = Math.max(rankLabel.width, classLabel.width) + 20 + wingSlot;
 
         const tagBg = new Graphics();
         tagBg.roundRect(0, 0, tagW, rankTagH, 4);
@@ -443,11 +426,15 @@ export function buildHeroModule(
 
         const tagContainer = new Container();
         tagContainer.addChild(tagBg);
+        const classWing = createIconPilotClassWings(wingSlot);
+        classWing.position.set(4, (rankTagH - wingSlot) / 2);
+        tagContainer.addChild(classWing);
+        const textCx = wingSlot + 10 + Math.max(rankLabel.width, classLabel.width) / 2;
         classLabel.anchor.set(0.5, 0);
-        classLabel.position.set(tagW / 2, 2);
+        classLabel.position.set(textCx, 2);
         tagContainer.addChild(classLabel);
         rankLabel.anchor.set(0.5, 1);
-        rankLabel.position.set(tagW / 2, rankTagH - 2);
+        rankLabel.position.set(textCx, rankTagH - 2);
         tagContainer.addChild(rankLabel);
 
         chipResult.container.position.set(bodyX + 18, chipY);
