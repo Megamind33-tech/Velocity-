@@ -42,11 +42,19 @@ import {
 export type MenuButtonTier = 'cta' | 'secondary' | 'economy' | 'utility';
 
 export const MENU_TIER_HEIGHT: Record<MenuButtonTier, number> = {
-    cta:       64,
-    secondary: 48,
+    cta:       70,
+    secondary: 52,
     economy:   46,
     utility:   40,
 };
+
+/** Optional visual treatment for menu buttons (CTA launch energy, social modules). */
+export interface MenuButtonExtras {
+    /** Primary CTA only — runway streaks, deploy strip, forward chevrons. */
+    ctaLaunch?: boolean;
+    /** Secondary tier — distinct fantasy for leaderboard vs achievements. */
+    social?: 'leaderboard' | 'achievements';
+}
 
 // ─── Role palette ─────────────────────────────────────────────────────────────
 
@@ -118,10 +126,12 @@ export function createMenuButton(
     variant: 'primary' | 'secondary' | 'accent' | 'danger' | 'success',
     onClick: () => void,
     width:   number,
+    extras?: MenuButtonExtras,
 ): Container {
     const h    = MENU_TIER_HEIGHT[tier];
     const role = tierToRole(tier);
     const P    = ROLE_PALETTE[role];
+    const socialColW = extras?.social ? 46 : 0;
 
     const root = new Container();
     root.eventMode = 'static';
@@ -133,6 +143,123 @@ export function createMenuButton(
     base.fill({ color: P.bg, alpha: 0.97 });
     base.eventMode = 'none';
     root.addChild(base);
+
+    // 1b. CTA launch deck — forward motion, runway energy (under other layers)
+    if (role === 'primary' && extras?.ctaLaunch) {
+        const deck = new Graphics();
+        deck.roundRect(0, h * 0.58, width, h * 0.42, P.radius);
+        deck.fill({ color: 0x020a0c, alpha: 0.92 });
+        deck.eventMode = 'none';
+        root.addChild(deck);
+
+        const streaks = new Graphics();
+        for (let i = 0; i < 5; i++) {
+            const x0 = 12 + i * (width - 24) / 4.5;
+            streaks.moveTo(x0, h - 6);
+            streaks.lineTo(x0 + 10 + i * 3, h * 0.62);
+        }
+        streaks.stroke({ color: P.border, width: 1.25, alpha: 0.22 });
+        streaks.eventMode = 'none';
+        root.addChild(streaks);
+
+        const strip = new Graphics();
+        strip.roundRect(8, h - 10, width - 16, 4, 2);
+        strip.fill({ color: P.border, alpha: 0.35 });
+        strip.eventMode = 'none';
+        root.addChild(strip);
+
+        const chev = new Graphics();
+        const cy = h * 0.36;
+        for (let k = 0; k < 3; k++) {
+            const cx = width - 16 - k * 10;
+            chev.moveTo(cx - 6, cy);
+            chev.lineTo(cx + 2, cy - 6);
+            chev.lineTo(cx + 2, cy + 6);
+            chev.closePath();
+        }
+        chev.fill({ color: P.border, alpha: 0.22 });
+        chev.eventMode = 'none';
+        root.addChild(chev);
+    }
+
+    // 1c. Social modules — prestige column + tinted lift (leaderboard vs achievements)
+    if (role === 'utility' && extras?.social) {
+        const acc = extras.social === 'leaderboard' ? GAME_COLORS.accent_gold : 0xcc88ff;
+        const zone = new Graphics();
+        zone.roundRect(0, 0, socialColW, h, 6);
+        zone.fill({ color: extras.social === 'leaderboard' ? 0x120a00 : 0x100818, alpha: 0.98 });
+        zone.eventMode = 'none';
+        root.addChild(zone);
+
+        const zoneLine = new Graphics();
+        zoneLine.moveTo(socialColW, 6).lineTo(socialColW, h - 6);
+        zoneLine.stroke({ color: acc, width: 1, alpha: 0.45 });
+        zoneLine.eventMode = 'none';
+        root.addChild(zoneLine);
+
+        const iconRoot = new Container();
+        const ix = socialColW / 2;
+        const iy = h / 2;
+        if (extras.social === 'leaderboard') {
+            const b1 = new Graphics();
+            b1.roundRect(ix - 14, iy + 2, 8, 10, 1);
+            b1.fill({ color: acc, alpha: 0.55 });
+            iconRoot.addChild(b1);
+            const b2 = new Graphics();
+            b2.roundRect(ix - 4, iy - 4, 8, 16, 1);
+            b2.fill({ color: acc, alpha: 0.85 });
+            iconRoot.addChild(b2);
+            const b3 = new Graphics();
+            b3.roundRect(ix + 6, iy + 4, 8, 8, 1);
+            b3.fill({ color: acc, alpha: 0.5 });
+            iconRoot.addChild(b3);
+            const crown = new Graphics();
+            crown.moveTo(ix, iy - 14);
+            crown.lineTo(ix - 5, iy - 8);
+            crown.lineTo(ix + 5, iy - 8);
+            crown.closePath();
+            crown.fill({ color: 0xffffee, alpha: 0.35 });
+            iconRoot.addChild(crown);
+        } else {
+            const cupBody = new Graphics();
+            cupBody.roundRect(ix - 7, iy - 2, 14, 12, 2);
+            cupBody.fill({ color: acc, alpha: 0.22 });
+            cupBody.stroke({ color: acc, width: 1, alpha: 0.75 });
+            iconRoot.addChild(cupBody);
+            const cupBase = new Graphics();
+            cupBase.arc(ix, iy + 8, 8, Math.PI, 0);
+            cupBase.stroke({ color: acc, width: 1.2, alpha: 0.55 });
+            iconRoot.addChild(cupBase);
+            const star = new Graphics();
+            star.moveTo(ix, iy - 12);
+            for (let s = 0; s < 5; s++) {
+                const a = -Math.PI / 2 + (s * 2 * Math.PI) / 5;
+                const r = s % 2 === 0 ? 5 : 2;
+                const px = ix + Math.cos(a) * r;
+                const py = iy - 8 + Math.sin(a) * r;
+                if (s === 0) star.moveTo(px, py);
+                else star.lineTo(px, py);
+            }
+            star.closePath();
+            star.fill({ color: 0xfff8cc, alpha: 0.7 });
+            iconRoot.addChild(star);
+        }
+        root.addChild(iconRoot);
+
+        const tierLbl = new Text({
+            text:  extras.social === 'leaderboard' ? 'ELITE' : 'HONORS',
+            style: {
+                fill:          acc,
+                fontSize:      6,
+                fontFamily:    GAME_FONTS.arcade,
+                letterSpacing: 1,
+            },
+        });
+        tierLbl.alpha = 0.75;
+        tierLbl.anchor.set(0.5, 1);
+        tierLbl.position.set(socialColW / 2, h - 4);
+        root.addChild(tierLbl);
+    }
 
     // 2. Subtle interior surface lift for utility buttons (reduces flat feel)
     if (role === 'utility') {
@@ -226,8 +353,34 @@ export function createMenuButton(
                              utilityButtonLabelStyle();
     const t = new Text({ text: label, style: labelStyle });
     t.anchor.set(0.5);
-    t.position.set(width / 2, h / 2);
+    t.position.set((width + socialColW) / 2, h / 2);
     root.addChild(t);
+
+    if (role === 'primary' && extras?.ctaLaunch) {
+        const deploy = new Text({
+            text:  'DEPLOY',
+            style: {
+                fill:          P.border,
+                fontSize:      8,
+                fontFamily:    GAME_FONTS.arcade,
+                letterSpacing: 3,
+            },
+        });
+        deploy.alpha = 0.45;
+        deploy.anchor.set(0.5, 0);
+        deploy.position.set(width / 2, 8);
+        root.addChild(deploy);
+    }
+
+    if (role === 'utility' && extras?.social) {
+        const sub = new Text({
+            text:  extras.social === 'leaderboard' ? 'GLOBAL RANK' : 'MEDALS',
+            style: hudLabelStyle(),
+        });
+        sub.anchor.set(0, 0.5);
+        sub.position.set(socialColW + 10, h * 0.32);
+        root.addChild(sub);
+    }
 
     // 8. Interaction states
     const stop = (e: FederatedPointerEvent) => e.stopPropagation();
@@ -520,10 +673,13 @@ export function createStatsStripBackplate(width: number, height: number): Contai
     return root;
 }
 
-// ─── Utility row (Settings) ───────────────────────────────────────────────────
+// ─── Settings dock (compact utility rail) ─────────────────────────────────────
 
-/** Low-priority settings row — bold, readable, still clearly subordinate. */
-export function createUtilityRow(
+/**
+ * Finished bottom utility: split rail with gear socket + label capsule + status ticks.
+ * Reads as cockpit systems, not an empty footer slab.
+ */
+export function createSettingsDock(
     label:   string,
     onClick: () => void,
     width:   number,
@@ -531,33 +687,99 @@ export function createUtilityRow(
     const root = new Container();
     root.eventMode = 'static';
     root.cursor    = 'pointer';
-    const h = 38;
+    const h = 34;
+    const r = h / 2;
 
-    const bg = new Graphics();
-    bg.roundRect(0, 0, width, h, 8);
-    bg.fill({ color: 0xffffff, alpha: 0.035 });
-    bg.stroke({ color: 0x334455, width: 1, alpha: 0.45 });
-    bg.eventMode = 'none';
-    root.addChild(bg);
+    const rail = new Graphics();
+    rail.roundRect(0, 0, width, h, r);
+    rail.fill({ color: 0x060c14, alpha: 0.88 });
+    rail.stroke({ color: GAME_COLORS.primary, width: 1, alpha: 0.22 });
+    rail.eventMode = 'none';
+    root.addChild(rail);
+
+    const inner = new Graphics();
+    inner.roundRect(2, 2, width - 4, h - 4, r - 1);
+    inner.stroke({ color: 0x1a3044, width: 1, alpha: 0.55 });
+    inner.eventMode = 'none';
+    root.addChild(inner);
+
+    const socketW = 36;
+    const socket = new Graphics();
+    socket.roundRect(2, 2, socketW, h - 4, 6);
+    socket.fill({ color: 0x0a1520, alpha: 0.95 });
+    socket.stroke({ color: 0x2a4a62, width: 1, alpha: 0.65 });
+    socket.eventMode = 'none';
+    root.addChild(socket);
+
+    const gear = new Graphics();
+    const gx = 2 + socketW / 2;
+    const gy = h / 2;
+    gear.circle(gx, gy, 9);
+    gear.stroke({ color: 0x88aacc, width: 1.25, alpha: 0.55 });
+    gear.circle(gx, gy, 3.5);
+    gear.stroke({ color: 0x88aacc, width: 1, alpha: 0.45 });
+    for (let i = 0; i < 4; i++) {
+        const a = (i * Math.PI) / 2;
+        gear.moveTo(gx + Math.cos(a) * 4.5, gy + Math.sin(a) * 4.5);
+        gear.lineTo(gx + Math.cos(a) * 8.5, gy + Math.sin(a) * 8.5);
+    }
+    gear.stroke({ color: 0x88aacc, width: 1, alpha: 0.4 });
+    gear.eventMode = 'none';
+    root.addChild(gear);
+
+    const capW = Math.min(width - socketW - 18, 160);
+    const capX = socketW + 8;
+    const cap = new Graphics();
+    cap.roundRect(capX, 5, capW, h - 10, (h - 10) / 2);
+    cap.fill({ color: 0xffffff, alpha: 0.04 });
+    cap.stroke({ color: 0x334c60, width: 1, alpha: 0.5 });
+    cap.eventMode = 'none';
+    root.addChild(cap);
 
     const t = new Text({ text: label, style: footerUtilityLabelStyle() });
-    t.anchor.set(0.5, 0.5);
-    t.position.set(width / 2, h / 2);
+    t.anchor.set(0, 0.5);
+    t.position.set(capX + 12, h / 2);
     root.addChild(t);
 
-    const icon = new Text({
-        text:  '⚙',
-        style: { fill: 0x7799aa, fontSize: 12 },
+    const sys = new Text({
+        text:  'SYS',
+        style: {
+            fill:          0x4a6678,
+            fontSize:      7,
+            fontFamily:    GAME_FONTS.arcade,
+            letterSpacing: 2,
+        },
     });
-    icon.anchor.set(1, 0.5);
-    icon.position.set(width / 2 - t.width / 2 - 6, h / 2);
-    root.addChild(icon);
+    sys.anchor.set(1, 0.5);
+    sys.position.set(width - 10, h / 2);
+    root.addChild(sys);
+
+    const tickY = h / 2;
+    for (let j = 0; j < 3; j++) {
+        const tx = width - 28 - j * 5;
+        const tick = new Graphics();
+        tick.moveTo(tx, tickY - 4);
+        tick.lineTo(tx + 3, tickY);
+        tick.lineTo(tx, tickY + 4);
+        tick.stroke({ color: GAME_COLORS.primary, width: 1, alpha: 0.2 + j * 0.08 });
+        tick.eventMode = 'none';
+        root.addChild(tick);
+    }
 
     const stop = (e: FederatedPointerEvent) => e.stopPropagation();
-    root.on('pointerdown',     (e: FederatedPointerEvent) => { stop(e); root.alpha = 0.72; });
+    root.on('pointerdown',     (e: FederatedPointerEvent) => { stop(e); root.alpha = 0.82; });
     root.on('pointerup',       (e: FederatedPointerEvent) => { stop(e); root.alpha = 1.0;  onClick(); });
     root.on('pointerupoutside',() => { root.alpha = 1.0; });
     root.on('pointercancel',   () => { root.alpha = 1.0; });
 
     return root;
+}
+
+/** @deprecated Use createSettingsDock for main menu footer. */
+export function createUtilityRow(
+    label:   string,
+    onClick: () => void,
+    width:   number,
+): Container {
+    return createSettingsDock(label, onClick, width);
 }
