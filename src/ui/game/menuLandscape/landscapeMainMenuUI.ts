@@ -90,12 +90,6 @@ function icoProfile(g: Graphics, cx: number, cy: number, s: number): void {
     g.arc(cx, cy + s * 0.42, s * 0.38, Math.PI * 1.12, Math.PI * 1.88);
     g.stroke({ color: C.cyan, width: 2, alpha: 0.9 });
 }
-function icoMic(g: Graphics, cx: number, cy: number, s: number): void {
-    g.roundRect(cx - s * 0.1, cy - s * 0.26, s * 0.2, s * 0.34, 3);
-    g.stroke({ color: C.cyan, width: 2, alpha: 0.9 });
-    g.arc(cx, cy + s * 0.18, s * 0.2, 0.25, Math.PI - 0.25);
-    g.stroke({ color: C.cyan, width: 2, alpha: 0.9 });
-}
 function icoWing(g: Graphics, cx: number, cy: number, s: number): void {
     g.moveTo(cx, cy - s * 0.12);
     g.lineTo(cx - s * 0.38, cy + s * 0.22);
@@ -317,17 +311,16 @@ export function buildHeroFlightCard(
         const ox = 0;
 
         const btnH = 40;
-        const micW = 96;
-        /** mic + gap + class + gap + fly ≤ contentW */
-        const budget = Math.max(120, contentW - micW - GRID * 2);
-        let flyW = Math.min(200, Math.max(96, Math.floor(budget * 0.58)));
-        let clsW = budget - flyW;
-        if (clsW < 64) {
-            clsW = 64;
-            flyW = Math.min(200, Math.max(88, budget - clsW));
+        /** class chip + gap + FLY NOW — no mic row */
+        const rowBudget = Math.max(160, contentW - GRID * 2);
+        let flyW = Math.min(200, Math.max(100, Math.floor(rowBudget * 0.42)));
+        let clsW = rowBudget - flyW - GRID;
+        if (clsW < 120) {
+            clsW = 120;
+            flyW = Math.min(200, Math.max(96, rowBudget - clsW - GRID));
         }
-        if (clsW > 148) clsW = 148;
-        flyW = budget - clsW;
+        clsW = Math.min(Math.floor(rowBudget * 0.62), clsW);
+        flyW = rowBudget - clsW - GRID;
 
         const bottomPad = 8;
         let rowY = innerH - btnH - bottomPad;
@@ -424,40 +417,27 @@ export function buildHeroFlightCard(
             content.addChild(f);
         }
 
-        const mic = new Container();
-        const mb = new Graphics();
-        mb.roundRect(0, 0, micW, useBtnH, 12);
-        mb.fill({ color: 0x080e16, alpha: 1 });
-        mb.stroke({ color: 0x33aa66, width: 1.5, alpha: 0.65 });
-        mic.addChild(mb);
-        const mlab = new Text({ text: 'Mic live', style: style(12, '700', C.text) });
-        mlab.position.set(32, Math.floor((useBtnH - 14) / 2));
-        mic.addChild(mlab);
-        const mg = new Graphics();
-        icoMic(mg, 15, useBtnH / 2, 13);
-        mic.addChild(mg);
-        mic.position.set(ox, rowY);
-        content.addChild(mic);
-
         const cls = new Container();
         const cb = new Graphics();
         cb.roundRect(0, 0, clsW, useBtnH, 12);
         cb.fill({ color: 0x080e16, alpha: 1 });
         cb.stroke({ color: C.gold, width: 1.5, alpha: 0.55 });
         cls.addChild(cb);
+        const wingX = 14;
+        const textPad = 36;
+        const wg = new Graphics();
+        icoWing(wg, wingX, useBtnH / 2, 13);
+        cls.addChild(wg);
         const clab = new Text({
-            text: trunc(`Class: ${rank}`, 16),
+            text: trunc(`Class: ${rank}`, Math.max(8, Math.floor((clsW - textPad - 8) / 7))),
             style: style(12, '700', C.text),
         });
-        clab.position.set(32, Math.floor((useBtnH - 14) / 2));
+        clab.position.set(textPad, Math.floor((useBtnH - 14) / 2));
         cls.addChild(clab);
-        const wg = new Graphics();
-        icoWing(wg, 15, useBtnH / 2, 13);
-        cls.addChild(wg);
-        cls.position.set(ox + micW + GRID, rowY);
+        cls.position.set(ox, rowY);
         content.addChild(cls);
 
-        const flyX = ox + micW + GRID + clsW + GRID;
+        const flyX = ox + clsW + GRID;
         const fly =
             kenneyButton('FLY NOW', flyW, useBtnH, 'button_primary', false, onFlyNow) ??
             fallbackPrimaryBtn(flyW, useBtnH, 'FLY NOW', onFlyNow);
