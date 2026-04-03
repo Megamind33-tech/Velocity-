@@ -1,6 +1,5 @@
 /**
- * Main menu — landscape-first premium layout (PixiJS).
- * Zones: utility bar, hero card, mode tabs, scrollable mission list, bottom nav.
+ * Main menu — portrait mission console OR landscape layout (PixiJS), orientation from aspect ratio.
  */
 
 import { Application, Container, FederatedPointerEvent } from 'pixi.js';
@@ -18,6 +17,7 @@ import {
     type MissionListBundle,
     type TopBarRefs,
 } from '../menuLandscape/landscapeMainMenuUI';
+import { buildPortraitMissionScreen, type PortraitMissionBundle } from '../menuPortrait/portraitMissionScreen';
 import { getPilotRank } from '../menuLayoutHelpers';
 import { mountVelocityShell, resizeVelocityShell, type VelocityShellParts } from '../velocityScreenShell';
 
@@ -34,12 +34,19 @@ function findLabeledDescendant(root: Container, label: string): Container | null
     return null;
 }
 
+function isPortraitAspect(sw: number, sh: number): boolean {
+    return sh > sw;
+}
+
 export class MainMenuScreen extends BaseGameScreen {
     private shell!: VelocityShellParts;
     private readonly content = new Container();
 
-    private topRefs!: TopBarRefs;
-    private missionBundle!: MissionListBundle;
+    private portraitMode = false;
+    private landscapeTopRefs!: TopBarRefs;
+    private portraitBundle: PortraitMissionBundle | null = null;
+    private missionBundle: MissionListBundle | null = null;
+
     private tabsSetActive!: (i: number) => void;
     private navSetActive!: (i: number) => void;
 
@@ -50,10 +57,9 @@ export class MainMenuScreen extends BaseGameScreen {
     private listDrag = false;
     private listDragY = 0;
     private listScrollStart = 0;
-
     constructor(app: Application) {
         super(app);
-        this.content.label = 'mainMenuLandscapeContent';
+        this.content.label = 'mainMenuContent';
         this.setupUI();
     }
 
@@ -67,10 +73,12 @@ export class MainMenuScreen extends BaseGameScreen {
         return ResponsiveUIManager.getInstance().getSafeAreaPadding();
     }
 
-    private contentWidth(sw: number): number {
+    private contentWidth(sw: number, portrait: boolean): number {
         const s = this.safePad();
         const m = Math.max(s.left, s.right, GAME_SIZES.spacing.md);
-        return Math.max(320, sw - m * 2);
+        const inner = sw - m * 2;
+        if (portrait) return Math.min(430, Math.max(320, inner));
+        return Math.max(320, inner);
     }
 
     private marginX(sw: number, cw: number): number {
@@ -82,15 +90,52 @@ export class MainMenuScreen extends BaseGameScreen {
         resizeVelocityShell(this.shell, this.container, sw, sh, 0.36, { liveBackdrop: true });
 
         this.content.removeChildren();
+        this.portraitBundle = null;
+        this.missionBundle = null;
+        this._flyBtn = null;
 
-        const cw = this.contentWidth(sw);
+        this.portraitMode = isPortraitAspect(sw, sh);
+        const cw = this.contentWidth(sw, this.portraitMode);
         const mx = this.marginX(sw, cw);
+        const ui = this.uiManager;
+
+        if (this.portraitMode) {
+            const prog = getMainMenuProgress();
+            const unlocked = getUnlockedLevelIds();
+            const firstPlayable = [...unlocked].sort((a, b) => a - b)[0] ?? 1;
+
+            const bundle = buildPortraitMissionScreen({
+                layoutW: cw,
+                screenH: sh,
+                safeTop: safe.top,
+                safeBottom: safe.bottom,
+                ui,
+                getProgress: () => getMainMenuProgress(),
+                getRank: (m) => getPilotRank(m),
+                getBestScore: () => getMenuHighScore(),
+                onFly: () => gameFlow().startLevelWithMicGate?.(firstPlayable),
+            });
+            this.portraitBundle = bundle;
+            bundle.root.position.set(mx, 0);
+            this.content.addChild(bundle.root);
+
+            this.landscapeTopRefs = {
+                energyText: bundle.topRefs.signal,
+                bestText: bundle.topRefs.best,
+                premiumText: bundle.topRefs.premium,
+            };
+            this.tabsSetActive = bundle.setTabActive;
+            this.navSetActive = bundle.setNavActive;
+            this._flyBtn = bundle.flyCta;
+            this.setupListScroll(bundle.root, bundle);
+            return;
+        }
+
         const topY = safe.top + 12;
 
         const prog = getMainMenuProgress();
         const rank = getPilotRank(prog.maxUnlocked);
         const score = getMenuHighScore();
-        const ui = this.uiManager;
 
         const topBar = buildTopUtilityBar(
             cw,
@@ -100,7 +145,7 @@ export class MainMenuScreen extends BaseGameScreen {
             score,
             () => gameFlow().openAchievements?.(),
         );
-        this.topRefs = topBar.refs;
+        this.landscapeTopRefs = topBar.refs;
         topBar.root.position.set(mx, topY);
         this.content.addChild(topBar.root);
 
@@ -131,10 +176,10 @@ export class MainMenuScreen extends BaseGameScreen {
         this.missionBundle = bundle;
         bundle.root.position.set(mx, y);
         this.content.addChild(bundle.root);
-        this.setupListScroll(bundle);
+        this.setupListScroll(bundle.root, bundle);
 
         const tabs = buildModeTabs(cw, (idx) => {
-            this.missionBundle.rebuild(idx);
+            this.missionBundle!.rebuild(idx);
             this.tabsSetActive(idx);
         });
         this.tabsSetActive = tabs.setActive;
@@ -149,8 +194,10 @@ export class MainMenuScreen extends BaseGameScreen {
         this._refreshTopBar();
     }
 
-    private setupListScroll(bundle: MissionListBundle): void {
-        const root = bundle.root;
+    private setupListScroll(
+        root: Container,
+        bundle: { setScrollY: (y: number) => void; getScrollY: () => number },
+    ): void {
         root.eventMode = 'static';
         root.cursor = 'grab';
 
@@ -176,15 +223,19 @@ export class MainMenuScreen extends BaseGameScreen {
 
     private _refreshTopBar(): void {
         const p = getMainMenuProgress();
-        this.topRefs.bestText.text = String(getMenuHighScore());
-        this.topRefs.premiumText.text = `${p.unlockedCount}`;
-        this.topRefs.energyText.text = `${p.maxUnlocked}`;
+        this.landscapeTopRefs.bestText.text = String(getMenuHighScore());
+        this.landscapeTopRefs.premiumText.text = `${p.unlockedCount}`;
+        this.landscapeTopRefs.energyText.text = `${p.maxUnlocked}`;
     }
 
     update(deltaTime: number): void {
         if (!this.container.visible) return;
         this._tick += deltaTime;
         this.shell.backdropTick?.(this._tick);
+
+        if (this.portraitBundle) {
+            this.portraitBundle.tick(this._tick);
+        }
 
         if (this._flyBtn) {
             this._flyShimmer += deltaTime * 0.9;
