@@ -171,23 +171,73 @@ function buildStatusChip(
     accent: 'cyan' | 'gold',
 ): Container {
     const root = new Container();
-    const g = new Graphics();
-    g.roundRect(0, 0, w, h, P_RADIUS.chip);
-    g.fill({ color: P_COLORS.bgElevated, alpha: 1 });
-    const strokeC = accent === 'gold' ? P_COLORS.accentGoldSoft : P_COLORS.accentCyanSoft;
-    g.stroke({ color: strokeC, width: 1, alpha: 0.55 });
-    root.addChild(g);
-    const rim = new Graphics();
-    rim.roundRect(1, 1, w - 2, h - 2, P_RADIUS.chip - 1);
-    rim.stroke({ color: P_COLORS.strokeSubtle, width: 1, alpha: 0.4 });
-    root.addChild(rim);
 
-    const lb = new Text({ text: label, style: ts(P_TYPO.label, P_COLORS.textMuted) });
-    lb.position.set(P_SPACE.s10, P_SPACE.s6);
+    // ── Background: Kenney nine-slice if available at this width, else vector ──
+    const chipTex = getVelocityUiTexture('button_secondary');
+    const BS = PORTRAIT_TAB_BS;
+    const canNineSlice = !!chipTex && w >= 116; // 56+56 corners need ≥ 116px safe
+
+    if (canNineSlice) {
+        const spr = new NineSliceSprite({
+            texture: chipTex!,
+            leftWidth: BS.L, rightWidth: BS.R,
+            topHeight: BS.T, bottomHeight: BS.B,
+            width: w, height: h,
+        });
+        // Tint towards accent family for cohesion
+        spr.tint = accent === 'gold' ? 0xf0ead0 : 0xd0e8f0;
+        spr.alpha = 0.92;
+        root.addChild(spr);
+    } else {
+        const g = new Graphics();
+        g.roundRect(0, 0, w, h, P_RADIUS.chip);
+        g.fill({ color: P_COLORS.bgElevated, alpha: 1 });
+        const strokeC = accent === 'gold' ? P_COLORS.accentGoldSoft : P_COLORS.accentCyanSoft;
+        g.stroke({ color: strokeC, width: 1.5, alpha: 0.65 });
+        root.addChild(g);
+        // Inner bevel line for depth
+        const bevel = new Graphics();
+        bevel.roundRect(1, 1, w - 2, h / 2, P_RADIUS.chip - 1);
+        bevel.fill({ color: 0xffffff, alpha: 0.04 });
+        root.addChild(bevel);
+    }
+
+    // ── Accent indicator strip (top edge) ─────────────────────────────────────
+    const strip = new Graphics();
+    const stripC = accent === 'gold' ? P_COLORS.accentGold : P_COLORS.accentCyan;
+    strip.roundRect(8, 0, w - 16, 2, 1);
+    strip.fill({ color: stripC, alpha: 0.7 });
+    root.addChild(strip);
+
+    // ── Label — 9px muted, clearly subordinate ─────────────────────────────────
+    const lb = new Text({
+        text: label.toUpperCase(),
+        style: new TextStyle({
+            fontFamily: FONT,
+            fontSize: 9,
+            fontWeight: '600',
+            fill: P_COLORS.textMuted,
+            letterSpacing: 1.2,
+        }),
+    });
+    lb.position.set(10, 6);
     root.addChild(lb);
-    const vt = new Text({ text: value, style: ts(P_TYPO.meta, P_COLORS.textPrimary) });
-    vt.position.set(P_SPACE.s10, P_SPACE.s6 + 14);
+
+    // ── Value — 16px bold in accent color — dominant visual target ─────────────
+    const valColor = accent === 'gold' ? P_COLORS.accentGold : P_COLORS.accentCyan;
+    const vt = new Text({
+        text: value,
+        style: new TextStyle({
+            fontFamily: FONT,
+            fontSize: 16,
+            fontWeight: '800',
+            fill: valColor,
+            dropShadow: { alpha: 0.45, blur: 2, color: 0x000000, distance: 1 },
+        }),
+    });
+    vt.position.set(10, h / 2 - 2);
     root.addChild(vt);
+
     return root;
 }
 
@@ -347,10 +397,11 @@ function buildFeaturedMissionCard(p: FeaturedProps): {
     rewardShimmer.position.set(ex - emblemR, ey - emblemR);
     root.addChild(rewardShimmer);
 
-    const rowY = p.cardH - pad - 44;
-    const chipH = 40;
+    const rowY = p.cardH - pad - 48;
+    const chipH = 44;
     const rowInner = p.cw - pad * 2;
-    let flyW = Math.min(168, Math.max(112, Math.floor(rowInner * 0.38)));
+    // FLY NOW gets 46% of row — dominant primary action
+    let flyW = Math.min(180, Math.max(120, Math.floor(rowInner * 0.46)));
     let rankW = rowInner - flyW - P_SPACE.s8;
     if (rankW < 140) {
         rankW = 140;
@@ -389,8 +440,9 @@ function buildFeaturedMissionCard(p: FeaturedProps): {
     starLbl.position.set(pad, rowY - 20);
     root.addChild(starLbl);
 
+        // Gold accent — structurally unique warm tone in the card composition
         const fly =
-            kenneyButton('FLY NOW', flyW, 36, 'button_primary', false, p.onFly) ?? buildFallbackFly(flyW, 36, p.onFly);
+            kenneyButton('FLY NOW', flyW, 44, 'button_accent', false, p.onFly) ?? buildFallbackFly(flyW, 44, p.onFly);
     fly.label = 'heroFlyCta';
     fly.position.set(p.cw - pad - flyW, rowY);
     root.addChild(fly);
@@ -418,7 +470,9 @@ function buildFallbackFly(w: number, h: number, onFly: () => void): Container {
     return c;
 }
 
-const TAB_LABELS = ['Missions', 'Routes', 'Training', 'Fleet', 'Events'] as const;
+const TAB_LABELS       = ['Missions', 'Routes', 'Training', 'Fleet', 'Events'] as const;
+/** Short versions used when tabW < 88 — same read, less ink */
+const TAB_LABELS_SHORT = ['MISS.', 'ROUTE', 'TRAIN', 'FLEET', 'EVNT'] as const;
 
 function buildSegmentTabs(
     cw: number,
@@ -426,55 +480,81 @@ function buildSegmentTabs(
 ): { root: Container; setActive: (i: number) => void; tabGlows: Graphics[] } {
     const H = 44;
     const root = new Container();
+
+    // Track background — vector only (panel fill would also corrupt at this width)
     const track = new Graphics();
     track.roundRect(0, 0, cw, H, P_RADIUS.chip);
-    track.fill({ color: P_COLORS.bgElevated, alpha: 1 });
-    track.stroke({ color: P_COLORS.strokeSubtle, width: 1, alpha: 0.65 });
+    track.fill({ color: P_COLORS.bgBase, alpha: 1 });
+    track.stroke({ color: P_COLORS.strokeSubtle, width: 1, alpha: 0.6 });
     root.addChild(track);
 
     const n = TAB_LABELS.length;
     const pad = P_SPACE.s6;
     const tabW = Math.floor((cw - pad * 2) / n);
+    const innerW = tabW - 4;
+    const innerH = H - 10;
+
+    // Kenney nine-slice safe ONLY when innerW ≥ 116 (56+56 corner budget)
+    const useK9 = innerW >= 116 &&
+        !!getVelocityUiTexture('button_primary') &&
+        !!getVelocityUiTexture('button_secondary');
+
+    // Abbreviated labels when tabs are narrow
+    const useShort = tabW < 88;
+    const labels = useShort ? TAB_LABELS_SHORT : TAB_LABELS;
+    // Font size: scale down when using short labels to guarantee fit
+    const tabFontSize = useShort ? 9 : 10;
+
     const tabGlows: Graphics[] = [];
     const buttons: Container[] = [];
 
-    const useK = !!getVelocityUiTexture('button_primary') && !!getVelocityUiTexture('button_secondary');
-
     for (let i = 0; i < n; i++) {
         const b = new Container();
-        b.position.set(pad + i * tabW, 6);
+        b.position.set(pad + i * tabW, 5);
+
+        // Glow stroke (inactive = transparent, active = visible)
         const glow = new Graphics();
-        glow.roundRect(0, 0, tabW - 4, H - 12, P_RADIUS.chip - 2);
-        glow.stroke({ color: P_COLORS.accentCyan, width: 2, alpha: 0 });
         tabGlows.push(glow);
         b.addChild(glow);
 
+        // Background — nine-slice if safe, otherwise vector Graphics
         let bg: NineSliceSprite | Graphics;
-        if (useK) {
+        if (useK9) {
             const spr = new NineSliceSprite({
                 texture: getVelocityUiTexture('button_secondary')!,
                 leftWidth: PORTRAIT_TAB_BS.L,
                 rightWidth: PORTRAIT_TAB_BS.R,
                 topHeight: PORTRAIT_TAB_BS.T,
                 bottomHeight: PORTRAIT_TAB_BS.B,
-                width: tabW - 4,
-                height: H - 12,
+                width: innerW,
+                height: innerH,
             });
-            spr.alpha = 0.88;
-            spr.tint = 0xe8eef5;
+            spr.alpha = 0.82;
+            spr.tint = 0xd8e4f2;
             b.addChild(spr);
             bg = spr;
         } else {
             const gr = new Graphics();
-            gr.roundRect(0, 0, tabW - 4, H - 12, P_RADIUS.chip - 2);
+            gr.roundRect(0, 0, innerW, innerH, 8);
             gr.fill({ color: P_COLORS.bgPanel, alpha: 1 });
+            gr.stroke({ color: P_COLORS.strokeSubtle, width: 1, alpha: 0.5 });
             b.addChild(gr);
             bg = gr;
         }
 
-        const t = new Text({ text: TAB_LABELS[i], style: ts(P_TYPO.tab, P_COLORS.textMuted) });
+        const t = new Text({
+            text: labels[i].toUpperCase(),
+            style: new TextStyle({
+                fontFamily: FONT,
+                fontSize: tabFontSize,
+                fontWeight: '700',
+                fill: P_COLORS.textSecondary,
+                letterSpacing: useShort ? 0.5 : 0.8,
+                align: 'center',
+            }),
+        });
         t.anchor.set(0.5);
-        t.position.set((tabW - 4) / 2, (H - 12) / 2);
+        t.position.set(innerW / 2, innerH / 2);
         b.addChild(t);
 
         const idx = i;
@@ -490,44 +570,54 @@ function buildSegmentTabs(
 
     function paint(active: number): void {
         buttons.forEach((b, i) => {
-            tabGlows[i].alpha = i === active ? 1 : 0;
-            tabGlows[i].clear();
-            tabGlows[i].roundRect(0, 0, tabW - 4, H - 12, P_RADIUS.chip - 2);
-            tabGlows[i].stroke({
-                color: P_COLORS.accentCyan,
-                width: 2,
-                alpha: i === active ? 0.55 : 0,
-            });
-            const tx = b.children[2] as Text;
-            const mid = b.children[1];
+            const on = i === active;
+
+            // Glow ring for active tab
+            const gw = tabGlows[i];
+            gw.clear();
+            if (on) {
+                gw.roundRect(0, 0, innerW, innerH, 8);
+                gw.stroke({ color: P_COLORS.accentCyan, width: 2, alpha: 0.65 });
+                // Bottom indicator strip
+                gw.roundRect(innerW * 0.2, innerH - 3, innerW * 0.6, 2, 1);
+                gw.fill({ color: P_COLORS.accentCyan, alpha: 0.9 });
+            }
+
+            // Background surface
+            const mid = b.children[1]; // glow=0, bg=1, text=2
             if (mid instanceof NineSliceSprite) {
-                const on = i === active;
                 const k = on ? 'button_primary' : 'button_secondary';
                 mid.texture = getVelocityUiTexture(k)!;
-                mid.leftWidth = PORTRAIT_TAB_BS.L;
-                mid.rightWidth = PORTRAIT_TAB_BS.R;
-                mid.topHeight = PORTRAIT_TAB_BS.T;
-                mid.bottomHeight = PORTRAIT_TAB_BS.B;
-                mid.tint = on ? 0xb8e8ff : 0xe8eef5;
-                mid.alpha = on ? 0.96 : 0.88;
+                mid.tint   = on ? 0xa8d8f8 : 0xd8e4f2;
+                mid.alpha  = on ? 1.0 : 0.78;
             } else if (mid instanceof Graphics) {
                 mid.clear();
-                mid.roundRect(0, 0, tabW - 4, H - 12, P_RADIUS.chip - 2);
-                mid.fill({
-                    color: i === active ? P_COLORS.accentCyan : P_COLORS.bgPanel,
-                    alpha: i === active ? 0.25 : 1,
-                });
-                mid.stroke({
-                    color: i === active ? P_COLORS.strokeActive : P_COLORS.strokeSubtle,
-                    width: 1,
-                    alpha: i === active ? 0.9 : 0.4,
-                });
+                mid.roundRect(0, 0, innerW, innerH, 8);
+                if (on) {
+                    mid.fill({ color: P_COLORS.accentCyan, alpha: 0.18 });
+                    mid.stroke({ color: P_COLORS.strokeActive, width: 1.5, alpha: 0.85 });
+                } else {
+                    mid.fill({ color: P_COLORS.bgPanel, alpha: 0.85 });
+                    mid.stroke({ color: P_COLORS.strokeSubtle, width: 1, alpha: 0.4 });
+                }
             }
-            tx.style = ts(P_TYPO.tab, i === active ? P_COLORS.textPrimary : P_COLORS.textSecondary);
-            if (i === active) (tx.style as TextStyle).fontWeight = '800';
-            else (tx.style as TextStyle).fontWeight = '700';
+
+            // Text
+            const tx = b.children[2] as Text;
+            tx.style = new TextStyle({
+                fontFamily: FONT,
+                fontSize: on ? tabFontSize + 1 : tabFontSize,
+                fontWeight: on ? '800' : '600',
+                fill: on ? P_COLORS.textPrimary : P_COLORS.textMuted,
+                letterSpacing: useShort ? 0.5 : 0.8,
+                align: 'center',
+                dropShadow: on ? { alpha: 0.5, blur: 2, color: 0x000000, distance: 1 } : undefined,
+            });
+            tx.anchor.set(0.5);
+            tx.position.set(innerW / 2, innerH / 2);
         });
     }
+
     paint(0);
     return { root, setActive: paint, tabGlows };
 }
@@ -574,37 +664,57 @@ function buildMissionCardPortrait(
 
     const ic = new Graphics();
     if (unlocked) drawIconRouteNode(ic, icX, icY, 10, { color: P_COLORS.accentCyan, width: 2, alpha: 0.9 });
-    else drawIconLock(ic, icX, icY, 20);
+    else {
+        // Larger lock icon + subtle glow — make the locked state feel intentional, not empty
+        drawIconLock(ic, icX, icY, 18, { color: P_COLORS.stateLocked, width: 2, alpha: 0.75 });
+        ic.circle(icX, icY, P_ICON.emblem - 2);
+        ic.fill({ color: P_COLORS.stateLocked, alpha: 0.06 });
+    }
     root.addChild(ic);
 
     const btnW = 96;
     const btnH = 38;
     const tx = icX + P_ICON.emblem + P_SPACE.s12;
-    const tw = cw - tx - btnW - P_SPACE.s16 - 56;
+    // Removed the unexplained 56px surplus — title now gets full available width
+    const tw = Math.max(40, cw - tx - btnW - P_SPACE.s16 - 8);
 
     const title = new Text({
-        text: trunc(level.name, Math.max(8, Math.floor(tw / 9))),
+        // Chars per pixel: 7.5 is accurate for Kenney Future at missionTitle size
+        text: trunc(level.name, Math.max(10, Math.floor(tw / 7.5))),
         style: ts(P_TYPO.missionTitle, unlocked ? P_COLORS.textPrimary : P_COLORS.textSecondary),
     });
-    title.position.set(tx, P_SPACE.s10);
+    title.position.set(tx, P_SPACE.s8);
     root.addChild(title);
 
     const hint = level.learningObjectives[0]?.hint ?? `${level.gateCount} voice gates`;
     const sub = new Text({
-        text: trunc(hint, Math.max(12, Math.floor(tw / 6))),
+        text: trunc(hint, Math.max(14, Math.floor(tw / 6))),
         style: ts(P_TYPO.missionBody, P_COLORS.textMuted),
     });
-    sub.position.set(tx, P_SPACE.s10 + 22);
+    sub.position.set(tx, P_SPACE.s8 + 21);
     root.addChild(sub);
 
-    let metaStr = elite ? 'ELITE' : completed ? 'CLEARED' : unlocked ? 'Reward' : 'Locked';
-    const meta = new Text({
-        text: metaStr,
-        style: ts(P_TYPO.label, elite || unlocked ? P_COLORS.accentGold : P_COLORS.textMuted),
-    });
-    meta.anchor.set(1, 0);
-    meta.position.set(cw - btnW - P_SPACE.s12, P_SPACE.s10);
-    root.addChild(meta);
+    // State badge — below subtitle, left-anchored (no more same-row collision with title)
+    let metaStr = elite ? '★ ELITE' : completed ? '✓ CLEARED' : unlocked ? '⬡ REWARD' : '';
+    if (metaStr) {
+        const metaColor = elite
+            ? P_COLORS.accentGold
+            : completed
+            ? P_COLORS.stateLive
+            : P_COLORS.accentCyanSoft;
+        const meta = new Text({
+            text: metaStr,
+            style: new TextStyle({
+                fontFamily: FONT,
+                fontSize: 9,
+                fontWeight: '700',
+                fill: metaColor,
+                letterSpacing: 0.8,
+            }),
+        });
+        meta.position.set(tx, P_SPACE.s8 + 21 + 14);
+        root.addChild(meta);
+    }
 
     const bx = cw - btnW - P_SPACE.s10;
     const by = (rowH - btnH) / 2;
@@ -641,19 +751,53 @@ function buildPlayFallback(w: number, h: number, onPlay: () => void): Container 
 function buildLockedButton(w: number, h: number): Container {
     const c = new Container();
     c.eventMode = 'none';
+
+    // Outer body — darker than card background: communicates "unavailable"
     const g = new Graphics();
     g.roundRect(0, 0, w, h, P_RADIUS.button);
-    g.fill({ color: P_COLORS.bgElevated, alpha: 1 });
-    g.stroke({ color: P_COLORS.stateLocked, width: 1.5, alpha: 0.7 });
+    g.fill({ color: P_COLORS.bgBase, alpha: 1 });
+    g.stroke({ color: P_COLORS.stateLocked, width: 1.5, alpha: 0.55 });
     c.addChild(g);
-    const inset = new Graphics();
-    inset.roundRect(2, 2, w - 4, h - 4, P_RADIUS.button - 2);
-    inset.stroke({ color: P_COLORS.strokeSubtle, width: 1, alpha: 0.5 });
-    c.addChild(inset);
-    const t = new Text({ text: 'LOCKED', style: ts(P_TYPO.button, P_COLORS.textSecondary) });
-    t.anchor.set(0.5);
-    t.position.set(w / 2, h / 2);
+
+    // Cross-hatch texture: two diagonal lines — game-native "locked zone" indicator
+    const hatch = new Graphics();
+    const stride = 10;
+    for (let k = -h; k < w + h; k += stride) {
+        hatch.moveTo(Math.max(0, k), 0);
+        hatch.lineTo(Math.min(w, k + h), Math.min(h, h - Math.max(0, k)));
+        hatch.moveTo(Math.min(w, k + h), Math.min(h, h - Math.max(0, k)));
+        // skip drawing — just fill stroke
+    }
+    // simpler: two corner-to-corner stripes
+    hatch.moveTo(0, h * 0.35);
+    hatch.lineTo(w * 0.35, 0);
+    hatch.moveTo(w * 0.65, h);
+    hatch.lineTo(w, h * 0.65);
+    hatch.stroke({ color: P_COLORS.stateLocked, width: 1, alpha: 0.12 });
+    c.addChild(hatch);
+
+    // Lock icon — centered left of label
+    const lockG = new Graphics();
+    const iconCx = w / 2 - 18;
+    const iconCy = h / 2;
+    drawIconLock(lockG, iconCx, iconCy, 14, { color: P_COLORS.stateLocked, width: 1.5, alpha: 0.75 });
+    c.addChild(lockG);
+
+    // "LOCKED" label — small, 10px, clearly reads as state not action
+    const t = new Text({
+        text: 'LOCKED',
+        style: new TextStyle({
+            fontFamily: FONT,
+            fontSize: 10,
+            fontWeight: '700',
+            fill: P_COLORS.textMuted,
+            letterSpacing: 1,
+        }),
+    });
+    t.anchor.set(0, 0.5);
+    t.position.set(iconCx + 16, h / 2);
     c.addChild(t);
+
     return c;
 }
 

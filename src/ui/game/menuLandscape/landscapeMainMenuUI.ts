@@ -492,7 +492,8 @@ export function buildModeTabs(
     const innerPad = GRID;
     const tabW = Math.floor((cw - innerPad * 2) / n);
     const buttons: Container[] = [];
-    const useKenney = !!getVelocityUiTexture('button_primary') && !!getVelocityUiTexture('button_secondary');
+    // Nine-slice needs tabW >= 116px (56+56 corner budget); fall back to vector for narrow
+    const useKenney = tabW >= 116 && !!getVelocityUiTexture('button_primary') && !!getVelocityUiTexture('button_secondary');
 
     for (let i = 0; i < n; i++) {
         const b = new Container();
@@ -610,10 +611,10 @@ function missionRow(
     const btnW = 100;
     const btnH = 42;
     const tx = 14 + iconR * 2 + 14;
-    const textMax = cw - tx - btnW - 20 - 72;
+    const textMax = cw - tx - btnW - 20 - 8;
 
     const title = new Text({
-        text: trunc(level.name, Math.floor(textMax / 10)),
+        text: trunc(level.name, Math.max(8, Math.floor(textMax / 7.5))),
         style: style(17, '700', unlocked ? C.text : C.muted),
     });
     title.position.set(tx, 12);
@@ -622,20 +623,23 @@ function missionRow(
     const subHint =
         level.learningObjectives[0]?.hint ?? `${level.gateCount} gates`;
     const sub = new Text({
-        text: trunc(subHint, Math.floor(textMax / 7)),
+        text: trunc(subHint, Math.max(8, Math.floor(textMax / 6))),
         style: style(13, '500', C.muted),
     });
-    sub.position.set(tx, 36);
+    sub.position.set(tx, 34);
     root.addChild(sub);
 
-    let metaStr = elite ? 'ELITE' : completed ? 'DONE' : unlocked ? 'Reward' : 'Locked';
-    const meta = new Text({
-        text: metaStr,
-        style: style(11, '700', elite ? C.gold : unlocked ? C.gold : C.muted),
-    });
-    meta.anchor.set(1, 0);
-    meta.position.set(cw - btnW - 18, 14);
-    root.addChild(meta);
+    // Meta badge: below subtitle, left-anchored — avoids title collision
+    let metaStr = elite ? '★ ELITE' : completed ? '✓ CLEARED' : unlocked ? '⬡ REWARD' : '';
+    if (metaStr) {
+        const meta = new Text({
+            text: metaStr,
+            style: style(10, '700', elite ? C.gold : completed ? C.cyan : C.muted),
+        });
+        meta.anchor.set(0, 0);
+        meta.position.set(tx, 34 + 16);
+        root.addChild(meta);
+    }
 
     const bx = cw - btnW - 12;
     const by = (rowH - btnH) / 2;
@@ -649,9 +653,10 @@ function missionRow(
     } else {
         const lock = new Container();
         const tex = getVelocityUiTexture('button_secondary');
-        if (tex) {
+        const canNineSlice = !!tex && btnW >= 116;
+        if (canNineSlice) {
             const spr = new NineSliceSprite({
-                texture: tex,
+                texture: tex!,
                 leftWidth: TAB_BS.L,
                 rightWidth: TAB_BS.R,
                 topHeight: TAB_BS.T,
@@ -659,16 +664,25 @@ function missionRow(
                 width: btnW,
                 height: btnH,
             });
-            spr.alpha = 0.55;
-            spr.tint = 0x6a7585;
+            spr.alpha = 0.45;
+            spr.tint = 0x4a5565;
             lock.addChild(spr);
         } else {
             const lb = new Graphics();
             lb.roundRect(0, 0, btnW, btnH, 10);
-            lb.fill({ color: C.surface2, alpha: 0.6 });
+            lb.fill({ color: 0x0d1520, alpha: 1 });
+            lb.stroke({ color: 0x334455, width: 1, alpha: 0.6 });
+            // Cross-hatch texture
+            const hatch = new Graphics();
+            hatch.setStrokeStyle({ width: 1, color: 0x223344, alpha: 0.35 });
+            for (let hx = 0; hx < btnW; hx += 10) {
+                hatch.moveTo(hx, 0); hatch.lineTo(hx, btnH);
+            }
+            hatch.stroke();
             lock.addChild(lb);
+            lock.addChild(hatch);
         }
-        const lt = new Text({ text: 'LOCKED', style: style(13, '700', C.muted) });
+        const lt = new Text({ text: 'LOCKED', style: style(10, '700', 0x445566) });
         lt.anchor.set(0.5);
         lt.position.set(btnW / 2, btnH / 2);
         lock.addChild(lt);
