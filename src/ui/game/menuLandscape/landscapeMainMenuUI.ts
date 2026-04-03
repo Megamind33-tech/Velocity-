@@ -1,34 +1,45 @@
 /**
- * Premium landscape main menu — PixiJS (rhythm-game style IA).
- * Zones: top bar, hero card, mode tabs, scrollable mission list, bottom nav.
+ * Landscape main menu — Kenney UI Pack sci-fi chrome + Velocity cyan identity.
+ * Falls back to vector shapes only if textures are not preloaded.
  */
 
 import {
     Container,
     FederatedPointerEvent,
     Graphics,
+    NineSliceSprite,
+    Sprite,
     Text,
     TextStyle,
 } from 'pixi.js';
-import { GAME_COLORS } from '../GameUITheme';
-import { getMainMenuProgress, getMenuHighScore, isLevelUnlocked } from '../../../data/localProgress';
+import { GAME_COLORS, GAME_FONTS } from '../GameUITheme';
+import { getMainMenuProgress, isLevelUnlocked } from '../../../data/localProgress';
 import { LEVEL_DEFINITIONS, type LevelDefinition } from '../../../data/levelDefinitions';
-import { getPilotRank } from '../menuLayoutHelpers';
 import { gameFlow } from '../gameFlowBridge';
 import type { GameUIManager } from '../GameUIManager';
+import { getVelocityUiTexture, type VelocityUiTextureKey } from '../velocityUiArt';
+import {
+    kenneyAvatarPlate,
+    kenneyButton,
+    kenneyChromeHit,
+    kenneyDockBar,
+    kenneyHeroPanel,
+    kenneyProgressBar,
+    kenneyRowPanel,
+    kenneyStatChip,
+    kenneyTabTrack,
+    mountGearIcon,
+    spriteIcon,
+} from './kenneyLandscapeWidgets';
 
 const GRID = 8;
-const R_CARD = 22;
-const R_ROW = 16;
 const R_CHIP = 12;
 
-const FONT_UI = 'system-ui, -apple-system, "Segoe UI", Roboto, sans-serif';
-const FONT_DISPLAY = '"Segoe UI", system-ui, -apple-system, sans-serif';
+const FONT_UI = GAME_FONTS.standard;
 
 const C = {
     surface:  0x0f1624,
     surface2: 0x141c2e,
-    surfaceHi: 0x1a2438,
     border:   0x243044,
     text:     0xf0f4fa,
     muted:    0x9aa8bc,
@@ -68,55 +79,18 @@ function pressable(root: Container, onUp: () => void): void {
     root.on('pointercancel', () => root.scale.set(1));
 }
 
-// ─── Icons (unified stroke ~2px) ─────────────────────────────────────────────
+function trunc(s: string, max: number): string {
+    if (s.length <= max) return s;
+    return `${s.slice(0, max - 1)}…`;
+}
+
+// ─── Vector fallbacks (icons) ───────────────────────────────────────────────
 
 function icoProfile(g: Graphics, cx: number, cy: number, s: number): void {
     g.circle(cx, cy - s * 0.08, s * 0.32);
     g.stroke({ color: C.cyan, width: 2, alpha: 0.9 });
     g.arc(cx, cy + s * 0.42, s * 0.38, Math.PI * 1.12, Math.PI * 1.88);
     g.stroke({ color: C.cyan, width: 2, alpha: 0.9 });
-}
-function icoBolt(g: Graphics, cx: number, cy: number, s: number): void {
-    g.moveTo(cx + s * 0.12, cy - s * 0.38);
-    g.lineTo(cx - s * 0.08, cy - s * 0.02);
-    g.lineTo(cx + s * 0.06, cy - s * 0.02);
-    g.lineTo(cx - s * 0.18, cy + s * 0.4);
-    g.lineTo(cx + s * 0.1, cy - s * 0.02);
-    g.closePath();
-    g.stroke({ color: C.cyan, width: 2, alpha: 0.9 });
-}
-function icoCoin(g: Graphics, cx: number, cy: number, s: number): void {
-    g.circle(cx, cy, s * 0.36);
-    g.stroke({ color: C.gold, width: 2, alpha: 0.95 });
-    g.circle(cx, cy, s * 0.2);
-    g.stroke({ color: C.gold, width: 1.5, alpha: 0.55 });
-}
-function icoGem(g: Graphics, cx: number, cy: number, s: number): void {
-    g.moveTo(cx, cy - s * 0.36);
-    g.lineTo(cx + s * 0.3, cy - s * 0.06);
-    g.lineTo(cx + s * 0.2, cy + s * 0.3);
-    g.lineTo(cx - s * 0.2, cy + s * 0.3);
-    g.lineTo(cx - s * 0.3, cy - s * 0.06);
-    g.closePath();
-    g.stroke({ color: 0xcc88ff, width: 2, alpha: 0.9 });
-}
-function icoGear(g: Graphics, cx: number, cy: number, s: number): void {
-    const n = 6;
-    const ri = s * 0.18;
-    const ro = s * 0.36;
-    for (let i = 0; i < n; i++) {
-        const a0 = ((i - 0.5) * 2 * Math.PI) / n;
-        const a1 = (i * 2 * Math.PI) / n;
-        const a2 = ((i + 0.5) * 2 * Math.PI) / n;
-        if (i === 0) g.moveTo(cx + Math.cos(a0) * ri, cy + Math.sin(a0) * ri);
-        else g.lineTo(cx + Math.cos(a0) * ri, cy + Math.sin(a0) * ri);
-        g.lineTo(cx + Math.cos(a1) * ro, cy + Math.sin(a1) * ro);
-        g.lineTo(cx + Math.cos(a2) * ri, cy + Math.sin(a2) * ri);
-    }
-    g.closePath();
-    g.stroke({ color: C.muted, width: 2, alpha: 0.95 });
-    g.circle(cx, cy, s * 0.12);
-    g.stroke({ color: C.muted, width: 1.5, alpha: 0.8 });
 }
 function icoMic(g: Graphics, cx: number, cy: number, s: number): void {
     g.roundRect(cx - s * 0.1, cy - s * 0.26, s * 0.2, s * 0.34, 3);
@@ -172,29 +146,32 @@ function icoStore(g: Graphics, cx: number, cy: number, s: number): void {
     g.stroke({ color: C.gold, width: 2, alpha: 0.9 });
 }
 
-function chip(
-    draw: (g: Graphics, cx: number, cy: number, s: number) => void,
-    label: string,
-    val: string,
-    w: number,
-    h: number,
-    accent: number,
-): Container {
+function fallbackPrimaryBtn(w: number, h: number, label: string, onClick: () => void): Container {
     const root = new Container();
     const bg = new Graphics();
-    bg.roundRect(0, 0, w, h, R_CHIP);
-    bg.fill({ color: C.surface2, alpha: 1 });
-    bg.stroke({ color: accent, width: 1, alpha: 0.4 });
+    bg.roundRect(0, 0, w, h, 12);
+    bg.fill({ color: C.cyan, alpha: 1 });
     root.addChild(bg);
-    const ig = new Graphics();
-    draw(ig, 18, h / 2, 18);
-    root.addChild(ig);
-    const lb = new Text({ text: label, style: style(11, '600', C.muted) });
-    lb.position.set(40, 6);
-    root.addChild(lb);
-    const vt = new Text({ text: val, style: style(13, '700', C.text) });
-    vt.position.set(40, 20);
-    root.addChild(vt);
+    const t = new Text({ text: label, style: style(15, '800', 0x001810) });
+    t.anchor.set(0.5);
+    t.position.set(w / 2, h / 2);
+    root.addChild(t);
+    pressable(root, onClick);
+    return root;
+}
+
+function fallbackSecondaryBtn(w: number, h: number, label: string, onClick: () => void): Container {
+    const root = new Container();
+    const bg = new Graphics();
+    bg.roundRect(0, 0, w, h, 10);
+    bg.fill({ color: C.surface2, alpha: 1 });
+    bg.stroke({ color: C.cyan, width: 2, alpha: 0.5 });
+    root.addChild(bg);
+    const t = new Text({ text: label, style: style(14, '700', C.cyan) });
+    t.anchor.set(0.5);
+    t.position.set(w / 2, h / 2);
+    root.addChild(t);
+    pressable(root, onClick);
     return root;
 }
 
@@ -214,110 +191,104 @@ export function buildTopUtilityBar(
     const H = 60;
     const root = new Container();
     const gap = GRID;
-    const gearW = 52;
+    const gearW = 56;
 
-    const av = new Container();
-    const avBg = new Graphics();
-    avBg.circle(28, 28, 26);
-    avBg.fill({ color: C.surface2, alpha: 1 });
-    avBg.stroke({ color: C.cyan, width: 2, alpha: 0.55 });
-    av.addChild(avBg);
-    const avG = new Graphics();
-    icoProfile(avG, 28, 28, 38);
-    av.addChild(avG);
-    pressable(av, onProfile);
-    root.addChild(av);
+    let chipW = Math.floor((cw - 60 - gearW - gap * 4) / 3);
+    chipW = Math.max(100, chipW);
 
-    const chipW = Math.floor((cw - 56 - gearW - gap * 5) / 3);
-    const x0 = 56 + gap;
+    const av = kenneyAvatarPlate(56, onProfile);
+    if (av) {
+        const ic = spriteIcon('menu_profile_star_outline', 22, C.cyan);
+        if (ic) {
+            ic.position.set(28, 28);
+            av.addChild(ic);
+        } else {
+            const g = new Graphics();
+            icoProfile(g, 28, 28, 34);
+            av.addChild(g);
+        }
+        root.addChild(av);
+    } else {
+        const fb = new Container();
+        const c = new Graphics();
+        c.circle(28, 28, 26);
+        c.fill({ color: C.surface2, alpha: 1 });
+        c.stroke({ color: C.cyan, width: 2, alpha: 0.55 });
+        fb.addChild(c);
+        const g = new Graphics();
+        icoProfile(g, 28, 28, 34);
+        fb.addChild(g);
+        pressable(fb, onProfile);
+        root.addChild(fb);
+    }
 
-    const c1 = chip(icoBolt, 'SIGNAL', `${prog.maxUnlocked}`, chipW, H - 4, C.cyan);
+    const x0 = 60 + gap;
+    const c1 =
+        kenneyStatChip('menu_sector_circle', 'SIGNAL', `${prog.maxUnlocked}`, chipW, H - 4, C.cyan) ??
+        vectorStatChip(icoRadar, 'SIGNAL', `${prog.maxUnlocked}`, chipW, H - 4);
     c1.position.set(x0, 2);
     root.addChild(c1);
 
-    const c2 = chip(icoCoin, 'BEST', String(bestScore), chipW, H - 4, C.gold);
+    const c2 =
+        kenneyStatChip('menu_best_star', 'BEST', String(bestScore), chipW, H - 4, C.gold) ??
+        vectorStatChip(icoRadar, 'BEST', String(bestScore), chipW, H - 4);
     c2.position.set(x0 + chipW + gap, 2);
     root.addChild(c2);
 
-    const c3 = chip(icoGem, 'PREMIUM', `${prog.unlockedCount}`, chipW, H - 4, 0xcc88ff);
+    const c3 =
+        kenneyStatChip('menu_rewards_star_outline', 'PREMIUM', `${prog.unlockedCount}`, chipW, H - 4, 0xdd99ff) ??
+        vectorStatChip(icoRadar, 'PREMIUM', `${prog.unlockedCount}`, chipW, H - 4);
     c3.position.set(x0 + (chipW + gap) * 2, 2);
     root.addChild(c3);
 
-    const gear = new Container();
-    const gb = new Graphics();
-    gb.roundRect(0, 0, gearW, H, R_CHIP);
-    gb.fill({ color: C.surface2, alpha: 1 });
-    gb.stroke({ color: C.border, width: 1, alpha: 0.85 });
-    gear.addChild(gb);
-    const gg = new Graphics();
-    icoGear(gg, gearW / 2, H / 2, 22);
-    gear.addChild(gg);
-    gear.position.set(cw - gearW, 2);
-    pressable(gear, onSettings);
-    root.addChild(gear);
+    const gearBox = kenneyChromeHit(gearW, H, onSettings);
+    if (gearBox) {
+        mountGearIcon(gearBox, gearW / 2, H / 2, 26);
+        gearBox.position.set(cw - gearW, 2);
+        root.addChild(gearBox);
+    } else {
+        const g = new Container();
+        const bg = new Graphics();
+        bg.roundRect(0, 0, gearW, H, R_CHIP);
+        bg.fill({ color: C.surface2, alpha: 1 });
+        g.addChild(bg);
+        pressable(g, onSettings);
+        g.position.set(cw - gearW, 2);
+        root.addChild(g);
+    }
 
     return {
         root,
         refs: {
-            energyText: c1.children[3] as Text,
-            bestText: c2.children[3] as Text,
-            premiumText: c3.children[3] as Text,
+            energyText: c1.children[c1.children.length - 1] as Text,
+            bestText: c2.children[c2.children.length - 1] as Text,
+            premiumText: c3.children[c3.children.length - 1] as Text,
         },
     };
 }
 
-function primaryBtn(w: number, h: number, label: string, onClick: () => void): Container {
-    const root = new Container();
-    const bg = new Graphics();
-    bg.roundRect(0, 0, w, h, 14);
-    bg.fill({ color: C.cyan, alpha: 1 });
-    bg.stroke({ color: 0xffffff, width: 1, alpha: 0.15 });
-    root.addChild(bg);
-    const t = new Text({ text: label, style: style(15, '800', 0x001a16) });
-    t.anchor.set(0.5);
-    t.position.set(w / 2, h / 2);
-    root.addChild(t);
-    pressable(root, onClick);
-    return root;
-}
-
-function secondaryBtn(w: number, h: number, label: string, onClick: () => void): Container {
-    const root = new Container();
-    const bg = new Graphics();
-    bg.roundRect(0, 0, w, h, 12);
-    bg.fill({ color: C.surfaceHi, alpha: 1 });
-    bg.stroke({ color: C.cyan, width: 2, alpha: 0.55 });
-    root.addChild(bg);
-    const t = new Text({ text: label, style: style(14, '700', C.cyan) });
-    t.anchor.set(0.5);
-    t.position.set(w / 2, h / 2);
-    root.addChild(t);
-    pressable(root, onClick);
-    return root;
-}
-
-function utilityChip(
+function vectorStatChip(
+    draw: (g: Graphics, cx: number, cy: number, s: number) => void,
     label: string,
+    val: string,
     w: number,
     h: number,
-    accent: number,
-    iconFn?: (g: Graphics, cx: number, cy: number, s: number) => void,
 ): Container {
     const root = new Container();
     const bg = new Graphics();
-    bg.roundRect(0, 0, w, h, h / 2);
+    bg.roundRect(0, 0, w, h, R_CHIP);
     bg.fill({ color: C.surface2, alpha: 1 });
-    bg.stroke({ color: accent, width: 1, alpha: 0.45 });
+    bg.stroke({ color: C.border, width: 1, alpha: 0.5 });
     root.addChild(bg);
-    if (iconFn) {
-        const ig = new Graphics();
-        iconFn(ig, 14, h / 2, 12);
-        root.addChild(ig);
-    }
-    const t = new Text({ text: label, style: style(12, '600', C.text) });
-    t.anchor.set(0, 0.5);
-    t.position.set(iconFn ? 28 : 12, h / 2);
-    root.addChild(t);
+    const ig = new Graphics();
+    draw(ig, 18, h / 2, 16);
+    root.addChild(ig);
+    const lb = new Text({ text: label, style: style(11, '600', C.muted) });
+    lb.position.set(40, 6);
+    root.addChild(lb);
+    const vt = new Text({ text: val, style: style(13, '700', C.text) });
+    vt.position.set(40, 22);
+    root.addChild(vt);
     return root;
 }
 
@@ -330,84 +301,152 @@ export function buildHeroFlightCard(
     onTrain: () => void,
 ): Container {
     const root = new Container();
-    const pad = GRID * 2;
+    const pad = 20;
+    const rightCol = 108;
+    const titleBlockW = Math.max(200, cw - pad * 2 - rightCol - 16);
+
+    const pair = kenneyHeroPanel(cw, cardH);
+    if (pair) {
+        root.addChild(pair.root);
+        const content = pair.content;
+        const ox = 0;
+        const oy = 0;
+        const H_IN = cardH - 52;
+
+        const title = new Text({
+            text: 'VELOCITY',
+            style: new TextStyle({
+                fontFamily: FONT_UI,
+                fontSize: 32,
+                fontWeight: '800',
+                fill: C.text,
+                letterSpacing: 2,
+            }),
+        });
+        title.position.set(ox, oy);
+        content.addChild(title);
+
+        const sub = new Text({ text: 'Voice-Powered Flight', style: style(15, '600', C.muted) });
+        sub.position.set(ox, oy + 40);
+        content.addChild(sub);
+
+        const tag = new Text({
+            text: 'Precision · Pitch · Signal',
+            style: style(13, '500', 0x66ccbb),
+        });
+        tag.position.set(ox, oy + 62);
+        content.addChild(tag);
+
+        const barW = Math.min(titleBlockW, cw - pad * 2 - rightCol - 40);
+        const barY = Math.max(oy + 72, H_IN - 50);
+        const prog01 = prog.totalLevels > 0 ? prog.unlockedCount / prog.totalLevels : 0;
+        const progLbl = new Text({
+            text: `Routes  ${prog.unlockedCount} / ${prog.totalLevels}`,
+            style: style(12, '600', C.muted),
+        });
+        progLbl.position.set(ox, barY - 18);
+        content.addChild(progLbl);
+
+        const kBar = kenneyProgressBar(barW, 14);
+        if (kBar) {
+            kBar.position.set(ox, barY);
+            kBar.setProgress(prog01);
+            content.addChild(kBar);
+        } else {
+            const bbg = new Graphics();
+            bbg.roundRect(ox, barY, barW, 10, 5);
+            bbg.fill({ color: C.surface2, alpha: 1 });
+            content.addChild(bbg);
+            const f = new Graphics();
+            f.roundRect(ox + 2, barY + 2, Math.max(4, (barW - 4) * prog01), 6, 3);
+            f.fill({ color: C.cyan, alpha: 0.85 });
+            content.addChild(f);
+        }
+
+        const micW = 108;
+        const mic = new Container();
+        const mb = new Graphics();
+        mb.roundRect(0, 0, micW, 32, 16);
+        mb.fill({ color: C.surface2, alpha: 1 });
+        mb.stroke({ color: 0x22aa66, width: 1, alpha: 0.55 });
+        mic.addChild(mb);
+        const mlab = new Text({ text: 'Mic live', style: style(12, '700', C.text) });
+        mlab.position.set(34, 9);
+        mic.addChild(mlab);
+        const mg = new Graphics();
+        icoMic(mg, 16, 16, 14);
+        mic.addChild(mg);
+        mic.position.set(ox, H_IN - 36);
+        content.addChild(mic);
+
+        const clsW = Math.min(140, Math.max(72, titleBlockW - micW - GRID));
+        const cls = new Container();
+        const cb = new Graphics();
+        cb.roundRect(0, 0, clsW, 32, 16);
+        cb.fill({ color: C.surface2, alpha: 1 });
+        cb.stroke({ color: C.gold, width: 1, alpha: 0.45 });
+        cls.addChild(cb);
+        const cr = trunc(`Class: ${rank}`, 14);
+        const clab = new Text({ text: cr, style: style(12, '700', C.text) });
+        clab.position.set(34, 9);
+        cls.addChild(clab);
+        const wg = new Graphics();
+        icoWing(wg, 16, 16, 14);
+        cls.addChild(wg);
+        cls.position.set(ox + micW + GRID, H_IN - 36);
+        content.addChild(cls);
+
+        const rx = cw - pad - rightCol - 24;
+        const ry = oy + 8;
+        const radSpr = spriteIcon('menu_radar_center', 72, 0xffffee);
+        if (radSpr) {
+            radSpr.position.set(rx + 36, ry + 36);
+            content.addChild(radSpr);
+        } else {
+            const rg = new Graphics();
+            icoRadar(rg, rx + 36, ry + 36, 32);
+            content.addChild(rg);
+        }
+
+        const btnH = 50;
+        const flyW = 148;
+        const trainW = 124;
+        const btnY = H_IN - btnH - 6;
+        const btnX = cw - pad - flyW - GRID - trainW - 24;
+
+        const train =
+            kenneyButton('TRAIN', trainW, btnH, 'button_secondary', false, onTrain) ??
+            fallbackSecondaryBtn(trainW, btnH, 'TRAIN', onTrain);
+        train.position.set(btnX, btnY);
+        content.addChild(train);
+
+        const fly =
+            kenneyButton('FLY NOW', flyW, btnH, 'button_primary', false, onFlyNow) ??
+            fallbackPrimaryBtn(flyW, btnH, 'FLY NOW', onFlyNow);
+        fly.position.set(btnX + trainW + GRID, btnY);
+        content.addChild(fly);
+
+        return root;
+    }
+
+    const fb = new Container();
     const bg = new Graphics();
-    bg.roundRect(0, 0, cw, cardH, R_CARD);
+    bg.roundRect(0, 0, cw, cardH, 20);
     bg.fill({ color: C.surface, alpha: 1 });
-    bg.stroke({ color: C.cyan, width: 1.5, alpha: 0.25 });
-    root.addChild(bg);
-    const glow = new Graphics();
-    glow.roundRect(1, 1, cw - 2, cardH - 2, R_CARD - 1);
-    glow.stroke({ color: C.cyan, width: 1, alpha: 0.08 });
-    root.addChild(glow);
-
-    const title = new Text({
+    bg.stroke({ color: C.cyan, width: 1.5, alpha: 0.35 });
+    fb.addChild(bg);
+    const t0 = new Text({
         text: 'VELOCITY',
-        style: new TextStyle({
-            fontFamily: FONT_DISPLAY,
-            fontSize: 34,
-            fontWeight: '800',
-            fill: C.text,
-            letterSpacing: 3,
-        }),
+        style: new TextStyle({ fontFamily: FONT_UI, fontSize: 30, fontWeight: '800', fill: C.text }),
     });
-    title.position.set(pad, pad);
-    root.addChild(title);
-
-    const sub = new Text({ text: 'Voice-Powered Flight', style: style(15, '600', C.muted) });
-    sub.position.set(pad, pad + 42);
-    root.addChild(sub);
-
-    const tag = new Text({
-        text: 'Precision • Pitch • Signal',
-        style: style(13, '500', 0x66bbaa),
-    });
-    tag.position.set(pad, pad + 64);
-    root.addChild(tag);
-
-    const micChip = utilityChip('Mic live', 100, 30, 0x22aa66, icoMic);
-    micChip.position.set(pad, cardH - 46);
-
-    const classChip = utilityChip(`Class: ${rank}`, 132, 30, C.gold, icoWing);
-    classChip.position.set(pad + 108, cardH - 46);
-
-    root.addChild(micChip, classChip);
-
-    const progLabel = new Text({
-        text: `Route progress   ${prog.unlockedCount} / ${prog.totalLevels}`,
-        style: style(13, '600', C.muted),
-    });
-    progLabel.position.set(pad, cardH - 72);
-    root.addChild(progLabel);
-
-    const barW = Math.min(280, cw * 0.35);
-    const barX = pad;
-    const barY = cardH - 58;
-    const barBg = new Graphics();
-    barBg.roundRect(barX, barY, barW, 8, 4);
-    barBg.fill({ color: C.surface2, alpha: 1 });
-    root.addChild(barBg);
-    const p = prog.totalLevels > 0 ? prog.unlockedCount / prog.totalLevels : 0;
-    const barFill = new Graphics();
-    barFill.roundRect(barX + 2, barY + 2, Math.max(4, (barW - 4) * p), 4, 2);
-    barFill.fill({ color: C.cyan, alpha: 0.85 });
-    root.addChild(barFill);
-
-    const radarX = cw - pad - 72;
-    const radarY = pad + 8;
-    const rad = new Graphics();
-    icoRadar(rad, radarX + 36, radarY + 36, 34);
-    root.addChild(rad);
-
-    const bw = 140;
-    const bh = 50;
-    const train = secondaryBtn(bw, bh, 'TRAIN', onTrain);
-    train.position.set(cw - pad - bw * 2 - GRID, cardH - pad - bh);
-    const fly = primaryBtn(bw + 24, bh, 'FLY NOW', onFlyNow);
-    fly.position.set(cw - pad - bw - 24, cardH - pad - bh);
-    root.addChild(train, fly);
-
-    return root;
+    t0.position.set(20, 18);
+    fb.addChild(t0);
+    const train = fallbackSecondaryBtn(120, 48, 'TRAIN', onTrain);
+    const fly = fallbackPrimaryBtn(140, 48, 'FLY NOW', onFlyNow);
+    train.position.set(cw - 300, cardH - 58);
+    fly.position.set(cw - 160, cardH - 58);
+    fb.addChild(train, fly);
+    return fb;
 }
 
 const TAB_LABELS = ['Missions', 'Routes', 'Training', 'Fleet', 'Events'] as const;
@@ -416,36 +455,53 @@ export function buildModeTabs(
     cw: number,
     onSelect: (index: number) => void,
 ): { root: Container; setActive: (i: number) => void } {
-    const H = 46;
+    const H = 48;
     const root = new Container();
-    const track = new Graphics();
-    track.roundRect(0, 0, cw, H, 12);
-    track.fill({ color: C.surface2, alpha: 1 });
-    track.stroke({ color: C.border, width: 1, alpha: 0.6 });
-    root.addChild(track);
+    const track = kenneyTabTrack(cw, H);
+    if (track) root.addChild(track);
+    else {
+        const g = new Graphics();
+        g.roundRect(0, 0, cw, H, 12);
+        g.fill({ color: C.surface2, alpha: 1 });
+        root.addChild(g);
+    }
 
     const n = TAB_LABELS.length;
     const innerPad = GRID;
     const tabW = Math.floor((cw - innerPad * 2) / n);
     const buttons: Container[] = [];
-    const bgs: Graphics[] = [];
+    const useKenney = !!getVelocityUiTexture('button_primary') && !!getVelocityUiTexture('button_secondary');
+    const KS = { L: 56, R: 56, T: 20, B: 20 };
 
     for (let i = 0; i < n; i++) {
         const b = new Container();
-        b.position.set(innerPad + i * tabW, GRID * 0.5);
+        b.position.set(innerPad + i * tabW, 6);
+        const idx = i;
 
-        const g = new Graphics();
-        g.roundRect(0, 0, tabW - 4, H - GRID, 10);
-        g.fill({ color: 0x000000, alpha: 0.02 });
-        b.addChild(g);
-        bgs.push(g);
+        if (useKenney) {
+            const spr = new NineSliceSprite({
+                texture: getVelocityUiTexture('button_secondary')!,
+                leftWidth: KS.L,
+                rightWidth: KS.R,
+                topHeight: KS.T,
+                bottomHeight: KS.B,
+                width: tabW - 6,
+                height: H - 12,
+            });
+            spr.alpha = 0.85;
+            b.addChild(spr);
+        } else {
+            const gr = new Graphics();
+            gr.roundRect(0, 0, tabW - 6, H - 12, 10);
+            gr.fill({ color: 0x0a121c, alpha: 0.85 });
+            b.addChild(gr);
+        }
 
-        const t = new Text({ text: TAB_LABELS[i], style: style(14, '600', C.muted) });
+        const t = new Text({ text: TAB_LABELS[i], style: style(13, '600', C.muted) });
         t.anchor.set(0.5);
-        t.position.set((tabW - 4) / 2, (H - GRID) / 2);
+        t.position.set((tabW - 6) / 2, (H - 12) / 2);
         b.addChild(t);
 
-        const idx = i;
         b.eventMode = 'static';
         b.cursor = 'pointer';
         pressable(b, () => {
@@ -458,18 +514,22 @@ export function buildModeTabs(
 
     function paint(active: number): void {
         buttons.forEach((b, i) => {
-            const g = bgs[i];
-            g.clear();
-            g.roundRect(0, 0, tabW - 4, H - GRID, 10);
-            if (i === active) {
-                g.fill({ color: C.cyan, alpha: 0.92 });
-                g.stroke({ color: C.cyan, width: 1, alpha: 0.45 });
-            } else {
-                g.fill({ color: 0x0a121c, alpha: 0.6 });
-                g.stroke({ color: C.border, width: 1, alpha: 0.25 });
-            }
             const tx = b.children[1] as Text;
-            tx.style = i === active ? style(14, '800', 0x001810) : style(14, '600', C.muted);
+            const bg0 = b.children[0];
+            if (useKenney && bg0 instanceof NineSliceSprite) {
+                bg0.texture = getVelocityUiTexture(i === active ? 'button_primary' : 'button_secondary')!;
+                bg0.tint = i === active ? 0x22ddcc : 0xffffff;
+                bg0.alpha = i === active ? 0.95 : 0.82;
+                tx.style = i === active ? style(13, '800', 0x001810) : style(13, '600', C.muted);
+            } else if (bg0 instanceof Graphics) {
+                bg0.clear();
+                bg0.roundRect(0, 0, tabW - 6, H - 12, 10);
+                bg0.fill({
+                    color: i === active ? C.cyan : 0x0a121c,
+                    alpha: i === active ? 0.92 : 0.8,
+                });
+                tx.style = i === active ? style(13, '800', 0x001810) : style(13, '600', C.muted);
+            }
         });
     }
     paint(0);
@@ -497,69 +557,99 @@ function missionRow(
     const completed = unlocked && level.id < maxUnlocked;
     const elite = level.id >= 18;
 
-    const bg = new Graphics();
-    bg.roundRect(0, 0, cw, rowH, R_ROW);
-    bg.fill({ color: C.surface, alpha: 1 });
-    bg.stroke({ color: unlocked ? C.border : 0x333344, width: 1, alpha: 0.8 });
-    root.addChild(bg);
+    const plate = kenneyRowPanel(cw, rowH);
+    if (plate) root.addChild(plate);
+    else {
+        const bg = new Graphics();
+        bg.roundRect(0, 0, cw, rowH, 14);
+        bg.fill({ color: C.surface, alpha: 1 });
+        bg.stroke({ color: C.border, width: 1, alpha: 0.5 });
+        root.addChild(bg);
+    }
 
-    const iconR = 28;
-    const icX = 16 + iconR;
+    const iconR = 26;
+    const icX = 14 + iconR;
     const icY = rowH / 2;
-    const icBg = new Graphics();
-    icBg.circle(icX, icY, iconR);
-    icBg.fill({ color: C.surface2, alpha: 1 });
-    icBg.stroke({ color: unlocked ? C.cyan : C.muted, width: 2, alpha: unlocked ? 0.5 : 0.25 });
-    root.addChild(icBg);
-    const ic = new Graphics();
-    icoBolt(ic, icX, icY, 22);
-    root.addChild(ic);
+    const nodeTex = unlocked ? 'node_unlocked' : 'node_locked';
+    const ns = spriteIcon(nodeTex, iconR * 2, unlocked ? C.cyan : 0x888899);
+    if (ns) {
+        ns.position.set(icX, icY);
+        root.addChild(ns);
+    } else {
+        const icBg = new Graphics();
+        icBg.circle(icX, icY, iconR);
+        icBg.fill({ color: C.surface2, alpha: 1 });
+        icBg.stroke({ color: unlocked ? C.cyan : C.muted, width: 2, alpha: 0.45 });
+        root.addChild(icBg);
+    }
 
-    const tx = 16 + iconR * 2 + 16;
+    const btnW = 108;
+    const btnH = 48;
+    const tx = 14 + iconR * 2 + 14;
+    const textMax = cw - tx - btnW - 20 - 72;
+
     const title = new Text({
-        text: level.name,
+        text: trunc(level.name, Math.floor(textMax / 10)),
         style: style(17, '700', unlocked ? C.text : C.muted),
     });
-    title.position.set(tx, 14);
+    title.position.set(tx, 12);
     root.addChild(title);
 
     const subHint =
-        level.learningObjectives[0]?.hint ?? `Sector ${level.id} · ${level.gateCount} gates`;
+        level.learningObjectives[0]?.hint ?? `${level.gateCount} gates`;
     const sub = new Text({
-        text: subHint.length > 52 ? `${subHint.slice(0, 50)}…` : subHint,
+        text: trunc(subHint, Math.floor(textMax / 7)),
         style: style(13, '500', C.muted),
     });
     sub.position.set(tx, 36);
     root.addChild(sub);
 
-    let metaStr = elite ? 'ELITE' : completed ? 'CLEARED' : unlocked ? 'Reward' : 'Locked';
-    if (elite && unlocked) metaStr = 'ELITE · Reward';
-    const meta = new Text({ text: metaStr, style: style(12, '700', elite ? C.gold : unlocked ? C.gold : C.muted) });
+    let metaStr = elite ? 'ELITE' : completed ? 'DONE' : unlocked ? 'Reward' : 'Locked';
+    const meta = new Text({
+        text: metaStr,
+        style: style(11, '700', elite ? C.gold : unlocked ? C.gold : C.muted),
+    });
     meta.anchor.set(1, 0);
-    meta.position.set(cw - 120, 18);
+    meta.position.set(cw - btnW - 18, 14);
     root.addChild(meta);
 
-    const btnW = 100;
-    const btnH = 46;
-    const bx = cw - btnW - 14;
+    const bx = cw - btnW - 12;
     const by = (rowH - btnH) / 2;
 
     if (unlocked) {
-        const btn = primaryBtn(btnW, btnH, 'PLAY', () => onPlay(level.id));
+        const btn =
+            kenneyButton('PLAY', btnW, btnH, 'button_accent', true, () => onPlay(level.id)) ??
+            fallbackPrimaryBtn(btnW, btnH, 'PLAY', () => onPlay(level.id));
         btn.position.set(bx, by);
         root.addChild(btn);
     } else {
         const lock = new Container();
-        const lb = new Graphics();
-        lb.roundRect(0, 0, btnW, btnH, 12);
-        lb.fill({ color: C.surface2, alpha: 1 });
-        lb.stroke({ color: C.muted, width: 1, alpha: 0.35 });
-        lock.addChild(lb);
+        const tex = getVelocityUiTexture('button_secondary');
+        if (tex) {
+            const spr = new NineSliceSprite({
+                texture: tex,
+                leftWidth: 56,
+                rightWidth: 56,
+                topHeight: 20,
+                bottomHeight: 20,
+                width: btnW,
+                height: btnH,
+            });
+            spr.alpha = 0.45;
+            spr.tint = 0x444455;
+            lock.addChild(spr);
+        } else {
+            const lb = new Graphics();
+            lb.roundRect(0, 0, btnW, btnH, 10);
+            lb.fill({ color: C.surface2, alpha: 0.6 });
+            lock.addChild(lb);
+        }
         const lt = new Text({ text: 'LOCKED', style: style(13, '700', C.muted) });
         lt.anchor.set(0.5);
         lt.position.set(btnW / 2, btnH / 2);
         lock.addChild(lt);
         lock.position.set(bx, by);
+        lock.eventMode = 'none';
         root.addChild(lock);
     }
 
@@ -588,12 +678,11 @@ export function buildMissionList(
     root.addChild(maskG);
 
     const scrollLayer = new Container();
-    scrollLayer.y = 0;
     scrollLayer.mask = maskG;
     root.addChild(scrollLayer);
 
     let scrollY = 0;
-    const rowH = 88;
+    const rowH = 92;
     const gap = GRID;
 
     function maxScroll(): number {
@@ -619,7 +708,6 @@ export function buildMissionList(
     }
 
     rebuild(0);
-
     return { root, scrollLayer, rebuild, setScrollY, getScrollY: () => scrollY, maxScroll };
 }
 
@@ -629,16 +717,26 @@ export function buildBottomNavDock(
     onHome: () => void,
     navIndexBySlot?: (slot: number) => void,
 ): { root: Container; setActive: (i: number) => void; labels: Text[] } {
-    const H = 68;
+    const H = 70;
     const root = new Container();
-    const bg = new Graphics();
-    bg.roundRect(0, 0, cw, H, 16);
-    bg.fill({ color: C.surface, alpha: 0.98 });
-    bg.stroke({ color: C.border, width: 1, alpha: 0.7 });
-    root.addChild(bg);
+    const bar = kenneyDockBar(cw, H);
+    if (bar) root.addChild(bar);
+    else {
+        const bg = new Graphics();
+        bg.roundRect(0, 0, cw, H, 16);
+        bg.fill({ color: C.surface, alpha: 0.98 });
+        root.addChild(bg);
+    }
 
-    const items: { label: string; slot: number; onTap: () => void; draw: (g: Graphics, cx: number, cy: number, s: number) => void }[] = [
-        { label: 'Home', slot: 0, onTap: () => { navIndexBySlot?.(0); onHome(); }, draw: icoHome },
+    const items: {
+        label: string;
+        slot: number;
+        onTap: () => void;
+        icon: VelocityUiTextureKey;
+        tint: number;
+        vec: (g: Graphics, cx: number, cy: number, s: number) => void;
+    }[] = [
+        { label: 'Home', slot: 0, onTap: () => { navIndexBySlot?.(0); onHome(); }, icon: 'icon_star', tint: C.gold, vec: icoHome },
         {
             label: 'Missions',
             slot: 1,
@@ -646,11 +744,34 @@ export function buildBottomNavDock(
                 navIndexBySlot?.(1);
                 gameFlow().openMissionSelect();
             },
-            draw: icoMap,
+            icon: 'menu_routes_repeat',
+            tint: C.cyan,
+            vec: icoMap,
         },
-        { label: 'Hangar', slot: 2, onTap: () => { navIndexBySlot?.(2); ui.showScreen('store', true); }, draw: icoHangar },
-        { label: 'Store', slot: 3, onTap: () => { navIndexBySlot?.(3); ui.showScreen('store', true); }, draw: icoStore },
-        { label: 'Profile', slot: 4, onTap: () => { navIndexBySlot?.(4); ui.showScreen('settings', true); }, draw: icoProfile },
+        {
+            label: 'Hangar',
+            slot: 2,
+            onTap: () => { navIndexBySlot?.(2); ui.showScreen('store', true); },
+            icon: 'node_unlocked',
+            tint: C.cyan,
+            vec: icoHangar,
+        },
+        {
+            label: 'Store',
+            slot: 3,
+            onTap: () => { navIndexBySlot?.(3); ui.showScreen('store', true); },
+            icon: 'menu_store_icon',
+            tint: C.gold,
+            vec: icoStore,
+        },
+        {
+            label: 'Profile',
+            slot: 4,
+            onTap: () => { navIndexBySlot?.(4); ui.showScreen('settings', true); },
+            icon: 'menu_profile_star_outline',
+            tint: C.cyan,
+            vec: icoProfile,
+        },
     ];
 
     const n = items.length;
@@ -664,23 +785,21 @@ export function buildBottomNavDock(
         slot.cursor = 'pointer';
 
         const cx = slotW / 2;
-        const ig = new Graphics();
-        it.draw(ig, cx, H / 2 - 10, 22);
-        ig.eventMode = 'none';
-        slot.addChild(ig);
+        const sp = spriteIcon(it.icon, 26, it.tint);
+        if (sp) {
+            sp.position.set(cx, H / 2 - 8);
+            slot.addChild(sp);
+        } else {
+            const vg = new Graphics();
+            it.vec(vg, cx, H / 2 - 8, 22);
+            slot.addChild(vg);
+        }
 
         const t = new Text({ text: it.label, style: style(11, '600', C.muted) });
         t.anchor.set(0.5, 0);
-        t.position.set(cx, H / 2 + 12);
-        t.eventMode = 'none';
+        t.position.set(cx, H / 2 + 14);
         slot.addChild(t);
         labels.push(t);
-
-        const hit = new Graphics();
-        hit.rect(0, 0, slotW, H);
-        hit.fill({ color: 0xffffff, alpha: 0.001 });
-        hit.eventMode = 'static';
-        slot.addChild(hit);
 
         pressable(slot, it.onTap);
         root.addChild(slot);
