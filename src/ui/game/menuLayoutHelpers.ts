@@ -71,9 +71,9 @@ export interface MenuButtonExtras {
 
 const ROLE_PALETTE = {
     primary: {
-        bg:     0x051318,
+        bg:     0x061c22,
         border: 0x00ffcc,
-        shine:  0x55ffee,
+        shine:  0x66ffee,
         tint:   0x22ccbb,
         radius: 10,
     },
