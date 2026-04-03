@@ -28,7 +28,7 @@ import { FlightDynamicsComponent } from './engine/components/FlightDynamicsCompo
 import { createDemoTouchZones } from './debug/DemoTouchZones';
 import { SONGS } from './data/songs';
 import { GameState } from './engine/GameState';
-import { unlockAfterComplete } from './data/localProgress';
+import { recordMenuHighScore, unlockAfterComplete } from './data/localProgress';
 import { getLevelDefinition, getSongForLevel } from './data/levelDefinitions';
 import { GameUIManager } from './ui/game/GameUIManager';
 import { MainMenuScreen } from './ui/game/screens/MainMenuScreen';
@@ -318,6 +318,9 @@ async function init() {
     });
 
     function endRun(): void {
+        if (runScore > 0) {
+            recordMenuHighScore(runScore);
+        }
         GameState.setRunActive(false);
         gatePlayout.clear();
         boundsCheck.clear();
