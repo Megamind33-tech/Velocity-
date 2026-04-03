@@ -2,7 +2,7 @@
  * menuRewardComponents — economy / reward buttons with icon sockets.
  *
  * Layout: [icon socket | label zone]
- *   - icon socket: square zone, full button height, contains coin/star icon
+ *   - icon socket: square zone, full button height — store module / rewards cache pod (Family B)
  *   - label zone: main label (bold) + sub-label (smaller) stacked
  *
  * These replace plain orange rectangles with value-communicating,
@@ -12,71 +12,9 @@
  */
 
 import { Container, FederatedPointerEvent, Graphics, Text } from 'pixi.js';
-import { GAME_COLORS, GAME_FONTS } from './GameUITheme';
+import { GAME_FONTS } from './GameUITheme';
 import { economyButtonLabelStyle, hudLabelStyle } from './menuTextStyles';
-
-// ─── Icon factories ───────────────────────────────────────────────────────────
-
-/** Coin — filled gold disc with inner ring + top-left highlight arc. */
-function createCoinIcon(size: number): Container {
-    const root = new Container();
-    const cx   = size / 2;
-    const cy   = size / 2;
-    const r    = size / 2 - 1;
-
-    // Outer disc
-    const outer = new Graphics();
-    outer.circle(cx, cy, r);
-    outer.fill({ color: 0xffcc00, alpha: 0.92 });
-    outer.stroke({ color: 0xffe44d, width: 1, alpha: 0.75 });
-    root.addChild(outer);
-
-    // Inner ring (value depth)
-    const inner = new Graphics();
-    inner.circle(cx, cy, r * 0.60);
-    inner.stroke({ color: 0xffaa00, width: 1.5, alpha: 0.55 });
-    root.addChild(inner);
-
-    // Top-left highlight arc
-    const hl = new Graphics();
-    hl.arc(cx, cy, r * 0.72, -Math.PI * 0.88, -Math.PI * 0.42);
-    hl.stroke({ color: 0xffff99, width: 2, alpha: 0.48 });
-    root.addChild(hl);
-
-    return root;
-}
-
-/** Star — 5-point, filled gold, highlight center dot. */
-function createStarIcon(size: number): Container {
-    const root   = new Container();
-    const cx     = size / 2;
-    const cy     = size / 2;
-    const outerR = size / 2 - 1;
-    const innerR = outerR * 0.42;
-    const pts    = 5;
-
-    const star = new Graphics();
-    for (let i = 0; i < pts * 2; i++) {
-        const angle = (i * Math.PI) / pts - Math.PI / 2;
-        const r     = i % 2 === 0 ? outerR : innerR;
-        const x     = cx + Math.cos(angle) * r;
-        const y     = cy + Math.sin(angle) * r;
-        if (i === 0) star.moveTo(x, y);
-        else         star.lineTo(x, y);
-    }
-    star.closePath();
-    star.fill({ color: 0xffcc44, alpha: 0.94 });
-    star.stroke({ color: 0xffe066, width: 1, alpha: 0.65 });
-    root.addChild(star);
-
-    // Center highlight dot
-    const dot = new Graphics();
-    dot.circle(cx, cy, outerR * 0.16);
-    dot.fill({ color: 0xfffff8, alpha: 0.52 });
-    root.addChild(dot);
-
-    return root;
-}
+import { createIconRewardsCachePod, createIconStoreModule } from './menuFrontMenuIcons';
 
 // ─── Reward button ────────────────────────────────────────────────────────────
 
@@ -143,29 +81,6 @@ export function createRewardButton(
     border.eventMode = 'none';
     root.addChild(border);
 
-    // Corner prestige notches (collectible / vendor fantasy)
-    const notch = new Graphics();
-    notch.moveTo(6, 6).lineTo(14, 6).lineTo(6, 14).closePath();
-    notch.fill({ color: borderCol, alpha: 0.35 });
-    notch.eventMode = 'none';
-    root.addChild(notch);
-    const notch2 = new Graphics();
-    notch2.moveTo(width - 6, 6).lineTo(width - 14, 6).lineTo(width - 6, 14).closePath();
-    notch2.fill({ color: borderCol, alpha: 0.28 });
-    notch2.eventMode = 'none';
-    root.addChild(notch2);
-
-    // Sparkle triad — curiosity cue (top-right label zone)
-    const sx0 = width - 22;
-    const sy0 = 7;
-    for (let i = 0; i < 3; i++) {
-        const sp = new Graphics();
-        sp.circle(sx0 + i * 6, sy0, 1.2 + i * 0.15);
-        sp.fill({ color: 0xffeeaa, alpha: 0.35 - i * 0.08 });
-        sp.eventMode = 'none';
-        root.addChild(sp);
-    }
-
     // ── Top shine strip ───────────────────────────────────────────────────
     const shine = new Graphics();
     shine.roundRect(6, 2, width - 12, 2, 1);
@@ -182,7 +97,10 @@ export function createRewardButton(
 
     // ── Icon ──────────────────────────────────────────────────────────────
     const iconSize = Math.floor(height * 0.52);
-    const icon     = type === 'store' ? createCoinIcon(iconSize) : createStarIcon(iconSize);
+    const icon =
+        type === 'store'
+            ? createIconStoreModule(iconSize, borderCol)
+            : createIconRewardsCachePod(iconSize, borderCol);
     icon.position.set(
         Math.floor((iconZoneW - iconSize) / 2),
         Math.floor((height  - iconSize) / 2),

@@ -150,17 +150,17 @@ export class MainMenuScreen extends BaseGameScreen {
         const chipW     = Math.floor((cw - GAP.sm * 2 - badgeSize - GAP.sm) / 3);
         const prog      = getMainMenuProgress();
 
-        const chipScore  = createHudChip('BEST',   String(getMenuHighScore()),  chipW, GAME_COLORS.accent_gold);
-        const chipRank   = createHudChip('SECTOR', `${prog.maxUnlocked}`,       chipW, GAME_COLORS.primary);
-        const chipStreak = createHudChip('ROUTES', `${prog.unlockedCount}`,     chipW, 0x88ddff);
+        const chipScore  = createHudChip('BEST',   String(getMenuHighScore()),  chipW, GAME_COLORS.accent_gold, 'best');
+        const chipRank   = createHudChip('SECTOR', `${prog.maxUnlocked}`,       chipW, GAME_COLORS.primary, 'sector');
+        const chipStreak = createHudChip('ROUTES', `${prog.unlockedCount}`,     chipW, 0x88ddff, 'routes');
 
         chipRank.position.set(chipW + GAP.sm, 0);
         chipStreak.position.set((chipW + GAP.sm) * 2, 0);
 
-        // indices: 0=bg, 1=accentLine, 2=label, 3=value
-        this._chipScoreVal  = chipScore.children[3]  as Text;
-        this._chipRankVal   = chipRank.children[3]   as Text;
-        this._chipStreakVal  = chipStreak.children[3] as Text;
+        const hudVal = (c: Container) => c.getChildAt(c.children.length - 1) as Text;
+        this._chipScoreVal  = hudVal(chipScore);
+        this._chipRankVal   = hudVal(chipRank);
+        this._chipStreakVal = hudVal(chipStreak);
 
         const badge = createAvatarBadge(badgeSize, 'V');
         badge.position.set(cw - badgeSize, -2);

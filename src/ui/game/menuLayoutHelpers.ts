@@ -36,6 +36,16 @@ import {
     velocityUiArtReady,
     type VelocityUiTextureKey,
 } from './velocityUiArt';
+import {
+    createIconAchievementsMedal,
+    createIconHudBest,
+    createIconHudRoutes,
+    createIconHudSector,
+    createIconLeaderboardTrophy,
+    createIconPilotClassWings,
+    createIconSettingsGear,
+    createAvatarWingRing,
+} from './menuFrontMenuIcons';
 
 // ─── Tier heights ─────────────────────────────────────────────────────────────
 
@@ -197,53 +207,12 @@ export function createMenuButton(
         zoneLine.eventMode = 'none';
         root.addChild(zoneLine);
 
-        const iconRoot = new Container();
-        const ix = socialColW / 2;
-        const iy = h / 2;
-        if (extras.social === 'leaderboard') {
-            const b1 = new Graphics();
-            b1.roundRect(ix - 14, iy + 2, 8, 10, 1);
-            b1.fill({ color: acc, alpha: 0.55 });
-            iconRoot.addChild(b1);
-            const b2 = new Graphics();
-            b2.roundRect(ix - 4, iy - 4, 8, 16, 1);
-            b2.fill({ color: acc, alpha: 0.85 });
-            iconRoot.addChild(b2);
-            const b3 = new Graphics();
-            b3.roundRect(ix + 6, iy + 4, 8, 8, 1);
-            b3.fill({ color: acc, alpha: 0.5 });
-            iconRoot.addChild(b3);
-            const crown = new Graphics();
-            crown.moveTo(ix, iy - 14);
-            crown.lineTo(ix - 5, iy - 8);
-            crown.lineTo(ix + 5, iy - 8);
-            crown.closePath();
-            crown.fill({ color: 0xffffee, alpha: 0.35 });
-            iconRoot.addChild(crown);
-        } else {
-            const cupBody = new Graphics();
-            cupBody.roundRect(ix - 7, iy - 2, 14, 12, 2);
-            cupBody.fill({ color: acc, alpha: 0.22 });
-            cupBody.stroke({ color: acc, width: 1, alpha: 0.75 });
-            iconRoot.addChild(cupBody);
-            const cupBase = new Graphics();
-            cupBase.arc(ix, iy + 8, 8, Math.PI, 0);
-            cupBase.stroke({ color: acc, width: 1.2, alpha: 0.55 });
-            iconRoot.addChild(cupBase);
-            const star = new Graphics();
-            star.moveTo(ix, iy - 12);
-            for (let s = 0; s < 5; s++) {
-                const a = -Math.PI / 2 + (s * 2 * Math.PI) / 5;
-                const r = s % 2 === 0 ? 5 : 2;
-                const px = ix + Math.cos(a) * r;
-                const py = iy - 8 + Math.sin(a) * r;
-                if (s === 0) star.moveTo(px, py);
-                else star.lineTo(px, py);
-            }
-            star.closePath();
-            star.fill({ color: 0xfff8cc, alpha: 0.7 });
-            iconRoot.addChild(star);
-        }
+        const iconBox = Math.min(socialColW - 8, h - 12);
+        const iconRoot =
+            extras.social === 'leaderboard'
+                ? createIconLeaderboardTrophy(iconBox, acc)
+                : createIconAchievementsMedal(iconBox, acc);
+        iconRoot.position.set(Math.floor((socialColW - iconBox) / 2), Math.floor((h - iconBox) / 2));
         root.addChild(iconRoot);
 
         const tierLbl = new Text({
@@ -356,22 +325,6 @@ export function createMenuButton(
     t.position.set((width + socialColW) / 2, h / 2);
     root.addChild(t);
 
-    if (role === 'primary' && extras?.ctaLaunch) {
-        const deploy = new Text({
-            text:  'DEPLOY',
-            style: {
-                fill:          P.border,
-                fontSize:      8,
-                fontFamily:    GAME_FONTS.arcade,
-                letterSpacing: 3,
-            },
-        });
-        deploy.alpha = 0.45;
-        deploy.anchor.set(0.5, 0);
-        deploy.position.set(width / 2, 8);
-        root.addChild(deploy);
-    }
-
     if (role === 'utility' && extras?.social) {
         const sub = new Text({
             text:  extras.social === 'leaderboard' ? 'GLOBAL RANK' : 'MEDALS',
@@ -395,20 +348,24 @@ export function createMenuButton(
 
 // ─── Capsule HUD stat chip ────────────────────────────────────────────────────
 
+export type HudChipIconSlot = 'best' | 'sector' | 'routes';
+
 /**
  * Capsule-shaped HUD chip — radius = h/2 gives fully rounded ends.
- * Shape is visually distinct from rectangular panels.
- * Children: [bg, accentLine, label, value] — indices match MainMenuScreen refs.
+ * Children: [bg, accentLine, icon?, label, value] — value is last Text for MainMenuScreen.
  */
 export function createHudChip(
     label:       string,
     value:       string,
     width:       number,
     accentColor: number = GAME_COLORS.accent_gold,
+    iconSlot?:   HudChipIconSlot,
 ): Container {
     const root = new Container();
     const h    = 38;
     const r    = h / 2;   // CAPSULE
+    const iconSocketW = iconSlot ? 24 : 0;
+    const textX       = r / 2 + 2 + iconSocketW;
 
     // Capsule backplate
     const bg = new Graphics();
@@ -416,6 +373,23 @@ export function createHudChip(
     bg.fill({ color: 0x060e1a, alpha: 0.84 });
     bg.stroke({ color: accentColor, width: 1, alpha: 0.42 });
     root.addChild(bg);
+
+    if (iconSlot) {
+        const sock = new Graphics();
+        sock.roundRect(3, 5, iconSocketW - 2, h - 10, 4);
+        sock.stroke({ color: accentColor, width: 1, alpha: 0.28 });
+        sock.fill({ color: 0x000000, alpha: 0.2 });
+        root.addChild(sock);
+        const iz = 18;
+        const ic =
+            iconSlot === 'best'
+                ? createIconHudBest(iz, accentColor)
+                : iconSlot === 'sector'
+                  ? createIconHudSector(iz, accentColor)
+                  : createIconHudRoutes(iz, accentColor);
+        ic.position.set(4 + (iconSocketW - 2 - iz) / 2, (h - iz) / 2);
+        root.addChild(ic);
+    }
 
     // Top accent strip (inset from rounded ends)
     const accentLine = new Graphics();
@@ -425,12 +399,12 @@ export function createHudChip(
 
     // Micro-label
     const lab = new Text({ text: label, style: hudLabelStyle() });
-    lab.position.set(r / 2 + 2, 5);
+    lab.position.set(textX, 5);
     root.addChild(lab);
 
-    // Value
+    // Value (keep as last Text child for MainMenuScreen chip value refs)
     const val = new Text({ text: value, style: hudValueStyle(accentColor) });
-    val.position.set(r / 2 + 2, 17);
+    val.position.set(textX, 17);
     root.addChild(val);
 
     return root;
@@ -478,19 +452,22 @@ export function createPilotStatusStrip(
     badgeBg.stroke({ color: GAME_COLORS.primary, width: 1.5, alpha: 0.65 });
     root.addChild(badgeBg);
 
-    // Rank initial letter
+    const wingEm = createIconPilotClassWings(badgeR * 2);
+    wingEm.position.set(badgeCX - badgeR, badgeCY - badgeR);
+    root.addChild(wingEm);
+
     const initial = rank.charAt(0);
     const initText = new Text({
         text:  initial,
         style: {
             fill:       GAME_COLORS.primary,
-            fontSize:   14,
+            fontSize:   13,
             fontWeight: 'bold',
             fontFamily: GAME_FONTS.arcade,
         },
     });
     initText.anchor.set(0.5);
-    initText.position.set(badgeCX, badgeCY);
+    initText.position.set(badgeCX, badgeCY + 0.5);
     root.addChild(initText);
 
     // Segment separator after badge
@@ -551,6 +528,19 @@ export function createPilotStatusStrip(
         root.addChild(fill);
     }
 
+    // Slot 10 — route track markers (nodes only, Family A)
+    const nPips = Math.min(5, Math.max(3, Math.floor(barW / 14)));
+    const denom   = Math.max(1, nPips - 1);
+    for (let i = 0; i < nPips; i++) {
+        const px = barX + 3 + (i * (barW - 6)) / denom;
+        const t  = i / denom;
+        const lit = prog > 0 && t <= prog + 0.08;
+        const pip = new Graphics();
+        pip.circle(px, barY + barH / 2, 1.5);
+        pip.fill({ color: GAME_COLORS.primary, alpha: lit ? 0.58 : 0.18 });
+        root.addChild(pip);
+    }
+
     return root;
 }
 
@@ -576,38 +566,18 @@ export function createInfoPill(text: string, maxWidth: number): Container {
 
 // ─── Avatar / pilot badge ─────────────────────────────────────────────────────
 
-/** Circular pilot badge with glow ring, inner shine arc, and initial letter. */
+/** Pilot insignia ring + wing pips + initial (slot 4 — identity, Family A). */
 export function createAvatarBadge(size: number, initial: string = 'V'): Container {
     const root = new Container();
-    const cx   = size / 2;
-    const cy   = size / 2;
-    const r    = size / 2 - 2;
+    root.addChild(createAvatarWingRing(size));
 
-    // Outer glow ring
-    const glow = new Graphics();
-    glow.circle(cx, cy, r + 3);
-    glow.fill({ color: GAME_COLORS.primary, alpha: 0.10 });
-    root.addChild(glow);
-
-    // Background disc
-    const disc = new Graphics();
-    disc.circle(cx, cy, r);
-    disc.fill({ color: 0x0d1a28, alpha: 0.96 });
-    disc.stroke({ color: GAME_COLORS.primary, width: 2, alpha: 0.80 });
-    root.addChild(disc);
-
-    // Inner shine arc (top-left quadrant)
-    const shine = new Graphics();
-    shine.arc(cx, cy, r - 3, -2.4, -0.7);
-    shine.stroke({ color: 0xffffff, width: 1.5, alpha: 0.22 });
-    root.addChild(shine);
-
-    // Initial letter
+    const cx = size / 2;
+    const cy = size / 2;
     const letter = new Text({
         text:  initial,
         style: {
             fill:       GAME_COLORS.primary,
-            fontSize:   Math.floor(size * 0.42),
+            fontSize:   Math.floor(size * 0.40),
             fontWeight: 'bold',
             fontFamily: GAME_FONTS.arcade,
             dropShadow: { alpha: 0.50, blur: 1, color: 0x000000, distance: 1 },
@@ -711,19 +681,9 @@ export function createSettingsDock(
     socket.eventMode = 'none';
     root.addChild(socket);
 
-    const gear = new Graphics();
     const gx = 2 + socketW / 2;
     const gy = h / 2;
-    gear.circle(gx, gy, 9);
-    gear.stroke({ color: 0x88aacc, width: 1.25, alpha: 0.55 });
-    gear.circle(gx, gy, 3.5);
-    gear.stroke({ color: 0x88aacc, width: 1, alpha: 0.45 });
-    for (let i = 0; i < 4; i++) {
-        const a = (i * Math.PI) / 2;
-        gear.moveTo(gx + Math.cos(a) * 4.5, gy + Math.sin(a) * 4.5);
-        gear.lineTo(gx + Math.cos(a) * 8.5, gy + Math.sin(a) * 8.5);
-    }
-    gear.stroke({ color: 0x88aacc, width: 1, alpha: 0.4 });
+    const gear = createIconSettingsGear(gx, gy, 11, 0x88aacc, 0.62);
     gear.eventMode = 'none';
     root.addChild(gear);
 
@@ -740,31 +700,6 @@ export function createSettingsDock(
     t.anchor.set(0, 0.5);
     t.position.set(capX + 12, h / 2);
     root.addChild(t);
-
-    const sys = new Text({
-        text:  'SYS',
-        style: {
-            fill:          0x4a6678,
-            fontSize:      7,
-            fontFamily:    GAME_FONTS.arcade,
-            letterSpacing: 2,
-        },
-    });
-    sys.anchor.set(1, 0.5);
-    sys.position.set(width - 10, h / 2);
-    root.addChild(sys);
-
-    const tickY = h / 2;
-    for (let j = 0; j < 3; j++) {
-        const tx = width - 28 - j * 5;
-        const tick = new Graphics();
-        tick.moveTo(tx, tickY - 4);
-        tick.lineTo(tx + 3, tickY);
-        tick.lineTo(tx, tickY + 4);
-        tick.stroke({ color: GAME_COLORS.primary, width: 1, alpha: 0.2 + j * 0.08 });
-        tick.eventMode = 'none';
-        root.addChild(tick);
-    }
 
     const stop = (e: FederatedPointerEvent) => e.stopPropagation();
     root.on('pointerdown',     (e: FederatedPointerEvent) => { stop(e); root.alpha = 0.82; });
