@@ -176,6 +176,12 @@ export class ResponsiveUIManager {
      * Android: varies, typically 0
      */
     public getSafeAreaPadding(): { top: number; bottom: number; left: number; right: number } {
+        // When #game-root applies env(safe-area-inset-*) in CSS, Pixi resizes to that inset box.
+        // Do not add the same insets again in layout math (double padding shrinks content to zero).
+        if (typeof document !== 'undefined' && document.getElementById('game-root')) {
+            return { top: 0, bottom: 0, left: 0, right: 0 };
+        }
+
         const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
 
         let topPadding = 0;

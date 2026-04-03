@@ -110,6 +110,28 @@ export class MainMenuScreen extends BaseGameScreen {
 
         resizeVelocityShell(this.shell, this.container, screenW, screenH, 0.48);
 
+        // Fit tall menus on short viewports (avoid pushing UI below the visible inset box).
+        let heroHCap = Math.min(152, Math.max(122, Math.floor(screenH * 0.19)));
+        const layoutH =
+            40 + GAP.md
+            + heroHCap
+            + 48 + GAP.md
+            + MENU_TIER_HEIGHT.cta + GAP.sm
+            + MENU_TIER_HEIGHT.secondary + GAP.md
+            + MENU_TIER_HEIGHT.economy + GAP.xl
+            + 34;
+        const slack = screenH - y - layoutH;
+        let overlapStats = OVERLAP_STATS;
+        let overlapCta   = OVERLAP_CTA;
+        let overlapSec   = OVERLAP_SEC;
+        if (slack < 0) {
+            const reduce = Math.min(36, Math.ceil(-slack / 4));
+            overlapStats = Math.max(6, overlapStats - reduce);
+            overlapCta   = Math.max(4, overlapCta - Math.floor(reduce * 0.5));
+            overlapSec   = Math.max(2, overlapSec - Math.floor(reduce * 0.35));
+            heroHCap     = Math.max(100, heroHCap + Math.floor(slack * 0.45));
+        }
+
         this.topHudContainer.removeChildren();
         this.titleHeroContainer.removeChildren();
         this.statsStripContainer.removeChildren();
@@ -148,7 +170,7 @@ export class MainMenuScreen extends BaseGameScreen {
         y += hudH + GAP.md;
 
         // ── Hero module — signature cockpit identity zone ──────────────────
-        const heroH = Math.min(152, Math.max(122, Math.floor(screenH * 0.19)));
+        const heroH = heroHCap;
         const hero  = buildHeroModule(cw, heroH, {
             title:     'VELOCITY',
             subtitle:  'Voice-Powered Flight',
@@ -166,8 +188,8 @@ export class MainMenuScreen extends BaseGameScreen {
             totalLevels:   prog.totalLevels,
         });
         this.statsStripContainer.addChild(strip);
-        this.statsStripContainer.position.set(mx, y - OVERLAP_STATS);
-        y += 48 + GAP.md - OVERLAP_STATS;
+        this.statsStripContainer.position.set(mx, y - overlapStats);
+        y += 48 + GAP.md - overlapStats;
 
         // ── Mission Select — launch CTA (energy deck + deploy strip) ───────
         const cta = createMenuButton(
@@ -178,8 +200,8 @@ export class MainMenuScreen extends BaseGameScreen {
         );
         this._ctaBtn = cta;
         this.mainMenuContainer.addChild(cta);
-        this.mainMenuContainer.position.set(mx, y - OVERLAP_CTA);
-        y += MENU_TIER_HEIGHT.cta + GAP.sm - OVERLAP_CTA;
+        this.mainMenuContainer.position.set(mx, y - overlapCta);
+        y += MENU_TIER_HEIGHT.cta + GAP.sm - overlapCta;
 
         // ── Leaderboard + Achievements — prestige columns, tuck under CTA ──
         const secW = Math.floor((cw - GAP.sm) / 2);
@@ -197,8 +219,8 @@ export class MainMenuScreen extends BaseGameScreen {
         );
         ach.position.set(secW + GAP.sm, 0);
         this.secondaryMenuContainer.addChild(lb, ach);
-        this.secondaryMenuContainer.position.set(mx, y - OVERLAP_SEC);
-        y += MENU_TIER_HEIGHT.secondary + GAP.md - OVERLAP_SEC;
+        this.secondaryMenuContainer.position.set(mx, y - overlapSec);
+        y += MENU_TIER_HEIGHT.secondary + GAP.md - overlapSec;
 
         // ── Economy row — reward buttons with icon sockets ────────────────
         const ecoW    = Math.floor((cw - GAP.sm) / 2);
