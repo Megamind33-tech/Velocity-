@@ -11,10 +11,19 @@ import {
     Graphics,
     NineSliceSprite,
     Text,
-    TextStyle,
 } from 'pixi.js';
 import { GAME_COLORS, GAME_FONTS, GAME_SIZES } from './GameUITheme';
 import { createKenneyFramedPanelWithContent } from './kenneyNineSlice';
+import {
+    economyButtonLabelStyle,
+    footerUtilityLabelStyle,
+    helperTextStyle,
+    hudLabelStyle,
+    hudValueStyle,
+    pilotRankStyle,
+    primaryButtonLabelStyle,
+    utilityButtonLabelStyle,
+} from './menuTextStyles';
 import {
     getVelocityUiTexture,
     velocityUiArtReady,
@@ -185,26 +194,12 @@ export function createMenuButton(
         root.addChild(glow);
     }
 
-    // 6. Label — Phase 4 typography
-    const fontSize    = role === 'primary' ? 16 : role === 'economy' ? 14 : 13;
-    const letterSpace = role === 'primary' ? 2 : 1;
-    const t = new Text({
-        text: label,
-        style: new TextStyle({
-            fill:          P.text,
-            fontSize,
-            fontWeight:    'bold',
-            fontFamily:    GAME_FONTS.arcade,
-            align:         'center',
-            letterSpacing: letterSpace,
-            dropShadow: {
-                alpha:    role === 'primary' ? 0.85 : 0.55,
-                blur:     role === 'primary' ? 10   : 4,
-                color:    P.shadow,
-                distance: 0,
-            },
-        }),
-    });
+    // 6. Label — shared text style by role (blur-free, contrast-first)
+    const labelStyle =
+        role === 'primary' ? primaryButtonLabelStyle() :
+        role === 'economy' ? economyButtonLabelStyle() :
+                             utilityButtonLabelStyle();
+    const t = new Text({ text: label, style: labelStyle });
     t.anchor.set(0.5);
     t.position.set(width / 2, h / 2);
     root.addChild(t);
@@ -221,10 +216,10 @@ export function createMenuButton(
     return root;
 }
 
-// ─── Phase 2 (improved): HUD chip ────────────────────────────────────────────
+// ─── HUD chip ─────────────────────────────────────────────────────────────────
 /**
- * Compact HUD stat chip: backplate + small label + bold value.
- * Phase 2 rebuild: tighter padding, sharper value, role-aware accent line.
+ * Compact HUD stat chip — backplate, accent line, micro-label, bold value.
+ * Typography via shared style factories; no inline blur.
  */
 export function createHudChip(
     label: string,
@@ -238,41 +233,24 @@ export function createHudChip(
     // Backplate
     const bg = new Graphics();
     bg.roundRect(0, 0, width, h, 8);
-    bg.fill({ color: 0x060e1a, alpha: 0.82 });
-    bg.stroke({ color: GAME_COLORS.primary, width: 1, alpha: 0.38 });
+    bg.fill({ color: 0x060e1a, alpha: 0.84 });
+    bg.stroke({ color: GAME_COLORS.primary, width: 1, alpha: 0.35 });
     root.addChild(bg);
 
     // Top accent line (role colour)
     const accentLine = new Graphics();
     accentLine.roundRect(4, 0, width - 8, 2, 1);
-    accentLine.fill({ color: accentColor, alpha: 0.45 });
+    accentLine.fill({ color: accentColor, alpha: 0.50 });
     root.addChild(accentLine);
 
-    // Label
-    const lab = new Text({
-        text: label,
-        style: new TextStyle({
-            fill:          GAME_COLORS.text_muted,
-            fontSize:      GAME_SIZES.font.xs,
-            fontFamily:    GAME_FONTS.arcade,
-            letterSpacing: 1,
-        }),
-    });
+    // Micro-label — crisp, not muddy
+    const lab = new Text({ text: label, style: hudLabelStyle() });
     lab.position.set(7, 5);
     root.addChild(lab);
 
-    // Value
-    const val = new Text({
-        text: value,
-        style: new TextStyle({
-            fill:       accentColor,
-            fontSize:   GAME_SIZES.font.sm,
-            fontWeight: 'bold',
-            fontFamily: GAME_FONTS.arcade,
-            dropShadow: { alpha: 0.4, blur: 4, color: 0x000000, distance: 0 },
-        }),
-    });
-    val.position.set(7, 18);
+    // Value — bold, accent-coloured, sharp 1 px shadow
+    const val = new Text({ text: value, style: hudValueStyle(accentColor) });
+    val.position.set(7, 17);
     root.addChild(val);
 
     return root;
@@ -325,54 +303,26 @@ export function createPilotStatusStrip(
     topLine.fill({ color: GAME_COLORS.primary, alpha: 0.18 });
     root.addChild(topLine);
 
-    // Left block — "PILOT" micro-label + rank
-    const pilotLabel = new Text({
-        text: 'PILOT',
-        style: new TextStyle({
-            fill: GAME_COLORS.text_muted, fontSize: 8,
-            fontFamily: GAME_FONTS.arcade, letterSpacing: 2,
-        }),
-    });
-    pilotLabel.position.set(12, 7);
+    // Left block — "PILOT" micro-label (top) + rank name (bottom)
+    const pilotLabel = new Text({ text: 'PILOT', style: hudLabelStyle() });
+    pilotLabel.position.set(12, 6);
     root.addChild(pilotLabel);
 
-    const rankText = new Text({
-        text: rank,
-        style: new TextStyle({
-            fill:          GAME_COLORS.primary,
-            fontSize:      13,
-            fontWeight:    'bold',
-            fontFamily:    GAME_FONTS.arcade,
-            letterSpacing: 1,
-            dropShadow:    { alpha: 0.45, blur: 7, color: GAME_COLORS.primary, distance: 0 },
-        }),
-    });
-    rankText.position.set(12, 22);
+    const rankText = new Text({ text: rank, style: pilotRankStyle() });
+    rankText.position.set(12, 20);
     root.addChild(rankText);
 
-    // Right block — "X/Y ROUTES" value
+    // Right block — value (right-anchored) + "ROUTES" micro-label left of it
     const routesText = new Text({
         text: `${unlockedCount}/${totalLevels}`,
-        style: new TextStyle({
-            fill:       GAME_COLORS.accent_gold,
-            fontSize:   13,
-            fontWeight: 'bold',
-            fontFamily: GAME_FONTS.arcade,
-        }),
+        style: hudValueStyle(GAME_COLORS.accent_gold),
     });
     routesText.anchor.set(1, 0.5);
     routesText.position.set(width - 10, h / 2);
     root.addChild(routesText);
 
-    const routesLabel = new Text({
-        text: 'ROUTES',
-        style: new TextStyle({
-            fill: GAME_COLORS.text_muted, fontSize: 8,
-            fontFamily: GAME_FONTS.arcade, letterSpacing: 2,
-        }),
-    });
+    const routesLabel = new Text({ text: 'ROUTES', style: hudLabelStyle() });
     routesLabel.anchor.set(1, 0.5);
-    // Position left of value — leave 6px gap; routesText.width is available immediately
     routesLabel.position.set(width - 10 - routesText.width - 6, h / 2);
     root.addChild(routesLabel);
 
@@ -405,23 +355,18 @@ export function createPilotStatusStrip(
 // ─── Compact info pill ────────────────────────────────────────────────────────
 /** Small pill used inside the hero panel (e.g. mic tip). */
 export function createInfoPill(text: string, maxWidth: number): Container {
-    const root  = new Container();
-    const padX  = 10;
-    const padY  = 5;
-    const t = new Text({
-        text,
-        style: new TextStyle({
-            fill:       GAME_COLORS.text_secondary,
-            fontSize:   GAME_SIZES.font.xs,
-            fontFamily: GAME_FONTS.arcade,
-        }),
-    });
+    const root = new Container();
+    const padX = 10;
+    const padY = 4;
+    // helperTextStyle gives 0xaec8d8 fill — legible, not ghosted
+    const t = new Text({ text, style: helperTextStyle() });
     const w = Math.min(maxWidth, t.width + padX * 2);
     const h = t.height + padY * 2;
     const g = new Graphics();
     g.roundRect(0, 0, w, h, h / 2);
-    g.fill({ color: 0x080816, alpha: 0.58 });
-    g.stroke({ color: GAME_COLORS.primary, width: 1, alpha: 0.28 });
+    // Slightly lighter fill so text isn't fighting darkness-on-darkness
+    g.fill({ color: 0x0d1e30, alpha: 0.72 });
+    g.stroke({ color: GAME_COLORS.primary, width: 1, alpha: 0.32 });
     root.addChild(g);
     t.position.set(padX, padY);
     root.addChild(t);
@@ -455,16 +400,16 @@ export function createAvatarBadge(size: number, initial: string = 'V'): Containe
     shine.stroke({ color: 0xffffff, width: 1.5, alpha: 0.22 });
     root.addChild(shine);
 
-    // Initial letter
+    // Initial letter — same discipline as hudValueStyle: sharp 1 px shadow, no blur haze
     const letter = new Text({
         text: initial,
-        style: new TextStyle({
+        style: {
             fill:       GAME_COLORS.primary,
             fontSize:   Math.floor(size * 0.42),
             fontWeight: 'bold',
             fontFamily: GAME_FONTS.arcade,
-            dropShadow: { alpha: 0.5, blur: 6, color: GAME_COLORS.primary, distance: 0 },
-        }),
+            dropShadow: { alpha: 0.50, blur: 1, color: 0x000000, distance: 1 },
+        },
     });
     letter.anchor.set(0.5);
     letter.position.set(cx, cy);
@@ -486,30 +431,31 @@ export function createHeroPanel(
     const pair = createKenneyFramedPanelWithContent(width, height);
 
     if (pair) {
-        pair.root.alpha = 0.94;
-        pair.root.tint  = 0x243040;
+        // Slightly brighter tint so title has a clean, non-muddy surface
+        pair.root.alpha = 0.96;
+        pair.root.tint  = 0x2e3f55;
         const innerW = Math.max(80, width - 44);
         const innerH = Math.max(60, height - 48);
-        // Subtle bottom accent glow line
+        // Bottom accent glow line — slightly stronger for definition
         const glow = new Graphics();
-        glow.roundRect(0, innerH * 0.82, innerW, 2, 1);
-        glow.fill({ color: GAME_COLORS.primary, alpha: 0.18 });
+        glow.roundRect(0, innerH * 0.84, innerW, 2, 1);
+        glow.fill({ color: GAME_COLORS.primary, alpha: 0.25 });
         pair.content.addChildAt(glow, 0);
         root.addChild(pair.root);
         return { root, content: pair.content };
     }
 
-    // Fallback: pure Graphics
+    // Fallback: pure Graphics — lighter navy for cleaner title contrast
     const g = new Graphics();
     g.roundRect(0, 0, width, height, 14);
-    g.fill({ color: 0x0e1828, alpha: 0.94 });
-    g.stroke({ color: GAME_COLORS.primary, width: 2, alpha: 0.50 });
+    g.fill({ color: 0x121e30, alpha: 0.95 });
+    g.stroke({ color: GAME_COLORS.primary, width: 2, alpha: 0.55 });
     root.addChild(g);
 
-    // Top shine
+    // Top shine — slightly stronger
     const shine = new Graphics();
     shine.roundRect(8, 2, width - 16, 2, 1);
-    shine.fill({ color: 0x55eedd, alpha: 0.30 });
+    shine.fill({ color: 0x55eedd, alpha: 0.38 });
     root.addChild(shine);
 
     const content = new Container();
@@ -560,27 +506,20 @@ export function createUtilityRow(
     bg.eventMode = 'none';
     root.addChild(bg);
 
-    // Label
-    const t = new Text({
-        text: label,
-        style: new TextStyle({
-            fill:          0x8aaabb,
-            fontSize:      GAME_SIZES.font.sm,
-            fontFamily:    GAME_FONTS.arcade,
-            letterSpacing: 2,
-        }),
-    });
+    // Label — footerUtilityLabelStyle: bold, 2.5 letter-spacing, not ghosted
+    const t = new Text({ text: label, style: footerUtilityLabelStyle() });
     t.anchor.set(0.5, 0.5);
     t.position.set(width / 2, h / 2);
     root.addChild(t);
 
-    // Gear icon hint (simple ⚙ via text) left of label
+    // Gear icon — slightly brighter than before; vertically baseline-matched to label
     const icon = new Text({
         text: '⚙',
-        style: new TextStyle({ fill: 0x556677, fontSize: 12 }),
+        style: { fill: 0x7799aa, fontSize: 12 },
     });
-    icon.anchor.set(0, 0.5);
-    icon.position.set(width / 2 - t.width / 2 - 20, h / 2);
+    icon.anchor.set(1, 0.5);
+    // Right edge of icon sits 6 px left of label's left edge
+    icon.position.set(width / 2 - t.width / 2 - 6, h / 2);
     root.addChild(icon);
 
     const stop = (e: FederatedPointerEvent) => e.stopPropagation();
