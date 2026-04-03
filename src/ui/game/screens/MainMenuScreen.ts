@@ -125,31 +125,33 @@ export class MainMenuScreen extends BaseGameScreen {
         let overlapSec   = OVERLAP_SEC;
         let heroHCap     = Math.min(152, Math.max(122, Math.floor(screenH * 0.19)));
 
-        // Matches rebuildLayout y-advance (overlaps subtract twice from vertical span).
+        // Pixel-accurate height from HUD top to settings bottom (each overlap only once in the chain).
         const stackSpan = (hh: number) =>
             hudH + GAP.md
             + hh + GAP.xs
-            + stripH + GAP.md - 2 * overlapStats // stripH === pilot strip height
-            + ctaH + GAP.sm - 2 * overlapCta
-            + secH + GAP.md - 2 * overlapSec
+            + stripH + GAP.md - overlapStats
+            + ctaH + GAP.sm - overlapCta
+            + secH + GAP.md - overlapSec
             + rewardRowH + ecoSettingsGap + settingsH;
 
         const availBottom = screenH - safe.bottom - bottomPad;
-        let span = stackSpan(heroHCap);
-        let topY = availBottom - span;
+        const minTop      = safe.top + GAP.sm;
+        const maxSpan     = Math.max(200, availBottom - minTop);
 
-        const minTop = safe.top + GAP.sm;
-        if (topY < minTop) {
-            let deficit = minTop - topY;
-            const reduce = Math.min(40, Math.ceil(deficit / 3));
-            overlapStats = Math.max(6, overlapStats - reduce);
-            overlapCta   = Math.max(4, overlapCta - Math.floor(reduce * 0.45));
-            overlapSec   = Math.max(2, overlapSec - Math.floor(reduce * 0.35));
-            heroHCap     = Math.max(100, heroHCap - Math.min(40, deficit - reduce * 2));
-            span = stackSpan(heroHCap);
-            topY = Math.max(minTop, availBottom - span);
+        // Shrink until the column fits in [minTop, availBottom] (overlap math is single-subtract per row).
+        for (let i = 0; i < 48 && stackSpan(heroHCap) > maxSpan; i++) {
+            if (heroHCap > 88) {
+                heroHCap -= 5;
+            } else {
+                overlapStats = Math.max(0, overlapStats - 2);
+                overlapCta   = Math.max(0, overlapCta - 2);
+                overlapSec   = Math.max(0, overlapSec - 2);
+            }
         }
 
+        const span = stackSpan(heroHCap);
+        let topY   = availBottom - span;
+        if (topY < minTop) topY = minTop;
         let y = topY;
 
         this.topHudContainer.removeChildren();
