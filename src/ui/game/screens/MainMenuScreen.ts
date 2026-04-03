@@ -4,9 +4,9 @@
  * strong typography, palette discipline, idle animation, final polish.
  */
 
-import { Application, Container, Text, TextStyle, Ticker } from 'pixi.js';
+import { Application, Container, Text } from 'pixi.js';
 import { BaseGameScreen } from '../GameUIManager';
-import { GAME_COLORS, GAME_FONTS, GAME_SIZES } from '../GameUITheme';
+import { GAME_COLORS, GAME_SIZES } from '../GameUITheme';
 import { gameFlow } from '../gameFlowBridge';
 import { getMainMenuProgress, getMenuHighScore } from '../../../data/localProgress';
 import { ResponsiveUIManager } from '../../ResponsiveUIManager';
@@ -20,6 +20,7 @@ import {
     createUtilityRow,
     MENU_TIER_HEIGHT,
 } from '../menuLayoutHelpers';
+import { heroSubtitleStyle, heroTitleStyle } from '../menuTextStyles';
 import { mountVelocityShell, resizeVelocityShell, type VelocityShellParts } from '../velocityScreenShell';
 
 // ─── Layout rhythm ────────────────────────────────────────────────────────────
@@ -156,39 +157,22 @@ export class MainMenuScreen extends BaseGameScreen {
         const hero       = createHeroPanel(cw, heroH);
         const innerCentX = Math.max(160, cw - badgeSize - GAP.sm) / 2;
 
-        // VELOCITY — strongest text in the hierarchy
-        const titleFontSize = Math.min(34, Math.max(26, Math.floor(screenH * 0.046)));
+        // VELOCITY — hero identity, maximum contrast, no blur haze
+        const titleFontSize = Math.min(36, Math.max(28, Math.floor(screenH * 0.048)));
         const title = new Text({
-            text: 'VELOCITY',
-            style: new TextStyle({
-                fill:          GAME_COLORS.primary,
-                fontSize:      titleFontSize,
-                fontWeight:    'bold',
-                fontFamily:    GAME_FONTS.arcade,
-                letterSpacing: 3,
-                dropShadow: {
-                    alpha:    0.90,
-                    blur:     14,
-                    color:    GAME_COLORS.primary,
-                    distance: 0,
-                },
-            }),
+            text:  'VELOCITY',
+            style: heroTitleStyle(titleFontSize),
         });
         title.anchor.set(0.5, 0);
         title.position.set(innerCentX, 8);
 
-        // Subtitle — secondary weight, intentionally quieter
+        // Subtitle — legible secondary; tighter spacing below title
         const sub = new Text({
-            text: 'Voice-Powered Flight',
-            style: new TextStyle({
-                fill:       0xaaccdd,
-                fontSize:   GAME_SIZES.font.sm,
-                fontFamily: GAME_FONTS.arcade,
-                letterSpacing: 1,
-            }),
+            text:  'Voice-Powered Flight',
+            style: heroSubtitleStyle(),
         });
         sub.anchor.set(0.5, 0);
-        sub.position.set(innerCentX, title.y + titleFontSize + 6);
+        sub.position.set(innerCentX, title.y + titleFontSize + 8);
 
         // Tip pill — context, lowest hierarchy
         const pill = createInfoPill('Mic required · tap to begin', cw - 52);
