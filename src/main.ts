@@ -244,6 +244,7 @@ async function init() {
     registerGameFlowCallbacks({
         openMissionSelect: () => openWorldMap(),
         openMainMenu: () => openMainMenuFromFlow(),
+        startLevelWithMicGate: (levelId: number) => showMicGateOverlay(levelId),
     });
 
     registerPauseHandler(() => {
