@@ -37,6 +37,7 @@ import {
     velocityUiArtReady,
     type VelocityUiTextureKey,
 } from './velocityUiArt';
+import { velocityUiButtonSlice } from './velocityUiSlice';
 import {
     createIconAchievementsMedal,
     createIconHudBest,
@@ -100,8 +101,6 @@ function tierToRole(tier: MenuButtonTier): ButtonRole {
     if (tier === 'economy') return 'economy';
     return 'utility';
 }
-
-const KS = { L: 56, R: 56, T: 20, B: 20 } as const;
 
 // ─── Rank table (exported for callers) ───────────────────────────────────────
 
@@ -247,22 +246,26 @@ export function createMenuButton(
             role === 'economy' ? 'button_accent'  : 'button_secondary';
         const tex = getVelocityUiTexture(key);
         if (tex) {
+            const sl = velocityUiButtonSlice(key);
             const spr = new NineSliceSprite({
                 texture:     tex,
-                leftWidth:   KS.L, rightWidth:   KS.R,
-                topHeight:   KS.T, bottomHeight: KS.B,
+                leftWidth:   sl.L, rightWidth:   sl.R,
+                topHeight:   sl.T, bottomHeight: sl.B,
                 width, height: h,
             });
             spr.tint      = P.tint;
-            spr.alpha     = role === 'utility' ? 0.52 : 0.68;
+            spr.alpha     = role === 'utility' ? 0.58 : 0.72;
             spr.eventMode = 'none';
             root.addChild(spr);
+            const dim = new Graphics();
+            dim.roundRect(6, 4, width - 12, h - 8, Math.min(10, h * 0.2));
+            dim.fill({ color: 0x040810, alpha: 0.38 });
+            spr.addChild(dim);
 
-            // ColorMatrixFilter per role
             const cmf = new ColorMatrixFilter();
-            if (role === 'primary')      { cmf.saturate(0.3, true); cmf.brightness(1.06, true); }
-            else if (role === 'economy') { cmf.saturate(0.35, true); cmf.brightness(1.04, true); }
-            else                         { cmf.saturate(-0.2, true); cmf.brightness(0.98, true); }
+            if (role === 'primary')      { cmf.saturate(0.2, true); cmf.brightness(1.04, true); }
+            else if (role === 'economy') { cmf.saturate(0.25, true); cmf.brightness(1.03, true); }
+            else                         { cmf.saturate(-0.15, true); cmf.brightness(0.99, true); }
             spr.filters = [cmf];
         }
     }

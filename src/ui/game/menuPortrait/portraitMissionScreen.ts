@@ -17,7 +17,7 @@ import { LEVEL_DEFINITIONS, type LevelDefinition } from '../../../data/levelDefi
 import { gameFlow } from '../gameFlowBridge';
 import type { GameUIManager } from '../GameUIManager';
 import { getVelocityUiTexture } from '../velocityUiArt';
-import { VELOCITY_UI_SLICE } from '../velocityUiSlice';
+import { velocityUiButtonSlice } from '../velocityUiSlice';
 import { kenneyButton, kenneyProgressBar } from '../menuLandscape/kenneyLandscapeWidgets';
 import { P_COLORS, P_ICON, P_MOTION, P_OPACITY, P_RADIUS, P_SHADOW, P_SPACE, P_TYPO, P_Z } from './missionPortraitTokens';
 import {
@@ -436,7 +436,8 @@ function buildSegmentTabs(
     const tabGlows: Graphics[] = [];
     const buttons: Container[] = [];
 
-    const useK = !!getVelocityUiTexture('button_primary');
+    const useK = !!getVelocityUiTexture('button_primary') && !!getVelocityUiTexture('button_secondary');
+    const slOff = velocityUiButtonSlice('button_secondary');
 
     for (let i = 0; i < n; i++) {
         const b = new Container();
@@ -451,16 +452,20 @@ function buildSegmentTabs(
         if (useK) {
             const spr = new NineSliceSprite({
                 texture: getVelocityUiTexture('button_secondary')!,
-                leftWidth: VELOCITY_UI_SLICE.button.L,
-                rightWidth: VELOCITY_UI_SLICE.button.R,
-                topHeight: VELOCITY_UI_SLICE.button.T,
-                bottomHeight: VELOCITY_UI_SLICE.button.B,
+                leftWidth: slOff.L,
+                rightWidth: slOff.R,
+                topHeight: slOff.T,
+                bottomHeight: slOff.B,
                 width: tabW - 4,
                 height: H - 12,
             });
-            spr.alpha = 0.82;
-            spr.tint = 0xffffff;
+            spr.alpha = 0.88;
+            spr.tint = 0xe8eef5;
             b.addChild(spr);
+            const dim0 = new Graphics();
+            dim0.roundRect(3, 2, tabW - 4 - 6, H - 12 - 4, 6);
+            dim0.fill({ color: 0x040810, alpha: 0.4 });
+            spr.addChild(dim0);
             bg = spr;
         } else {
             const gr = new Graphics();
@@ -499,9 +504,21 @@ function buildSegmentTabs(
             const tx = b.children[2] as Text;
             const mid = b.children[1];
             if (mid instanceof NineSliceSprite) {
-                mid.texture = getVelocityUiTexture(i === active ? 'button_primary' : 'button_secondary')!;
-                mid.tint = i === active ? 0x22ddcc : 0xffffff;
-                mid.alpha = i === active ? 0.95 : 0.78;
+                const on = i === active;
+                const k = on ? 'button_primary' : 'button_secondary';
+                const sl = velocityUiButtonSlice(k);
+                mid.texture = getVelocityUiTexture(k)!;
+                mid.leftWidth = sl.L;
+                mid.rightWidth = sl.R;
+                mid.topHeight = sl.T;
+                mid.bottomHeight = sl.B;
+                mid.tint = on ? 0xc8f4ff : 0xe8eef5;
+                mid.alpha = on ? 0.96 : 0.88;
+                while (mid.children.length > 0) mid.removeChildAt(0);
+                const dim = new Graphics();
+                dim.roundRect(3, 2, tabW - 4 - 6, H - 12 - 4, 6);
+                dim.fill({ color: 0x040810, alpha: 0.4 });
+                mid.addChild(dim);
             } else if (mid instanceof Graphics) {
                 mid.clear();
                 mid.roundRect(0, 0, tabW - 4, H - 12, P_RADIUS.chip - 2);
@@ -515,10 +532,7 @@ function buildSegmentTabs(
                     alpha: i === active ? 0.9 : 0.4,
                 });
             }
-            tx.style = ts(
-                P_TYPO.tab,
-                i === active ? P_COLORS.statePressed : P_COLORS.textSecondary,
-            );
+            tx.style = ts(P_TYPO.tab, i === active ? P_COLORS.textPrimary : P_COLORS.textSecondary);
             if (i === active) (tx.style as TextStyle).fontWeight = '800';
             else (tx.style as TextStyle).fontWeight = '700';
         });
