@@ -1,18 +1,19 @@
 import { Application, Container, Graphics, Text, TextStyle } from 'pixi.js';
 import { BaseGameScreen } from '../GameUIManager';
-import { createGameButton, createModalDimmer } from '../GameUIComponents';
-import { createKenneyNineSliceButton, createKenneyPanelNineSlice } from '../kenneyNineSlice';
+import { createGameButton } from '../GameUIComponents';
+import { createKenneyPanelNineSlice } from '../kenneyNineSlice';
 import { GAME_COLORS, GAME_FONTS, GAME_SIZES, GAME_PANEL_STYLES } from '../GameUITheme';
 import { gameFlow, resumeFromGamePause } from '../gameFlowBridge';
 import { ResponsiveUIManager } from '../../ResponsiveUIManager';
+import { mountVelocityShell, resizeVelocityShell, type VelocityShellParts } from '../velocityScreenShell';
+import { createVelocityGameButton } from '../velocityUiButtons';
 import { velocityUiArtReady } from '../velocityUiArt';
 
 /**
- * Pause: full-screen dimmer, in-game HUD hidden while visible (see main pause handler).
- * Uses Kenney nine-slice panel/buttons when textures are preloaded.
+ * Pause: same shell as other modals + Kenney panel + uniform buttons.
  */
 export class PauseMenuScreen extends BaseGameScreen {
-    private dimmer!: Graphics;
+    private shell!: VelocityShellParts;
     private panel!: Container;
     private panelBgSlot!: Container;
     private titleText!: Text;
@@ -27,8 +28,7 @@ export class PauseMenuScreen extends BaseGameScreen {
         const sw = this.app.screen.width;
         const sh = this.app.screen.height;
 
-        this.dimmer = createModalDimmer(sw, sh, 0.84);
-        this.container.addChild(this.dimmer);
+        this.shell = mountVelocityShell(this.container, this.app, 0.84);
 
         this.panel = new Container();
         this.panelBgSlot = new Container();
@@ -66,9 +66,7 @@ export class PauseMenuScreen extends BaseGameScreen {
         const safe = ResponsiveUIManager.getInstance().getSafeAreaPadding();
         const modal = GAME_PANEL_STYLES.modal;
 
-        this.dimmer.clear();
-        this.dimmer.rect(0, 0, sw, sh);
-        this.dimmer.fill({ color: 0x020208, alpha: 0.84 });
+        resizeVelocityShell(this.shell, this.container, sw, sh, 0.84);
 
         const maxPanelH = sh - safe.top - safe.bottom - 20;
         const panelW = Math.min(320, sw - 28);
@@ -133,14 +131,17 @@ export class PauseMenuScreen extends BaseGameScreen {
 
         const useArt = velocityUiArtReady();
 
-        const resumeBtn =
-            useArt &&
-            createKenneyNineSliceButton('RESUME', btnW, btnH, 'primary', () => {
-                resumeFromGamePause();
-                this.uiManager.goBack();
-            });
         const resume =
-            resumeBtn ||
+            (useArt &&
+                createVelocityGameButton(
+                    'RESUME',
+                    'primary',
+                    () => {
+                        resumeFromGamePause();
+                        this.uiManager.goBack();
+                    },
+                    { width: btnW, height: btnH }
+                )) ||
             createGameButton(
                 'RESUME',
                 () => {
@@ -154,13 +155,12 @@ export class PauseMenuScreen extends BaseGameScreen {
         resume.position.set(btnX, y);
         y += btnH + gap;
 
-        const settingsBtn =
-            useArt &&
-            createKenneyNineSliceButton('SETTINGS', btnW, btnH, 'neutral', () => {
-                this.uiManager.showScreen('settings', true);
-            });
         const settings =
-            settingsBtn ||
+            (useArt &&
+                createVelocityGameButton('SETTINGS', 'secondary', () => this.uiManager.showScreen('settings', true), {
+                    width: btnW,
+                    height: btnH,
+                })) ||
             createGameButton(
                 'SETTINGS',
                 () => {
@@ -173,15 +173,18 @@ export class PauseMenuScreen extends BaseGameScreen {
         settings.position.set(btnX, y);
         y += btnH + gap;
 
-        const mainBtn =
-            useArt &&
-            createKenneyNineSliceButton('MAIN MENU', btnW, btnH, 'danger', () => {
-                resumeFromGamePause();
-                gameFlow().openMainMenu();
-                this.uiManager.showScreen('main-menu');
-            });
         const mainMenu =
-            mainBtn ||
+            (useArt &&
+                createVelocityGameButton(
+                    'MAIN MENU',
+                    'danger',
+                    () => {
+                        resumeFromGamePause();
+                        gameFlow().openMainMenu();
+                        this.uiManager.showScreen('main-menu');
+                    },
+                    { width: btnW, height: btnH }
+                )) ||
             createGameButton(
                 'MAIN MENU',
                 () => {

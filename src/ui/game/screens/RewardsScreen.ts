@@ -1,11 +1,18 @@
-import { Application, Container, Graphics, Text, TextStyle } from 'pixi.js';
+import { Application, Text, TextStyle } from 'pixi.js';
 import { BaseGameScreen } from '../GameUIManager';
-import { createGamePanel, createGameButton, createStatDisplay, createModalDimmer } from '../GameUIComponents';
+import { createStatDisplay } from '../GameUIComponents';
 import { GAME_COLORS, GAME_FONTS, GAME_SIZES } from '../GameUITheme';
+import {
+    buildVelocityModal,
+    repositionVelocityModal,
+    syncModalShellResize,
+    velocityModalInnerWidth,
+    type VelocityModalLayout,
+} from '../velocityModalLayout';
+import { createVelocityGameButton } from '../velocityUiButtons';
 
 export class RewardsScreen extends BaseGameScreen {
-    private dimmer!: Graphics;
-    private panel!: Container & { content: Container };
+    private layout!: VelocityModalLayout;
 
     constructor(app: Application) {
         super(app);
@@ -15,30 +22,22 @@ export class RewardsScreen extends BaseGameScreen {
     private setupUI(): void {
         const sw = this.app.screen.width;
         const sh = this.app.screen.height;
-
-        this.dimmer = createModalDimmer(sw, sh);
-        this.container.addChild(this.dimmer);
-
         const panelW = Math.min(450, sw - 24);
         const panelH = Math.min(440, sh - 48);
-        this.panel = createGamePanel(panelW, panelH, 'modal', 'DAILY REWARDS');
-        this.panel.position.set(sw / 2 - panelW / 2, sh / 2 - panelH / 2);
-        this.container.addChild(this.panel);
 
-        const content = this.panel.content;
-        const pad = GAME_SIZES.spacing.xl;
-        const innerW = panelW - pad * 2;
+        this.layout = buildVelocityModal(this.container, this.app, 'DAILY REWARDS', panelW, panelH, GAME_COLORS.accent_gold);
+        const { body, innerW } = this.layout;
 
-        const titleStyle = new TextStyle({
+        const subStyle = new TextStyle({
             fill: GAME_COLORS.accent_gold,
             fontSize: GAME_SIZES.font.lg,
             fontWeight: 'bold',
             fontFamily: GAME_FONTS.standard,
         });
-        const subtitle = new Text({ text: 'Come back tomorrow!', style: titleStyle });
+        const subtitle = new Text({ text: 'Come back tomorrow!', style: subStyle });
         subtitle.anchor.set(0.5, 0);
         subtitle.position.set(innerW / 2, 0);
-        content.addChild(subtitle);
+        body.addChild(subtitle);
 
         let y = GAME_SIZES.spacing.xxl;
         const rewards = [
@@ -50,31 +49,30 @@ export class RewardsScreen extends BaseGameScreen {
         rewards.forEach((reward) => {
             const rewardDisplay = createStatDisplay(reward.day, `+${reward.tokens}`, GAME_COLORS.accent_green);
             rewardDisplay.position.set((innerW - 200) / 2, y);
-            content.addChild(rewardDisplay);
+            body.addChild(rewardDisplay);
             y += GAME_SIZES.spacing.xl;
         });
 
         const btnW = Math.min(260, innerW);
         const btnH = 46;
-        const claimBtn = createGameButton(
+        const claimBtn = createVelocityGameButton(
             'CLAIM REWARD',
+            'success',
             () => {
                 console.log('Reward claimed!');
                 this.uiManager.goBack();
             },
-            'success',
-            'large',
             { width: btnW, height: btnH }
         );
         claimBtn.position.set((innerW - btnW) / 2, y + 8);
-        content.addChild(claimBtn);
+        body.addChild(claimBtn);
 
-        const backBtn = createGameButton('BACK', () => this.uiManager.goBack(), 'secondary', 'medium', {
+        const backBtn = createVelocityGameButton('BACK', 'secondary', () => this.uiManager.goBack(), {
             width: btnW,
             height: btnH,
         });
         backBtn.position.set((innerW - btnW) / 2, y + btnH + 20);
-        content.addChild(backBtn);
+        body.addChild(backBtn);
     }
 
     show(): void {
@@ -82,13 +80,12 @@ export class RewardsScreen extends BaseGameScreen {
     }
 
     resize(width: number, height: number): void {
-        this.dimmer.clear();
-        this.dimmer.rect(0, 0, width, height);
-        this.dimmer.fill({ color: 0x050510, alpha: 0.78 });
-        if (this.panel) {
-            const panelW = Math.min(450, width - 24);
-            const panelH = Math.min(440, height - 48);
-            this.panel.position.set(width / 2 - panelW / 2, height / 2 - panelH / 2);
-        }
+        syncModalShellResize(this.layout, this.container, width, height);
+        const panelW = Math.min(450, width - 24);
+        const panelH = Math.min(440, height - 48);
+        this.layout.panelW = panelW;
+        this.layout.panelH = panelH;
+        this.layout.innerW = velocityModalInnerWidth(panelW);
+        repositionVelocityModal(this.layout, width, height);
     }
 }

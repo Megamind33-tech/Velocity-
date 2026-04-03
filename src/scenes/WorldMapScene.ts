@@ -1,8 +1,10 @@
-import { Application, Container, FederatedPointerEvent, Graphics, Rectangle, Text, TextStyle } from 'pixi.js';
+import { Application, Container, FederatedPointerEvent, Graphics, Rectangle, Sprite, Text, TextStyle } from 'pixi.js';
 import { getUnlockedLevelIds } from '../data/localProgress';
-import { createGameButton } from '../ui/game/GameUIComponents';
-import { GAME_SIZES } from '../ui/game/GameUITheme';
+import { GAME_COLORS, GAME_SIZES } from '../ui/game/GameUITheme';
 import { ResponsiveUIManager } from '../ui/ResponsiveUIManager';
+import { mountVelocityShell, resizeVelocityShell, type VelocityShellParts } from '../ui/game/velocityScreenShell';
+import { createVelocityGameButton } from '../ui/game/velocityUiButtons';
+import { getVelocityUiTexture, velocityUiArtReady } from '../ui/game/velocityUiArt';
 
 interface LevelNode {
     id: number;
@@ -18,6 +20,7 @@ const NODE_RADIUS = 32;
  */
 export class WorldMapScene {
     private readonly root: Container;
+    private readonly shell: VelocityShellParts;
     private readonly scrollLayer: Container;
     private readonly nodes: LevelNode[] = [];
     private readonly pathGraphics: Graphics;
@@ -65,6 +68,7 @@ export class WorldMapScene {
         levelCount: number = 20
     ) {
         this.root = new Container();
+        this.shell = mountVelocityShell(this.root, app, 0.42);
         this.scrollLayer = new Container();
         this.pathGraphics = new Graphics();
         this.scrollLayer.addChild(this.pathGraphics);
@@ -78,7 +82,7 @@ export class WorldMapScene {
         const backW = 64;
 
         if (this.onBack) {
-            const backBtn = createGameButton('BACK', () => this.onBack!(), 'secondary', 'small', {
+            const backBtn = createVelocityGameButton('BACK', 'secondary', () => this.onBack!(), {
                 width: backW,
                 height: backH,
             });
@@ -89,7 +93,7 @@ export class WorldMapScene {
         const title = new Text({
             text: 'SELECT LEVEL',
             style: new TextStyle({
-                fill: '#00ffcc',
+                fill: GAME_COLORS.primary,
                 fontSize: 22,
                 fontWeight: 'bold',
                 fontFamily: 'Orbitron, Arial',
@@ -161,7 +165,7 @@ export class WorldMapScene {
 
     private drawPaths(): void {
         this.pathGraphics.clear();
-        this.pathGraphics.setStrokeStyle({ width: 4, color: 0x334455, alpha: 0.9 });
+        this.pathGraphics.setStrokeStyle({ width: 4, color: GAME_COLORS.primary, alpha: 0.35 });
 
         for (let i = 0; i < this.nodes.length - 1; i++) {
             const current = this.nodes[i];
@@ -179,20 +183,35 @@ export class WorldMapScene {
     private drawNodes(): void {
         const idStyle = new TextStyle({
             fill: '#ffffff',
-            fontSize: 20,
+            fontSize: 18,
             fontWeight: 'bold',
             fontFamily: 'Orbitron, Arial',
         });
 
+        const texOn = velocityUiArtReady() ? getVelocityUiTexture('node_unlocked') : undefined;
+        const texOff = velocityUiArtReady() ? getVelocityUiTexture('node_locked') : undefined;
+        const d = NODE_RADIUS * 2;
+
         for (const node of this.nodes) {
-            const dot = new Graphics();
-            const color = node.unlocked ? 0x00ffcc : 0x333344;
-            dot.circle(0, 0, NODE_RADIUS);
-            dot.fill(color);
-            dot.setStrokeStyle({ width: 3, color: node.unlocked ? 0xffffff : 0x222233 });
-            dot.stroke();
-            dot.position.set(node.x, node.y);
-            this.scrollLayer.addChild(dot);
+            const tex = node.unlocked ? texOn : texOff;
+            if (tex) {
+                const s = new Sprite(tex);
+                s.anchor.set(0.5);
+                s.width = d;
+                s.height = d;
+                s.position.set(node.x, node.y);
+                s.alpha = node.unlocked ? 1 : 0.55;
+                this.scrollLayer.addChild(s);
+            } else {
+                const dot = new Graphics();
+                const color = node.unlocked ? 0x00ffcc : 0x333344;
+                dot.circle(0, 0, NODE_RADIUS);
+                dot.fill(color);
+                dot.setStrokeStyle({ width: 3, color: node.unlocked ? 0xffffff : 0x222233 });
+                dot.stroke();
+                dot.position.set(node.x, node.y);
+                this.scrollLayer.addChild(dot);
+            }
 
             const txt = new Text({ text: node.id.toString(), style: idStyle });
             txt.anchor.set(0.5);

@@ -1,19 +1,21 @@
 /**
- * Main menu — Kenney UI Pack only (uniform chrome + shared backdrop).
+ * Main menu — Kenney UI Pack chrome + shared starfield shell
  */
 
 import { Application, Container, Graphics, Text, TextStyle } from 'pixi.js';
 import { BaseGameScreen } from '../GameUIManager';
-import { createGameButton, createMenuBackdrop } from '../GameUIComponents';
+import { createGameButton } from '../GameUIComponents';
 import { GAME_COLORS, GAME_FONTS, GAME_SIZES } from '../GameUITheme';
 import { gameFlow } from '../gameFlowBridge';
-import { createKenneyNineSliceButton, createKenneyPanelNineSlice } from '../kenneyNineSlice';
+import { createKenneyPanelNineSlice } from '../kenneyNineSlice';
+import { mountVelocityShell, resizeVelocityShell, type VelocityShellParts } from '../velocityScreenShell';
+import { createVelocityGameButton } from '../velocityUiButtons';
 import { velocityUiArtReady } from '../velocityUiArt';
 
 const TITLE_PLATE_H = 112;
 
 export class MainMenuScreen extends BaseGameScreen {
-    private backdrop!: Container;
+    private shell!: VelocityShellParts;
     private titlePlate!: Container;
     private titleText!: Text;
     private subtitleText!: Text;
@@ -28,8 +30,7 @@ export class MainMenuScreen extends BaseGameScreen {
         const width = this.app.screen.width;
         const height = this.app.screen.height;
 
-        this.backdrop = createMenuBackdrop(width, height);
-        this.container.addChild(this.backdrop);
+        this.shell = mountVelocityShell(this.container, this.app, 0.55);
 
         this.titlePlate = new Container();
         this.container.addChild(this.titlePlate);
@@ -64,8 +65,7 @@ export class MainMenuScreen extends BaseGameScreen {
         this.buttonColumn = new Container();
         this.container.addChild(this.buttonColumn);
 
-        this.layoutTitlePlate(width, height);
-        this.layoutTextAndButtons(width, height);
+        this.layoutForSize(width, height);
         this.buildButtons();
     }
 
@@ -85,7 +85,9 @@ export class MainMenuScreen extends BaseGameScreen {
         this.titlePlate.position.set(width / 2 - plateW / 2, Math.max(16, height * 0.08));
     }
 
-    private layoutTextAndButtons(width: number, height: number): void {
+    private layoutForSize(width: number, height: number): void {
+        resizeVelocityShell(this.shell, this.container, width, height, 0.55);
+        this.layoutTitlePlate(width, height);
         const plateTop = this.titlePlate.y;
         this.titleText.position.set(width / 2, plateTop + 36);
         this.subtitleText.position.set(width / 2, plateTop + 78);
@@ -105,11 +107,15 @@ export class MainMenuScreen extends BaseGameScreen {
             variant: 'primary' | 'secondary' | 'accent',
             onClick: () => void
         ) => {
-            const v = variant === 'primary' ? 'primary' : variant === 'accent' ? 'accent' : 'neutral';
-            const kenney = useArt && createKenneyNineSliceButton(label, btnW, btnH, v, onClick);
             const b =
-                kenney ||
-                createGameButton(label, onClick, variant, 'large', { width: btnW, height: btnH });
+                (useArt && createVelocityGameButton(label, variant, onClick, { width: btnW, height: btnH })) ||
+                createGameButton(
+                    label,
+                    onClick,
+                    variant === 'primary' ? 'primary' : variant === 'accent' ? 'accent' : 'secondary',
+                    'large',
+                    { width: btnW, height: btnH }
+                );
             b.position.set(-btnW / 2, this.buttonColumn.children.length * (btnH + gap));
             this.buttonColumn.addChild(b);
         };
@@ -127,11 +133,7 @@ export class MainMenuScreen extends BaseGameScreen {
     }
 
     resize(width: number, height: number): void {
-        this.backdrop.destroy({ children: true });
-        this.backdrop = createMenuBackdrop(width, height);
-        this.container.addChildAt(this.backdrop, 0);
-        this.layoutTitlePlate(width, height);
-        this.layoutTextAndButtons(width, height);
+        this.layoutForSize(width, height);
         this.buildButtons();
     }
 }
