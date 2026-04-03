@@ -1,5 +1,5 @@
 /**
- * SunGraphica sci-fi UI chrome — nine-slice buttons, panels, progress, icons.
+ * Landscape menu chrome — Kenney UI Pack nine-slice buttons, panels, progress, icons.
  */
 
 import {
@@ -14,12 +14,10 @@ import {
 import { getVelocityUiTexture, type VelocityUiTextureKey } from '../velocityUiArt';
 import { GAME_COLORS, GAME_FONTS } from '../GameUITheme';
 import { createKenneyFramedPanelWithContent, createKenneyHProgressBar } from '../kenneyNineSlice';
-import { VELOCITY_UI_SLICE, velocityUiButtonSlice } from '../velocityUiSlice';
+import { VELOCITY_UI_SLICE } from '../velocityUiSlice';
 
 const PS = VELOCITY_UI_SLICE.panel;
-
-/** Subtle cool lift on primary CTA chrome. */
-const PRIMARY_TINT = 0xc8f4ff;
+const BS = VELOCITY_UI_SLICE.button;
 
 function press(root: Container, onClick: () => void): void {
     root.eventMode = 'static';
@@ -38,47 +36,25 @@ function press(root: Container, onClick: () => void): void {
     root.on('pointercancel', () => root.scale.set(1));
 }
 
-function sungraphicaButtonNineSlice(
-    key: 'button_primary' | 'button_secondary' | 'button_accent' | 'button_danger' | 'button_plate',
+function kenneyButtonNineSlice(
+    key: 'button_primary' | 'button_secondary' | 'button_accent' | 'button_danger',
     w: number,
     h: number,
 ): NineSliceSprite | null {
     const tex = getVelocityUiTexture(key);
     if (!tex) return null;
-    const sl = velocityUiButtonSlice(key);
-    const spr = new NineSliceSprite({
+    return new NineSliceSprite({
         texture: tex,
-        leftWidth: sl.L,
-        rightWidth: sl.R,
-        topHeight: sl.T,
-        bottomHeight: sl.B,
+        leftWidth: BS.L,
+        rightWidth: BS.R,
+        topHeight: BS.T,
+        bottomHeight: BS.B,
         width: w,
         height: h,
     });
-    if (key === 'button_plate') {
-        spr.tint = 0xffffff;
-        spr.alpha = 0.92;
-        return spr;
-    }
-    if (key === 'button_primary') {
-        spr.tint = PRIMARY_TINT;
-        spr.alpha = 0.97;
-    } else if (key === 'button_accent') {
-        spr.tint = 0xfff0c8;
-        spr.alpha = 0.96;
-    } else {
-        spr.tint = 0xe8eef5;
-        spr.alpha = 0.94;
-    }
-    /** Mute baked English on pause-menu exports so our label reads clean. */
-    const dim = new Graphics();
-    dim.roundRect(6, 5, w - 12, h - 10, Math.min(10, h * 0.22));
-    dim.fill({ color: 0x040810, alpha: 0.42 });
-    spr.addChild(dim);
-    return spr;
 }
 
-/** Nine-slice button (SunGraphica pause chrome + overlay); returns null if textures not loaded. */
+/** Nine-slice button; returns null if textures not loaded. */
 export function kenneyButton(
     label: string,
     w: number,
@@ -87,7 +63,7 @@ export function kenneyButton(
     textLight: boolean,
     onClick: () => void,
 ): Container | null {
-    const spr = sungraphicaButtonNineSlice(key, w, h);
+    const spr = kenneyButtonNineSlice(key, w, h);
     if (!spr) return null;
     const root = new Container();
     root.addChild(spr);
@@ -95,7 +71,7 @@ export function kenneyButton(
     const t = new Text({
         text: label,
         style: new TextStyle({
-            fill: textLight ? 0xf8fbff : 0x0a1018,
+            fill: textLight ? 0xf8fbff : 0x1a1a22,
             fontSize: Math.min(14, Math.floor(h * 0.34)),
             fontWeight: '700',
             fontFamily: GAME_FONTS.standard,
@@ -111,7 +87,7 @@ export function kenneyButton(
     return root;
 }
 
-/** Compact stat chip: neutral plate + **vector** icon (pack Asset N.png IDs are not semantic). */
+/** Compact stat chip: Kenney secondary chrome + vector icon. */
 export function kenneyStatChip(
     drawIcon: (g: Graphics, cx: number, cy: number, s: number) => void,
     label: string,
@@ -119,8 +95,10 @@ export function kenneyStatChip(
     w: number,
     h: number,
 ): Container | null {
-    const spr = sungraphicaButtonNineSlice('button_plate', w, h);
+    const spr = kenneyButtonNineSlice('button_secondary', w, h);
     if (!spr) return null;
+    spr.alpha = 0.88;
+    spr.tint = 0xe8eef5;
     const root = new Container();
     root.addChild(spr);
 
@@ -157,32 +135,38 @@ export function kenneyStatChip(
 
 /** Square chrome hit target (settings, etc.) — no label. */
 export function kenneyChromeHit(w: number, h: number, onClick: () => void): Container | null {
-    const spr = sungraphicaButtonNineSlice('button_plate', w, h);
+    const spr = kenneyButtonNineSlice('button_secondary', w, h);
     if (!spr) return null;
     const root = new Container();
     spr.alpha = 0.9;
+    spr.tint = 0xd8e4f0;
     root.addChild(spr);
     press(root, onClick);
     return root;
 }
 
-/** Profile ring — vector chrome (pack icons are not reliable for this slot). */
+/** Profile / avatar hit — Kenney round gloss + optional tint ring. */
 export function kenneyAvatarPlate(size: number, onClick: () => void): Container {
     const root = new Container();
-    const g = new Graphics();
-    const cx = size / 2;
-    const cy = size / 2;
-    const r = size / 2 - 2;
-    g.circle(cx, cy, r);
-    g.fill({ color: 0x0c141e, alpha: 1 });
-    g.stroke({ color: GAME_COLORS.primary, width: 2, alpha: 0.55 });
-    root.addChild(g);
-    const inner = new Graphics();
-    inner.circle(cx, cy - r * 0.08, r * 0.28);
-    inner.stroke({ color: GAME_COLORS.primary, width: 2, alpha: 0.85 });
-    inner.arc(cx, cy + r * 0.38, r * 0.32, Math.PI * 1.12, Math.PI * 1.88);
-    inner.stroke({ color: GAME_COLORS.primary, width: 2, alpha: 0.85 });
-    root.addChild(inner);
+    const tex = getVelocityUiTexture('node_unlocked');
+    if (tex) {
+        const s = new Sprite(tex);
+        s.anchor.set(0.5);
+        s.width = size;
+        s.height = size;
+        s.position.set(size / 2, size / 2);
+        s.tint = 0xb8e0ff;
+        root.addChild(s);
+    } else {
+        const g = new Graphics();
+        const cx = size / 2;
+        const cy = size / 2;
+        const r = size / 2 - 2;
+        g.circle(cx, cy, r);
+        g.fill({ color: 0x0c141e, alpha: 1 });
+        g.stroke({ color: GAME_COLORS.primary, width: 2, alpha: 0.55 });
+        root.addChild(g);
+    }
     root.eventMode = 'static';
     root.cursor = 'pointer';
     const stop = (e: FederatedPointerEvent) => e.stopPropagation();
@@ -214,13 +198,12 @@ export function mountGearIcon(parent: Container, cx: number, cy: number, size: n
     parent.addChild(s);
 }
 
-/** Hero: framed panel + tinted inner fill (sci-fi window). */
+/** Hero: framed panel + tinted inner fill. */
 export function kenneyHeroPanel(cw: number, cardH: number): { root: Container; content: Container } | null {
     const pair = createKenneyFramedPanelWithContent(cw, cardH);
     if (!pair) return null;
     pair.root.alpha = 1;
     const fill = pair.root.children[0] as NineSliceSprite;
-    /** Deep navy body — solid, high-contrast vs cyan chrome (Kenney sci-fi panels). */
     fill.tint = 0x050a12;
     fill.alpha = 1;
     const frame = pair.root.children[1] as NineSliceSprite;
@@ -238,7 +221,7 @@ export function kenneyProgressBar(w: number, h: number): (Container & { setProgr
 
 /** Mission row plate. */
 export function kenneyRowPanel(cw: number, rowH: number): Container | null {
-    const spr = sungraphicaButtonNineSlice('button_plate', cw, rowH);
+    const spr = kenneyButtonNineSlice('button_secondary', cw, rowH);
     if (!spr) return null;
     const root = new Container();
     spr.alpha = 0.78;

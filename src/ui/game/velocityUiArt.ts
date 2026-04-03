@@ -1,32 +1,17 @@
 /**
- * Game UI textures — SunGraphica Sci-Fi Game UI (itch.io, credit: SunGraphica).
- * `public/sungraphica-ui/`
- *
- * **Buttons:** Pause-menu exports are full-width chrome (often with baked English words).
- * Code draws our labels on top and applies a small center dimmer so baked text does not
- * fight gameplay copy. **Chips / rows** use neutral `button_plate` only.
+ * Kenney UI Pack — https://kenney.nl/assets/ui-pack (CC0)
+ * Paths under `public/kenney-ui-pack/PNG`. `preloadVelocityUiTextures()` runs at boot.
  */
 
 import { Assets, Texture } from 'pixi.js';
 
-const BASE = `${import.meta.env.BASE_URL}sungraphica-ui`;
-
-function assetPath(...segments: string[]): string {
-    return segments.map((s) => encodeURIComponent(s)).join('/');
-}
-
-const SF = ['Sci Fi Game UI FREE'] as const;
-const LEVELS = [...SF, 'LEVELS'] as const;
-const PAUSE = [...SF, 'PAUSE MENU'] as const;
-const ICON1 = ['FREE Icon', 'Icon set 1', '1x'] as const;
+const BASE = `${import.meta.env.BASE_URL}kenney-ui-pack/PNG`;
 
 export type VelocityUiTextureKey =
     | 'button_primary'
     | 'button_secondary'
     | 'button_accent'
     | 'button_danger'
-    /** Neutral plate — stat chips, list rows, inactive chrome (no baked UI words). */
-    | 'button_plate'
     | 'panel_frame'
     | 'panel_fill'
     | 'slide_track'
@@ -49,35 +34,31 @@ export type VelocityUiTextureKey =
     | 'menu_settings_repeat';
 
 const MANIFEST: Record<VelocityUiTextureKey, string> = {
-    button_primary: `${BASE}/${assetPath(...PAUSE, 'PAUSE-MENU_0000s_0009_RESUME.png')}`,
-    button_secondary: `${BASE}/${assetPath(...PAUSE, 'PAUSE-MENU_0000s_0005_SETTING.png')}`,
-    button_accent: `${BASE}/${assetPath(...PAUSE, 'PAUSE-MENU_0000s_0007_RETRY.png')}`,
-    button_danger: `${BASE}/${assetPath(...PAUSE, 'PAUSE-MENU_0000s_0003_EXIT.png')}`,
-    button_plate: `${BASE}/${assetPath(...LEVELS, 'LEVELS_0000s_0004_Layer-5.png')}`,
+    button_primary: `${BASE}/Blue/Default/button_rectangle_depth_gloss.png`,
+    button_secondary: `${BASE}/Grey/Default/button_rectangle_depth_flat.png`,
+    button_accent: `${BASE}/Yellow/Default/button_rectangle_depth_gloss.png`,
+    button_danger: `${BASE}/Red/Default/button_rectangle_depth_gloss.png`,
+    panel_frame: `${BASE}/Extra/Default/input_outline_rectangle.png`,
+    panel_fill: `${BASE}/Extra/Default/input_rectangle.png`,
+    slide_track: `${BASE}/Blue/Default/slide_horizontal_grey_section_wide.png`,
+    slide_fill: `${BASE}/Blue/Default/slide_horizontal_color_section_wide.png`,
+    icon_star: `${BASE}/Blue/Default/star.png`,
+    node_unlocked: `${BASE}/Blue/Default/button_round_depth_gloss.png`,
+    node_locked: `${BASE}/Grey/Default/button_round_depth_flat.png`,
 
-    panel_frame: `${BASE}/${assetPath(...LEVELS, 'LEVELS_0000s_0001_Layer-8.png')}`,
-    panel_fill: `${BASE}/${assetPath(...LEVELS, 'LEVELS_0000s_0018_Layer-1.png')}`,
-
-    slide_track: `${BASE}/${assetPath(...LEVELS, 'LEVELS_0000s_0007_Layer-3.png')}`,
-    slide_fill: `${BASE}/${assetPath(...LEVELS, 'LEVELS_0000s_0009_Layer-2.png')}`,
-
-    icon_star: `${BASE}/${assetPath(...ICON1, 'Asset 10.png')}`,
-    node_unlocked: `${BASE}/${assetPath(...ICON1, 'Asset 24.png')}`,
-    node_locked: `${BASE}/${assetPath(...ICON1, 'Asset 33.png')}`,
-
-    menu_best_star: `${BASE}/${assetPath(...ICON1, 'Asset 10.png')}`,
-    menu_sector_circle: `${BASE}/${assetPath(...ICON1, 'Asset 24.png')}`,
-    menu_routes_repeat: `${BASE}/${assetPath(...ICON1, 'Asset 2.png')}`,
-    menu_profile_star_outline: `${BASE}/${assetPath(...ICON1, 'Asset 1.png')}`,
-    menu_status_led: `${BASE}/${assetPath(...ICON1, 'Asset 16.png')}`,
-    menu_radar_center: `${BASE}/${assetPath(...ICON1, 'Asset 24.png')}`,
-    menu_pilot_class_star: `${BASE}/${assetPath(...ICON1, 'Asset 10.png')}`,
-    menu_leaderboard_star: `${BASE}/${assetPath(...ICON1, 'Asset 10.png')}`,
-    menu_achievements_seal: `${BASE}/${assetPath(...ICON1, 'Asset 40.png')}`,
-    menu_icon_square_grey: `${BASE}/${assetPath(...ICON1, 'Asset 3.png')}`,
-    menu_store_icon: `${BASE}/${assetPath(...ICON1, 'Asset 21.png')}`,
-    menu_rewards_star_outline: `${BASE}/${assetPath(...ICON1, 'Asset 10.png')}`,
-    menu_settings_repeat: `${BASE}/${assetPath(...ICON1, 'Asset 35.png')}`,
+    menu_best_star: `${BASE}/Yellow/Default/star.png`,
+    menu_sector_circle: `${BASE}/Blue/Default/icon_outline_circle.png`,
+    menu_routes_repeat: `${BASE}/Extra/Default/icon_repeat_outline.png`,
+    menu_profile_star_outline: `${BASE}/Yellow/Default/star_outline_depth.png`,
+    menu_status_led: `${BASE}/Green/Default/icon_circle.png`,
+    menu_radar_center: `${BASE}/Yellow/Default/star.png`,
+    menu_pilot_class_star: `${BASE}/Yellow/Default/star_outline.png`,
+    menu_leaderboard_star: `${BASE}/Yellow/Default/star.png`,
+    menu_achievements_seal: `${BASE}/Blue/Default/star_outline_depth.png`,
+    menu_icon_square_grey: `${BASE}/Grey/Default/icon_square.png`,
+    menu_store_icon: `${BASE}/Yellow/Default/icon_square.png`,
+    menu_rewards_star_outline: `${BASE}/Yellow/Default/star_outline_depth.png`,
+    menu_settings_repeat: `${BASE}/Extra/Default/icon_repeat_dark.png`,
 };
 
 const cache = new Map<VelocityUiTextureKey, Texture>();
@@ -87,17 +68,12 @@ export async function preloadVelocityUiTextures(): Promise<void> {
     if (preloadPromise) return preloadPromise;
     preloadPromise = (async () => {
         const keys = Object.keys(MANIFEST) as VelocityUiTextureKey[];
-        const results = await Promise.allSettled(
+        await Promise.all(
             keys.map(async (key) => {
                 const tex = await Assets.load<Texture>(MANIFEST[key]);
                 cache.set(key, tex);
             }),
         );
-        results.forEach((r, i) => {
-            if (r.status === 'rejected') {
-                console.warn('[velocityUiArt] failed to load', keys[i], MANIFEST[keys[i]], r.reason);
-            }
-        });
     })();
     return preloadPromise;
 }
@@ -107,15 +83,13 @@ export function getVelocityUiTexture(key: VelocityUiTextureKey): Texture | undef
 }
 
 export function velocityUiArtReady(): boolean {
-    const keys = Object.keys(MANIFEST) as VelocityUiTextureKey[];
-    return keys.every((k) => cache.has(k));
+    return cache.size >= Object.keys(MANIFEST).length;
 }
 
 export function velocityUiCoreReady(): boolean {
     const core: VelocityUiTextureKey[] = [
         'button_primary',
         'button_secondary',
-        'button_plate',
         'panel_frame',
         'panel_fill',
     ];

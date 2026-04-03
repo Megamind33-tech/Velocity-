@@ -1,28 +1,19 @@
 Velocity — UI art (Pixi canvas)
 
-SunGraphica Sci-Fi Game UI (in-game chrome)
--------------------------------------------
-Folder: public/sungraphica-ui/
-Source: https://sungraphica.itch.io/sci-fi-game-user-interface
-Credit: SunGraphica (per pack license)
+Kenney UI Pack (in-game chrome)
+-------------------------------
+Folder: public/kenney-ui-pack/
+Source: https://kenney.nl/assets/ui-pack (CC0)
 
 Runtime mapping: src/ui/game/velocityUiArt.ts
-Nine-slice tuning: src/ui/game/velocityUiSlice.ts (per-texture button insets + panel/slide)
+Nine-slice insets: src/ui/game/velocityUiSlice.ts (Kenney rectangles: L/R 56, T/B 20; slides differ)
 
-Buttons:
-- primary → PAUSE-MENU … RESUME.png
-- secondary → PAUSE-MENU … SETTING.png
-- accent → PAUSE-MENU … RETRY.png
-- danger → PAUSE-MENU … EXIT.png
-- button_plate (chips/rows) → LEVELS … Layer-5.png
+Buttons use Blue / Grey / Yellow / Red `button_rectangle_depth_*` variants from the pack.
 
 In-game skin (code)
 -------------------
 - velocityScreenShell.ts — animated starfield + dimmer behind menus / map / pause
 - velocityModalLayout.ts — framed modals (nine-slice panel)
 - velocityUiButtons.ts — uniform buttons (nine-slice when textures load)
-- kenneyNineSlice.ts — nine-slice helpers + horizontal progress tiling (SunGraphica textures)
-
-Legacy (not used by velocityUiArt)
-----------------------------------
-- public/kenney-ui-pack/ — kept for reference only; game loads SunGraphica paths above.
+- kenneyNineSlice.ts — nine-slice helpers + horizontal progress tiling (Kenney slide strips)
+- menuLandscape/kenneyLandscapeWidgets.ts — landscape chrome built on the same textures
