@@ -21,14 +21,12 @@ import { getVelocityUiTexture, type VelocityUiTextureKey } from '../velocityUiAr
 import {
     kenneyAvatarPlate,
     kenneyButton,
-    kenneyChromeHit,
     kenneyDockBar,
     kenneyHeroPanel,
     kenneyProgressBar,
     kenneyRowPanel,
     kenneyStatChip,
     kenneyTabTrack,
-    mountGearIcon,
     spriteIcon,
 } from './kenneyLandscapeWidgets';
 
@@ -184,7 +182,6 @@ export type TopBarRefs = {
 export function buildTopUtilityBar(
     cw: number,
     onProfile: () => void,
-    onSettings: () => void,
     prog: ReturnType<typeof getMainMenuProgress>,
     bestScore: number,
     onPremiumTap?: () => void,
@@ -192,9 +189,8 @@ export function buildTopUtilityBar(
     const H = 60;
     const root = new Container();
     const gap = GRID;
-    const gearW = 56;
 
-    let chipW = Math.floor((cw - 60 - gearW - gap * 4) / 3);
+    let chipW = Math.floor((cw - 60 - gap * 3) / 3);
     chipW = Math.max(100, chipW);
 
     const av = kenneyAvatarPlate(56, onProfile);
@@ -246,22 +242,6 @@ export function buildTopUtilityBar(
         pressable(c3, onPremiumTap);
     }
     root.addChild(c3);
-
-    const gearBox = kenneyChromeHit(gearW, H, onSettings);
-    if (gearBox) {
-        mountGearIcon(gearBox, gearW / 2, H / 2, 26);
-        gearBox.position.set(cw - gearW, 2);
-        root.addChild(gearBox);
-    } else {
-        const g = new Container();
-        const bg = new Graphics();
-        bg.roundRect(0, 0, gearW, H, R_CHIP);
-        bg.fill({ color: C.surface2, alpha: 1 });
-        g.addChild(bg);
-        pressable(g, onSettings);
-        g.position.set(cw - gearW, 2);
-        root.addChild(g);
-    }
 
     return {
         root,

@@ -26,7 +26,6 @@ import {
     drawIconMap,
     drawIconMic,
     drawIconProfile,
-    drawIconRetry,
     drawIconRouteNode,
     drawIconStore,
     drawIconWing,
@@ -196,7 +195,6 @@ export type StatusStripProps = {
     bestVal: string;
     premiumVal: string;
     onProfile: () => void;
-    onSettings: () => void;
     onPremiumTap?: () => void;
 };
 
@@ -205,9 +203,8 @@ function buildStatusStrip(p: StatusStripProps): { root: Container; signal: Text;
     const root = new Container();
     const gap = P_SPACE.s8;
     const side = 48;
-    const gearW = 48;
     const chipCount = 3;
-    const chipW = Math.floor((p.cw - side - gearW - gap * (chipCount + 2)) / chipCount);
+    const chipW = Math.floor((p.cw - side - gap * (chipCount + 1)) / chipCount);
     const wChip = Math.max(92, chipW);
 
     const av = new Container();
@@ -237,19 +234,6 @@ function buildStatusStrip(p: StatusStripProps): { root: Container; signal: Text;
         pressable(c3, p.onPremiumTap);
     }
     root.addChild(c3);
-
-    const gear = new Container();
-    const gb = new Graphics();
-    gb.roundRect(0, 0, gearW, H - 4, P_RADIUS.chip);
-    gb.fill({ color: P_COLORS.bgElevated, alpha: 1 });
-    gb.stroke({ color: P_COLORS.strokeSubtle, width: 1, alpha: 0.7 });
-    gear.addChild(gb);
-    const gg = new Graphics();
-    drawIconRetry(gg, gearW / 2, (H - 4) / 2, 20);
-    gear.addChild(gg);
-    gear.position.set(p.cw - gearW, 2);
-    pressable(gear, p.onSettings);
-    root.addChild(gear);
 
     return {
         root,
@@ -892,7 +876,6 @@ export function buildPortraitMissionScreen(p: BuildPortraitMissionScreenParams):
         bestVal: String(p.getBestScore()),
         premiumVal: `${prog.unlockedCount}`,
         onProfile: () => p.ui.showScreen('settings', true),
-        onSettings: () => p.ui.showScreen('settings', true),
         onPremiumTap: () => gameFlow().openAchievements?.(),
     });
     strip.root.position.set(0, y);

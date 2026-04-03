@@ -10,6 +10,7 @@ import {
     type VelocityModalLayout,
 } from '../velocityModalLayout';
 import { createVelocityGameButton } from '../velocityUiButtons';
+import { resetLocalProgress } from '../../../data/localProgress';
 
 export class SettingsScreen extends BaseGameScreen {
     private layout!: VelocityModalLayout;
@@ -23,7 +24,7 @@ export class SettingsScreen extends BaseGameScreen {
         const sw = this.app.screen.width;
         const sh = this.app.screen.height;
         const panelW = Math.min(450, sw - 24);
-        const panelH = Math.min(420, sh - 48);
+        const panelH = Math.min(480, sh - 48);
 
         this.layout = buildVelocityModal(this.container, this.app, 'SETTINGS', panelW, panelH);
         const { body, innerW } = this.layout;
@@ -46,6 +47,19 @@ export class SettingsScreen extends BaseGameScreen {
 
         const btnW = Math.min(260, innerW);
         const btnH = 46;
+        const resetBtn = createVelocityGameButton(
+            'RESET PROGRESS',
+            'danger',
+            () => {
+                resetLocalProgress();
+                this.uiManager.showScreen('main-menu', true);
+            },
+            { width: btnW, height: btnH },
+        );
+        resetBtn.position.set((innerW - btnW) / 2, y);
+        body.addChild(resetBtn);
+        y += btnH + GAME_SIZES.spacing.md;
+
         const backBtn = createVelocityGameButton('BACK', 'secondary', () => this.uiManager.goBack(), {
             width: btnW,
             height: btnH,
@@ -61,7 +75,7 @@ export class SettingsScreen extends BaseGameScreen {
     resize(width: number, height: number): void {
         syncModalShellResize(this.layout, this.container, width, height);
         const panelW = Math.min(450, width - 24);
-        const panelH = Math.min(420, height - 48);
+        const panelH = Math.min(480, height - 48);
         this.layout.panelW = panelW;
         this.layout.panelH = panelH;
         this.layout.innerW = velocityModalInnerWidth(panelW);
