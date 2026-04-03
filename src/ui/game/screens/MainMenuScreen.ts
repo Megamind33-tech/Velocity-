@@ -175,21 +175,22 @@ export class MainMenuScreen extends BaseGameScreen {
         this.mainMenuContainer.position.set(mx, y);
         y += MENU_TIER_HEIGHT.cta + GAP.md;
 
-        // ── Utility: Leaderboard + Achievements ───────────────────────────
+        // ── Utility: Leaderboard + Achievements — side-by-side ───────────────
+        const secW = Math.floor((cw - GAP.sm) / 2);
         const lb = createMenuButton(
             'LEADERBOARD', 'secondary', 'secondary',
             () => this.uiManager.showScreen('leaderboard', true),
-            cw,
+            secW,
         );
         const ach = createMenuButton(
             'ACHIEVEMENTS', 'secondary', 'secondary',
             () => this.uiManager.showScreen('achievements', true),
-            cw,
+            secW,
         );
-        ach.position.set(0, MENU_TIER_HEIGHT.secondary + GAP.sm);
+        ach.position.set(secW + GAP.sm, 0);
         this.secondaryMenuContainer.addChild(lb, ach);
         this.secondaryMenuContainer.position.set(mx, y);
-        y += MENU_TIER_HEIGHT.secondary * 2 + GAP.sm + GAP.md;
+        y += MENU_TIER_HEIGHT.secondary + GAP.md;
 
         // ── Economy row — reward buttons with icon sockets ────────────────
         const ecoW    = Math.floor((cw - GAP.sm) / 2);

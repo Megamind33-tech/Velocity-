@@ -42,7 +42,7 @@ import {
 export type MenuButtonTier = 'cta' | 'secondary' | 'economy' | 'utility';
 
 export const MENU_TIER_HEIGHT: Record<MenuButtonTier, number> = {
-    cta:       58,
+    cta:       64,
     secondary: 48,
     economy:   46,
     utility:   40,
