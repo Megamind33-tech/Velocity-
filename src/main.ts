@@ -245,6 +245,7 @@ async function init() {
         openMissionSelect: () => openWorldMap(),
         openMainMenu: () => openMainMenuFromFlow(),
         startLevelWithMicGate: (levelId: number) => showMicGateOverlay(levelId),
+        openAchievements: () => uiManager.showScreen('achievements', true),
     });
 
     registerPauseHandler(() => {

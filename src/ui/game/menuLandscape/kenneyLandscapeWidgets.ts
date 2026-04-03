@@ -213,13 +213,14 @@ export function mountGearIcon(parent: Container, cx: number, cy: number, size: n
 export function kenneyHeroPanel(cw: number, cardH: number): { root: Container; content: Container } | null {
     const pair = createKenneyFramedPanelWithContent(cw, cardH);
     if (!pair) return null;
-    pair.root.alpha = 0.98;
+    pair.root.alpha = 1;
     const fill = pair.root.children[0] as NineSliceSprite;
-    fill.tint = 0x0a1520;
-    fill.alpha = 0.92;
+    /** Deep navy body — solid, high-contrast vs cyan chrome (Kenney sci-fi panels). */
+    fill.tint = 0x050a12;
+    fill.alpha = 1;
     const frame = pair.root.children[1] as NineSliceSprite;
     frame.tint = CYAN_TINT;
-    frame.alpha = 0.55;
+    frame.alpha = 0.72;
     return pair;
 }
 

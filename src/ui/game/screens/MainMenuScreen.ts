@@ -23,6 +23,17 @@ import { mountVelocityShell, resizeVelocityShell, type VelocityShellParts } from
 
 const GAP_Y = 12;
 
+function findLabeledDescendant(root: Container, label: string): Container | null {
+    if (root.label === label) return root;
+    for (const ch of root.children) {
+        if (ch instanceof Container) {
+            const hit = findLabeledDescendant(ch, label);
+            if (hit) return hit;
+        }
+    }
+    return null;
+}
+
 export class MainMenuScreen extends BaseGameScreen {
     private shell!: VelocityShellParts;
     private readonly content = new Container();
@@ -83,10 +94,11 @@ export class MainMenuScreen extends BaseGameScreen {
 
         const topBar = buildTopUtilityBar(
             cw,
-            () => ui.showScreen('achievements', true),
+            () => ui.showScreen('settings', true),
             () => ui.showScreen('settings', true),
             prog,
             score,
+            () => gameFlow().openAchievements?.(),
         );
         this.topRefs = topBar.refs;
         topBar.root.position.set(mx, topY);
@@ -100,19 +112,17 @@ export class MainMenuScreen extends BaseGameScreen {
 
         const hero = buildHeroFlightCard(cw, heroH, prog, rank, () => {
             gameFlow().startLevelWithMicGate?.(firstPlayable);
-        }, () => {
-            gameFlow().openMissionSelect();
         });
         hero.position.set(mx, y);
         this.content.addChild(hero);
-        this._flyBtn = hero.children[hero.children.length - 1] as Container;
+        this._flyBtn = findLabeledDescendant(hero, 'heroFlyCta');
 
         y += heroH + GAP_Y;
 
         const tabsY = y;
         y += 46 + GAP_Y;
 
-        const bottomNavH = 68;
+        const bottomNavH = 70;
         const listH = Math.max(160, sh - y - bottomNavH - safe.bottom - 16);
 
         const bundle = buildMissionList(cw, listH, (levelId) => {

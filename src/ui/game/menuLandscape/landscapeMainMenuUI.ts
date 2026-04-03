@@ -187,6 +187,7 @@ export function buildTopUtilityBar(
     onSettings: () => void,
     prog: ReturnType<typeof getMainMenuProgress>,
     bestScore: number,
+    onPremiumTap?: () => void,
 ): { root: Container; refs: TopBarRefs } {
     const H = 60;
     const root = new Container();
@@ -239,6 +240,11 @@ export function buildTopUtilityBar(
         kenneyStatChip('menu_rewards_star_outline', 'PREMIUM', `${prog.unlockedCount}`, chipW, H - 4, 0xdd99ff) ??
         vectorStatChip(icoRadar, 'PREMIUM', `${prog.unlockedCount}`, chipW, H - 4);
     c3.position.set(x0 + (chipW + gap) * 2, 2);
+    if (onPremiumTap) {
+        c3.eventMode = 'static';
+        c3.cursor = 'pointer';
+        pressable(c3, onPremiumTap);
+    }
     root.addChild(c3);
 
     const gearBox = kenneyChromeHit(gearW, H, onSettings);
@@ -298,56 +304,117 @@ export function buildHeroFlightCard(
     prog: ReturnType<typeof getMainMenuProgress>,
     rank: string,
     onFlyNow: () => void,
-    onTrain: () => void,
 ): Container {
     const root = new Container();
-    const pad = 20;
-    const rightCol = 108;
-    const titleBlockW = Math.max(200, cw - pad * 2 - rightCol - 16);
+    /** Usable width inside framed content (inset 10 + content offset ~12 each side). */
+    const contentW = Math.max(260, cw - 44);
+    /** Vertical space inside `content` (frame insets + label offset). */
+    const innerH = Math.max(110, cardH - 54);
+    const rightEmblem = 64;
+    const leftTitleMax = Math.max(160, contentW - rightEmblem - GRID * 2);
 
     const pair = kenneyHeroPanel(cw, cardH);
     if (pair) {
         root.addChild(pair.root);
         const content = pair.content;
         const ox = 0;
-        const oy = 0;
-        const H_IN = cardH - 52;
+
+        const btnH = 44;
+        const micW = 96;
+        /** mic + gap + class + gap + fly ≤ contentW */
+        const budget = Math.max(120, contentW - micW - GRID * 2);
+        let flyW = Math.min(200, Math.max(96, Math.floor(budget * 0.58)));
+        let clsW = budget - flyW;
+        if (clsW < 64) {
+            clsW = 64;
+            flyW = Math.min(200, Math.max(88, budget - clsW));
+        }
+        if (clsW > 148) clsW = 148;
+        flyW = budget - clsW;
+
+        const bottomPad = 8;
+        let rowY = innerH - btnH - bottomPad;
+        const barH = 14;
+        let barY = rowY - 12 - barH;
+        let progLblY = barY - 14;
+        const subBottom = 36 + 18;
+        const tagY = 58;
+        const showTag = progLblY >= tagY + 20;
+        /** Keep route copy below subtitle — never stack on the title block. */
+        const minProgY = subBottom + (showTag ? 22 : 10);
+        if (progLblY < minProgY) {
+            progLblY = minProgY;
+            barY = progLblY + 14;
+            const minRowY = barY + barH + 8;
+            if (rowY < minRowY) rowY = minRowY;
+        }
+        let useBtnH = btnH;
+        if (rowY + useBtnH + bottomPad > innerH) {
+            useBtnH = Math.max(36, innerH - bottomPad - rowY);
+        }
+        if (rowY + useBtnH + bottomPad > innerH) {
+            rowY = Math.max(0, innerH - useBtnH - bottomPad);
+            barY = Math.min(barY, rowY - 8 - barH);
+            progLblY = barY - 14;
+            if (progLblY < minProgY) {
+                progLblY = minProgY;
+                barY = progLblY + 14;
+                rowY = Math.max(rowY, barY + barH + 6);
+                useBtnH = Math.max(34, innerH - bottomPad - rowY);
+            }
+        }
 
         const title = new Text({
             text: 'VELOCITY',
             style: new TextStyle({
                 fontFamily: FONT_UI,
-                fontSize: 32,
+                fontSize: 30,
                 fontWeight: '800',
                 fill: C.text,
                 letterSpacing: 2,
             }),
         });
-        title.position.set(ox, oy);
+        title.position.set(ox, 0);
         content.addChild(title);
 
-        const sub = new Text({ text: 'Voice-Powered Flight', style: style(15, '600', C.muted) });
-        sub.position.set(ox, oy + 40);
+        const sub = new Text({
+            text: 'Voice-Powered Flight',
+            style: style(14, '600', C.muted),
+        });
+        sub.position.set(ox, 36);
         content.addChild(sub);
 
-        const tag = new Text({
-            text: 'Precision · Pitch · Signal',
-            style: style(13, '500', 0x66ccbb),
-        });
-        tag.position.set(ox, oy + 62);
-        content.addChild(tag);
+        if (showTag) {
+            const tag = new Text({
+                text: 'Precision · Pitch · Signal',
+                style: style(12, '500', 0x55bbaa),
+            });
+            tag.position.set(ox, tagY);
+            content.addChild(tag);
+        }
 
-        const barW = Math.min(titleBlockW, cw - pad * 2 - rightCol - 40);
-        const barY = Math.max(oy + 72, H_IN - 50);
+        const emblemX = ox + contentW - rightEmblem / 2;
+        const emblemY = 34;
+        const radSpr = spriteIcon('menu_radar_center', 48, 0xffeedd);
+        if (radSpr) {
+            radSpr.position.set(emblemX, emblemY);
+            content.addChild(radSpr);
+        } else {
+            const rg = new Graphics();
+            icoRadar(rg, emblemX, emblemY, 22);
+            content.addChild(rg);
+        }
+
         const prog01 = prog.totalLevels > 0 ? prog.unlockedCount / prog.totalLevels : 0;
         const progLbl = new Text({
             text: `Routes  ${prog.unlockedCount} / ${prog.totalLevels}`,
             style: style(12, '600', C.muted),
         });
-        progLbl.position.set(ox, barY - 18);
+        progLbl.position.set(ox, progLblY);
         content.addChild(progLbl);
 
-        const kBar = kenneyProgressBar(barW, 14);
+        const barW = Math.min(leftTitleMax, contentW - rightEmblem - GRID * 2);
+        const kBar = kenneyProgressBar(barW, barH);
         if (kBar) {
             kBar.position.set(ox, barY);
             kBar.setProgress(prog01);
@@ -355,75 +422,54 @@ export function buildHeroFlightCard(
         } else {
             const bbg = new Graphics();
             bbg.roundRect(ox, barY, barW, 10, 5);
-            bbg.fill({ color: C.surface2, alpha: 1 });
+            bbg.fill({ color: 0x0a1018, alpha: 1 });
+            bbg.stroke({ color: C.border, width: 1, alpha: 0.6 });
             content.addChild(bbg);
             const f = new Graphics();
             f.roundRect(ox + 2, barY + 2, Math.max(4, (barW - 4) * prog01), 6, 3);
-            f.fill({ color: C.cyan, alpha: 0.85 });
+            f.fill({ color: C.cyan, alpha: 0.9 });
             content.addChild(f);
         }
 
-        const micW = 108;
         const mic = new Container();
         const mb = new Graphics();
-        mb.roundRect(0, 0, micW, 32, 16);
-        mb.fill({ color: C.surface2, alpha: 1 });
-        mb.stroke({ color: 0x22aa66, width: 1, alpha: 0.55 });
+        mb.roundRect(0, 0, micW, useBtnH, 12);
+        mb.fill({ color: 0x080e16, alpha: 1 });
+        mb.stroke({ color: 0x33aa66, width: 1.5, alpha: 0.65 });
         mic.addChild(mb);
         const mlab = new Text({ text: 'Mic live', style: style(12, '700', C.text) });
-        mlab.position.set(34, 9);
+        mlab.position.set(32, Math.floor((useBtnH - 14) / 2));
         mic.addChild(mlab);
         const mg = new Graphics();
-        icoMic(mg, 16, 16, 14);
+        icoMic(mg, 15, useBtnH / 2, 13);
         mic.addChild(mg);
-        mic.position.set(ox, H_IN - 36);
+        mic.position.set(ox, rowY);
         content.addChild(mic);
 
-        const clsW = Math.min(140, Math.max(72, titleBlockW - micW - GRID));
         const cls = new Container();
         const cb = new Graphics();
-        cb.roundRect(0, 0, clsW, 32, 16);
-        cb.fill({ color: C.surface2, alpha: 1 });
-        cb.stroke({ color: C.gold, width: 1, alpha: 0.45 });
+        cb.roundRect(0, 0, clsW, useBtnH, 12);
+        cb.fill({ color: 0x080e16, alpha: 1 });
+        cb.stroke({ color: C.gold, width: 1.5, alpha: 0.55 });
         cls.addChild(cb);
-        const cr = trunc(`Class: ${rank}`, 14);
-        const clab = new Text({ text: cr, style: style(12, '700', C.text) });
-        clab.position.set(34, 9);
+        const clab = new Text({
+            text: trunc(`Class: ${rank}`, 16),
+            style: style(12, '700', C.text),
+        });
+        clab.position.set(32, Math.floor((useBtnH - 14) / 2));
         cls.addChild(clab);
         const wg = new Graphics();
-        icoWing(wg, 16, 16, 14);
+        icoWing(wg, 15, useBtnH / 2, 13);
         cls.addChild(wg);
-        cls.position.set(ox + micW + GRID, H_IN - 36);
+        cls.position.set(ox + micW + GRID, rowY);
         content.addChild(cls);
 
-        const rx = cw - pad - rightCol - 24;
-        const ry = oy + 8;
-        const radSpr = spriteIcon('menu_radar_center', 72, 0xffffee);
-        if (radSpr) {
-            radSpr.position.set(rx + 36, ry + 36);
-            content.addChild(radSpr);
-        } else {
-            const rg = new Graphics();
-            icoRadar(rg, rx + 36, ry + 36, 32);
-            content.addChild(rg);
-        }
-
-        const btnH = 50;
-        const flyW = 148;
-        const trainW = 124;
-        const btnY = H_IN - btnH - 6;
-        const btnX = cw - pad - flyW - GRID - trainW - 24;
-
-        const train =
-            kenneyButton('TRAIN', trainW, btnH, 'button_secondary', false, onTrain) ??
-            fallbackSecondaryBtn(trainW, btnH, 'TRAIN', onTrain);
-        train.position.set(btnX, btnY);
-        content.addChild(train);
-
+        const flyX = ox + micW + GRID + clsW + GRID;
         const fly =
-            kenneyButton('FLY NOW', flyW, btnH, 'button_primary', false, onFlyNow) ??
-            fallbackPrimaryBtn(flyW, btnH, 'FLY NOW', onFlyNow);
-        fly.position.set(btnX + trainW + GRID, btnY);
+            kenneyButton('FLY NOW', flyW, useBtnH, 'button_primary', false, onFlyNow) ??
+            fallbackPrimaryBtn(flyW, useBtnH, 'FLY NOW', onFlyNow);
+        fly.label = 'heroFlyCta';
+        fly.position.set(flyX, rowY);
         content.addChild(fly);
 
         return root;
@@ -432,8 +478,8 @@ export function buildHeroFlightCard(
     const fb = new Container();
     const bg = new Graphics();
     bg.roundRect(0, 0, cw, cardH, 20);
-    bg.fill({ color: C.surface, alpha: 1 });
-    bg.stroke({ color: C.cyan, width: 1.5, alpha: 0.35 });
+    bg.fill({ color: 0x050a12, alpha: 1 });
+    bg.stroke({ color: C.cyan, width: 1.5, alpha: 0.45 });
     fb.addChild(bg);
     const t0 = new Text({
         text: 'VELOCITY',
@@ -441,11 +487,10 @@ export function buildHeroFlightCard(
     });
     t0.position.set(20, 18);
     fb.addChild(t0);
-    const train = fallbackSecondaryBtn(120, 48, 'TRAIN', onTrain);
-    const fly = fallbackPrimaryBtn(140, 48, 'FLY NOW', onFlyNow);
-    train.position.set(cw - 300, cardH - 58);
-    fly.position.set(cw - 160, cardH - 58);
-    fb.addChild(train, fly);
+    const fly = fallbackPrimaryBtn(Math.min(200, cw - 40), 44, 'FLY NOW', onFlyNow);
+    fly.label = 'heroFlyCta';
+    fly.position.set(cw - fly.width - 20, cardH - 56);
+    fb.addChild(fly);
     return fb;
 }
 
@@ -763,14 +808,6 @@ export function buildBottomNavDock(
             icon: 'menu_store_icon',
             tint: C.gold,
             vec: icoStore,
-        },
-        {
-            label: 'Profile',
-            slot: 4,
-            onTap: () => { navIndexBySlot?.(4); ui.showScreen('settings', true); },
-            icon: 'menu_profile_star_outline',
-            tint: C.cyan,
-            vec: icoProfile,
         },
     ];
 
