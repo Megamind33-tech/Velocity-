@@ -37,6 +37,13 @@ export const GAME_COLORS = {
     // Game specific
     hud_bg: 0x111122,          // Very dark for HUD panels
     panel_bg: 0x1a1a3a,        // Dark panel background
+
+    /** In-run HUD copy (readable on light Kenney chrome) */
+    hud_score_value: 0xffcc00,
+    hud_level_value: 0x00ffcc,
+    hud_alt: 0xffaa44,
+    hud_spd: 0x66ddff,
+    hud_vocal_label: 0x00ffcc,
 };
 
 /**

@@ -18,7 +18,8 @@ export class InGameHUDScreen extends BaseGameScreen {
     private statsFallback!: Graphics;
     private scoreText!: Text;
     private levelText!: Text;
-    private altSpeedText!: Text;
+    private altText!: Text;
+    private spdText!: Text;
     private vocalPlate!: Container;
     private vocalKenney: NineSliceSprite | null = null;
     private vocalFallback!: Graphics;
@@ -61,23 +62,56 @@ export class InGameHUDScreen extends BaseGameScreen {
         this.statsFallback = new Graphics();
         this.container.addChild(this.statsPlate, this.statsFallback);
 
-        const lineStyle = new TextStyle({
-            fill: GAME_COLORS.text_primary,
-            fontSize: 13,
-            fontFamily: GAME_FONTS.monospace,
-            fontWeight: 'bold',
+        const hudGlow = {
+            alpha: 0.75,
+            blur: 3,
+            color: GAME_COLORS.bg_darkest,
+            distance: 0,
+        };
+        this.scoreText = new Text({
+            text: 'SCORE 0',
+            style: new TextStyle({
+                fill: GAME_COLORS.hud_score_value,
+                fontSize: 14,
+                fontFamily: GAME_FONTS.arcade,
+                fontWeight: 'bold',
+                letterSpacing: 1,
+                dropShadow: { ...hudGlow, color: 0x003322 },
+            }),
         });
-        const subStyle = new TextStyle({
-            fill: GAME_COLORS.text_secondary,
-            fontSize: 11,
-            fontFamily: GAME_FONTS.monospace,
+        this.levelText = new Text({
+            text: 'LV 1',
+            style: new TextStyle({
+                fill: GAME_COLORS.hud_level_value,
+                fontSize: 14,
+                fontFamily: GAME_FONTS.arcade,
+                fontWeight: 'bold',
+                letterSpacing: 1,
+                dropShadow: { ...hudGlow, color: 0x001a22 },
+            }),
         });
-
-        this.scoreText = new Text({ text: 'SCORE 0', style: lineStyle });
-        this.levelText = new Text({ text: 'LV 1', style: lineStyle });
         this.levelText.anchor.set(1, 0);
-        this.altSpeedText = new Text({ text: 'ALT 0m  ·  SPD 0', style: subStyle });
-        this.container.addChild(this.scoreText, this.levelText, this.altSpeedText);
+        this.altText = new Text({
+            text: 'ALT 0m',
+            style: new TextStyle({
+                fill: GAME_COLORS.hud_alt,
+                fontSize: 11,
+                fontFamily: GAME_FONTS.arcade,
+                fontWeight: 'bold',
+                dropShadow: hudGlow,
+            }),
+        });
+        this.spdText = new Text({
+            text: '·  SPD 0',
+            style: new TextStyle({
+                fill: GAME_COLORS.hud_spd,
+                fontSize: 11,
+                fontFamily: GAME_FONTS.arcade,
+                fontWeight: 'bold',
+                dropShadow: hudGlow,
+            }),
+        });
+        this.container.addChild(this.scoreText, this.levelText, this.altText, this.spdText);
 
         this.pauseBtn = createVelocityGameButton('II', 'secondary', () => requestGamePause(), {
             width: 52,
@@ -92,9 +126,12 @@ export class InGameHUDScreen extends BaseGameScreen {
         const vocalLabel = new Text({
             text: 'VOCAL',
             style: new TextStyle({
-                fill: GAME_COLORS.text_secondary,
-                fontSize: 9,
+                fill: GAME_COLORS.hud_vocal_label,
+                fontSize: 10,
                 fontFamily: GAME_FONTS.arcade,
+                fontWeight: 'bold',
+                letterSpacing: 2,
+                dropShadow: { alpha: 0.8, blur: 2, color: 0x220033, distance: 0 },
             }),
         });
         vocalLabel.position.set(10, 6);
@@ -127,7 +164,8 @@ export class InGameHUDScreen extends BaseGameScreen {
             const k = velocityUiArtReady() && createKenneyPanelNineSlice(statsW, statsH);
             if (k) {
                 this.statsKenney = k;
-                k.alpha = 0.92;
+                k.alpha = 0.88;
+                k.tint = 0x2a2a40;
                 this.statsPlate.addChild(k);
             }
             this.statsFallback.clear();
@@ -143,7 +181,9 @@ export class InGameHUDScreen extends BaseGameScreen {
 
         this.scoreText.position.set(pad + 10, topY + 8);
         this.levelText.position.set(pad + statsW - 10, topY + 8);
-        this.altSpeedText.position.set(pad + 10, topY + 32);
+        const row2y = topY + 32;
+        this.altText.position.set(pad + 10, row2y);
+        this.spdText.position.set(pad + 10 + this.altText.width + 6, row2y);
 
         this.pauseBtn.position.set(width - pad - pauseW, topY + (statsH - pauseH) / 2);
 
@@ -160,15 +200,19 @@ export class InGameHUDScreen extends BaseGameScreen {
             const vk = velocityUiArtReady() && createKenneyPanelNineSlice(vocalW, vocalH);
             if (vk) {
                 this.vocalKenney = vk;
-                vk.alpha = 0.9;
+                vk.alpha = 0.88;
+                vk.tint = 0x2a2a40;
                 this.vocalPlate.addChild(vk);
             }
             const vocalLabel = new Text({
                 text: 'VOCAL',
                 style: new TextStyle({
-                    fill: GAME_COLORS.text_secondary,
-                    fontSize: 9,
+                    fill: GAME_COLORS.hud_vocal_label,
+                    fontSize: 10,
                     fontFamily: GAME_FONTS.arcade,
+                    fontWeight: 'bold',
+                    letterSpacing: 2,
+                    dropShadow: { alpha: 0.8, blur: 2, color: 0x220033, distance: 0 },
                 }),
             });
             vocalLabel.position.set(10, 6);
@@ -197,7 +241,9 @@ export class InGameHUDScreen extends BaseGameScreen {
         this.scoreText.text = `SCORE ${h.getScore()}`;
         this.levelText.text = `LV ${h.getLevelId()}`;
         this.vocalBar.setProgress(Math.round(h.getVocal01() * 100) / 100);
-        this.altSpeedText.text = `ALT ${h.getAltitudeDisplay()}m  ·  SPD ${Math.round(h.getForwardSpeed())}`;
+        this.altText.text = `ALT ${h.getAltitudeDisplay()}m`;
+        this.spdText.text = `·  SPD ${Math.round(h.getForwardSpeed())}`;
+        this.spdText.position.set(this.altText.x + this.altText.width + 6, this.altText.y);
     }
 
     show(): void {
