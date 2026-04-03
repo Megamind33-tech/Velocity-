@@ -11,10 +11,11 @@
  * All icons are pure PixiJS Graphics — no new art required.
  */
 
-import { Container, FederatedPointerEvent, Graphics, Text } from 'pixi.js';
+import { Container, FederatedPointerEvent, Graphics, Sprite, Text } from 'pixi.js';
 import { GAME_FONTS } from './GameUITheme';
 import { economyButtonLabelStyle, hudLabelStyle } from './menuTextStyles';
 import { createIconRewardsCachePod, createIconStoreModule } from './menuFrontMenuIcons';
+import { getVelocityUiTexture, velocityUiArtReady } from './velocityUiArt';
 
 // ─── Reward button ────────────────────────────────────────────────────────────
 
@@ -58,12 +59,28 @@ export function createRewardButton(
     base.eventMode = 'none';
     root.addChild(base);
 
-    // ── Icon socket (darker, distinct zone) ───────────────────────────────
-    const socketBg = new Graphics();
-    socketBg.roundRect(0, 0, iconZoneW, height, r);
-    socketBg.fill({ color: type === 'store' ? 0x1e1100 : 0x180e00, alpha: 1.0 });
-    socketBg.eventMode = 'none';
-    root.addChild(socketBg);
+    // ── Icon socket — Kenney input outline when loaded ────────────────────
+    let socketKenney = false;
+    if (velocityUiArtReady()) {
+        const st = getVelocityUiTexture('panel_frame');
+        if (st) {
+            const sock = new Sprite(st);
+            sock.width = iconZoneW;
+            sock.height = height;
+            sock.tint = borderCol;
+            sock.alpha = 0.42;
+            sock.eventMode = 'none';
+            root.addChild(sock);
+            socketKenney = true;
+        }
+    }
+    if (!socketKenney) {
+        const socketBg = new Graphics();
+        socketBg.roundRect(0, 0, iconZoneW, height, r);
+        socketBg.fill({ color: type === 'store' ? 0x1e1100 : 0x180e00, alpha: 1.0 });
+        socketBg.eventMode = 'none';
+        root.addChild(socketBg);
+    }
 
     // ── Vertical divider between icon zone and label zone ─────────────────
     const divider = new Graphics();
