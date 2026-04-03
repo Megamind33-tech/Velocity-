@@ -22,20 +22,27 @@ function mountKenney(
     boxW: number,
     boxH: number,
     key: VelocityUiTextureKey,
-    opts?: { tint?: number; alpha?: number; pad?: number },
+    opts?: { tint?: number; alpha?: number; pad?: number; glowColor?: number; glowAlpha?: number },
 ): boolean {
     if (!velocityUiArtReady()) return false;
     const tex = getVelocityUiTexture(key);
     if (!tex) return false;
+    const pad = opts?.pad ?? 4;
+    if (opts?.glowColor !== undefined) {
+        const gl = new Graphics();
+        const rr = Math.min(boxW, boxH) * 0.42;
+        gl.circle(boxW / 2, boxH / 2, rr);
+        gl.fill({ color: opts.glowColor, alpha: opts.glowAlpha ?? 0.12 });
+        root.addChild(gl);
+    }
     const spr = new Sprite(tex);
     spr.anchor.set(0.5);
-    const pad = opts?.pad ?? 2;
     const max = Math.min(boxW, boxH) - pad * 2;
     const sc  = Math.min(max / spr.texture.width, max / spr.texture.height);
     spr.scale.set(sc);
     spr.position.set(boxW / 2, boxH / 2);
     if (opts?.tint !== undefined) spr.tint = opts.tint;
-    if (opts?.alpha !== undefined) spr.alpha = opts.alpha;
+    spr.alpha = opts?.alpha ?? 0.94;
     root.addChild(spr);
     return true;
 }
@@ -106,7 +113,12 @@ function vecHudRoutes(size: number, strokeColor: number): Graphics {
 /** BEST — Kenney Yellow star (allowed trophy fallback: rank star). */
 export function createIconHudBest(size: number, accentColor: number): Container {
     const root = new Container();
-    if (!mountKenney(root, size, size, 'menu_best_star', { tint: accentColor, alpha: 0.92, pad: 1 })) {
+    if (!mountKenney(root, size, size, 'menu_best_star', {
+        tint: accentColor,
+        alpha: 0.96,
+        glowColor: accentColor,
+        glowAlpha: 0.14,
+    })) {
         root.addChild(vecHudBest(size, accentColor));
     }
     return root;
@@ -115,7 +127,12 @@ export function createIconHudBest(size: number, accentColor: number): Container 
 /** SECTOR — Blue icon_outline_circle (node / beacon shell). */
 export function createIconHudSector(size: number, accentColor: number): Container {
     const root = new Container();
-    if (!mountKenney(root, size, size, 'menu_sector_circle', { tint: accentColor, alpha: 0.9, pad: 1 })) {
+    if (!mountKenney(root, size, size, 'menu_sector_circle', {
+        tint: accentColor,
+        alpha: 0.95,
+        glowColor: accentColor,
+        glowAlpha: 0.1,
+    })) {
         root.addChild(vecHudSector(size, accentColor));
     }
     return root;
@@ -124,7 +141,12 @@ export function createIconHudSector(size: number, accentColor: number): Containe
 /** ROUTES — Extra icon_repeat_outline (path / loop progression). */
 export function createIconHudRoutes(size: number, accentColor: number): Container {
     const root = new Container();
-    if (!mountKenney(root, size, size, 'menu_routes_repeat', { tint: accentColor, alpha: 0.88, pad: 1 })) {
+    if (!mountKenney(root, size, size, 'menu_routes_repeat', {
+        tint: accentColor,
+        alpha: 0.93,
+        glowColor: accentColor,
+        glowAlpha: 0.1,
+    })) {
         root.addChild(vecHudRoutes(size, accentColor));
     }
     return root;
