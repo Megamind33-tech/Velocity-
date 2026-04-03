@@ -1,330 +1,190 @@
 /**
- * Main menu — portrait game layout.
- * Wires all UI modules: hero, HUD chips, pilot strip, CTA, utility, reward buttons.
+ * Main menu — landscape-first premium layout (PixiJS).
+ * Zones: utility bar, hero card, mode tabs, scrollable mission list, bottom nav.
  */
 
-import { Application, Container, Text } from 'pixi.js';
+import { Application, Container, FederatedPointerEvent } from 'pixi.js';
 import { BaseGameScreen } from '../GameUIManager';
-import { GAME_COLORS, GAME_SIZES } from '../GameUITheme';
+import { GAME_SIZES } from '../GameUITheme';
 import { gameFlow } from '../gameFlowBridge';
-import { getMainMenuProgress, getMenuHighScore } from '../../../data/localProgress';
+import { getMainMenuProgress, getMenuHighScore, getUnlockedLevelIds } from '../../../data/localProgress';
 import { ResponsiveUIManager } from '../../ResponsiveUIManager';
 import {
-    createAvatarBadge,
-    createHudChip,
-    createMenuButton,
-    createPilotStatusStrip,
-    createSettingsDock,
-    getPilotRank,
-    MENU_TIER_HEIGHT,
-} from '../menuLayoutHelpers';
-import { buildHeroModule } from '../menuHeroComposer';
-import { createRewardButton } from '../menuRewardComponents';
+    buildBottomNavDock,
+    buildHeroFlightCard,
+    buildMissionList,
+    buildModeTabs,
+    buildTopUtilityBar,
+    type MissionListBundle,
+    type TopBarRefs,
+} from '../menuLandscape/landscapeMainMenuUI';
+import { getPilotRank } from '../menuLayoutHelpers';
 import { mountVelocityShell, resizeVelocityShell, type VelocityShellParts } from '../velocityScreenShell';
 
-// ─── Layout rhythm ────────────────────────────────────────────────────────────
-const GAP = { xs: 6, sm: 10, md: 14, lg: 20, xl: 26 } as const;
-
-/** Pull modules together so the column reads as one cockpit stack, not isolated rows. */
-const OVERLAP_STATS = 18;
-const OVERLAP_CTA   = 12;
-const OVERLAP_SEC   = 8;
-
-// ─── Idle animation constants ─────────────────────────────────────────────────
-const CTA_PULSE_SPEED    = 0.052;
-const CTA_PULSE_STRENGTH = 0.018;
-const ECO_PULSE_SPEED    = 0.072;
-const ECO_PULSE_STRENGTH = 0.018;
+const GAP_Y = 12;
 
 export class MainMenuScreen extends BaseGameScreen {
     private shell!: VelocityShellParts;
+    private readonly content = new Container();
 
-    // Phase 1: role-based containers
-    readonly topHudContainer          = new Container();
-    readonly titleHeroContainer       = new Container();
-    readonly statsStripContainer      = new Container();
-    readonly mainMenuContainer        = new Container();
-    readonly secondaryMenuContainer   = new Container();
-    readonly economyRowContainer      = new Container();
-    readonly floatingActionsContainer = new Container();
+    private topRefs!: TopBarRefs;
+    private missionBundle!: MissionListBundle;
+    private tabsSetActive!: (i: number) => void;
+    private navSetActive!: (i: number) => void;
 
-    // Animation refs
-    private _ctaBtn:      Container | null = null;
-    private _storeBtn:    Container | null = null;
-    private _rewardsBtn:  Container | null = null;
-    private _secLb:       Container | null = null;
-    private _secAch:      Container | null = null;
     private _tick = 0;
+    private _flyShimmer = 0;
+    private _flyBtn: Container | null = null;
 
-    // Live HUD text refs (child indices: 0=bg, 1=accentLine, 2=label, 3=value)
-    private _chipScoreVal!: Text;
-    private _chipRankVal!:  Text;
-    private _chipStreakVal!: Text;
+    private listDrag = false;
+    private listDragY = 0;
+    private listScrollStart = 0;
 
     constructor(app: Application) {
         super(app);
-        this.topHudContainer.label          = 'topHudContainer';
-        this.titleHeroContainer.label       = 'titleHeroContainer';
-        this.statsStripContainer.label      = 'statsStripContainer';
-        this.mainMenuContainer.label        = 'mainMenuContainer';
-        this.secondaryMenuContainer.label   = 'secondaryMenuContainer';
-        this.economyRowContainer.label      = 'economyRowContainer';
-        this.floatingActionsContainer.label = 'floatingActionsContainer';
-
+        this.content.label = 'mainMenuLandscapeContent';
         this.setupUI();
     }
 
-    // ─── Setup ───────────────────────────────────────────────────────────────
-
     private setupUI(): void {
-        this.shell = mountVelocityShell(this.container, this.app, 0.38, { liveBackdrop: true });
-        this.container.addChild(
-            this.topHudContainer,
-            this.titleHeroContainer,
-            this.statsStripContainer,
-            this.mainMenuContainer,
-            this.secondaryMenuContainer,
-            this.economyRowContainer,
-            this.floatingActionsContainer,
-        );
+        this.shell = mountVelocityShell(this.container, this.app, 0.36, { liveBackdrop: true });
+        this.container.addChild(this.content);
         this.rebuildLayout(this.app.screen.width, this.app.screen.height);
     }
 
-    // ─── Layout metrics ───────────────────────────────────────────────────────
-
-    private contentWidth(screenW: number): number {
-        const safe   = ResponsiveUIManager.getInstance().getSafeAreaPadding();
-        const margin = Math.max(safe.left, safe.right, GAME_SIZES.spacing.md);
-        return Math.max(260, screenW - margin * 2);
+    private safePad() {
+        return ResponsiveUIManager.getInstance().getSafeAreaPadding();
     }
 
-    private marginX(screenW: number, cw: number): number {
-        return (screenW - cw) / 2;
+    private contentWidth(sw: number): number {
+        const s = this.safePad();
+        const m = Math.max(s.left, s.right, GAME_SIZES.spacing.md);
+        return Math.max(320, sw - m * 2);
     }
 
-    // ─── Layout builder ───────────────────────────────────────────────────────
+    private marginX(sw: number, cw: number): number {
+        return (sw - cw) / 2;
+    }
 
-    private rebuildLayout(screenW: number, screenH: number): void {
-        const safe = ResponsiveUIManager.getInstance().getSafeAreaPadding();
-        const cw   = this.contentWidth(screenW);
-        const mx   = this.marginX(screenW, cw);
+    private rebuildLayout(sw: number, sh: number): void {
+        const safe = this.safePad();
+        resizeVelocityShell(this.shell, this.container, sw, sh, 0.36, { liveBackdrop: true });
 
-        resizeVelocityShell(this.shell, this.container, screenW, screenH, 0.38, { liveBackdrop: true });
+        this.content.removeChildren();
 
-        const hudH       = 40;
-        const stripH     = 48;
-        const ctaH       = MENU_TIER_HEIGHT.cta;
-        const secH       = MENU_TIER_HEIGHT.secondary;
-        const rewardRowH = MENU_TIER_HEIGHT.economy;
-        const settingsH  = 34;
-        const bottomPad  = Math.max(GAP.sm, safe.bottom > 0 ? 8 : GAP.sm);
-        const ecoSettingsGap = GAP.sm;
+        const cw = this.contentWidth(sw);
+        const mx = this.marginX(sw, cw);
+        const topY = safe.top + 12;
 
-        let overlapStats = OVERLAP_STATS;
-        let overlapCta   = OVERLAP_CTA;
-        let overlapSec   = OVERLAP_SEC;
-        let heroHCap     = Math.min(152, Math.max(122, Math.floor(screenH * 0.19)));
+        const prog = getMainMenuProgress();
+        const rank = getPilotRank(prog.maxUnlocked);
+        const score = getMenuHighScore();
+        const ui = this.uiManager;
 
-        // Pixel-accurate height from HUD top to settings bottom (each overlap only once in the chain).
-        const stackSpan = (hh: number) =>
-            hudH + GAP.md
-            + hh + GAP.xs
-            + stripH + GAP.md - overlapStats
-            + ctaH + GAP.sm - overlapCta
-            + secH + GAP.md - overlapSec
-            + rewardRowH + ecoSettingsGap + settingsH;
-
-        const availBottom = screenH - safe.bottom - bottomPad;
-        const minTop      = safe.top + GAP.sm;
-        const maxSpan     = Math.max(200, availBottom - minTop);
-
-        // Shrink until the column fits in [minTop, availBottom] (overlap math is single-subtract per row).
-        for (let i = 0; i < 48 && stackSpan(heroHCap) > maxSpan; i++) {
-            if (heroHCap > 88) {
-                heroHCap -= 5;
-            } else {
-                overlapStats = Math.max(0, overlapStats - 2);
-                overlapCta   = Math.max(0, overlapCta - 2);
-                overlapSec   = Math.max(0, overlapSec - 2);
-            }
-        }
-
-        const span = stackSpan(heroHCap);
-        let topY   = availBottom - span;
-        if (topY < minTop) topY = minTop;
-        let y = topY;
-
-        this.topHudContainer.removeChildren();
-        this.titleHeroContainer.removeChildren();
-        this.statsStripContainer.removeChildren();
-        this.mainMenuContainer.removeChildren();
-        this.secondaryMenuContainer.removeChildren();
-        this.economyRowContainer.removeChildren();
-        this.floatingActionsContainer.removeChildren();
-
-        this._ctaBtn       = null;
-        this._storeBtn     = null;
-        this._rewardsBtn   = null;
-        this._secLb        = null;
-        this._secAch       = null;
-        // ── Top HUD: capsule chips + avatar badge ─────────────────────────
-        const badgeSize = 44;
-        const chipW     = Math.floor((cw - GAP.sm * 2 - badgeSize - GAP.sm) / 3);
-        const prog      = getMainMenuProgress();
-
-        const chipScore  = createHudChip('BEST',   String(getMenuHighScore()),  chipW, GAME_COLORS.accent_gold, 'best');
-        const chipRank   = createHudChip('SECTOR', `${prog.maxUnlocked}`,       chipW, GAME_COLORS.primary, 'sector');
-        const chipStreak = createHudChip('ROUTES', `${prog.unlockedCount}`,     chipW, 0x88ddff, 'routes');
-
-        chipRank.position.set(chipW + GAP.sm, 0);
-        chipStreak.position.set((chipW + GAP.sm) * 2, 0);
-
-        const hudVal = (c: Container) => c.getChildAt(c.children.length - 1) as Text;
-        this._chipScoreVal  = hudVal(chipScore);
-        this._chipRankVal   = hudVal(chipRank);
-        this._chipStreakVal = hudVal(chipStreak);
-
-        const badge = createAvatarBadge(badgeSize, 'V');
-        badge.position.set(cw - badgeSize, -2);
-
-        this.topHudContainer.addChild(chipScore, chipRank, chipStreak, badge);
-        this.topHudContainer.position.set(mx, y);
-        y += hudH + GAP.md;
-
-        // ── Hero module — signature cockpit identity zone ──────────────────
-        const heroH = heroHCap;
-        const hero  = buildHeroModule(cw, heroH, {
-            title:     'VELOCITY',
-            subtitle:  'Voice-Powered Flight',
-            hint:      'Mic live · command ready',
-            pilotRank: getPilotRank(prog.maxUnlocked),
-        });
-        this.titleHeroContainer.addChild(hero);
-        this.titleHeroContainer.position.set(mx, y);
-        y += heroH + GAP.xs;
-
-        // ── Pilot status strip — overlaps hero foot (connected progression read) ─
-        const strip = createPilotStatusStrip(cw, {
-            maxUnlocked:   prog.maxUnlocked,
-            unlockedCount: prog.unlockedCount,
-            totalLevels:   prog.totalLevels,
-        });
-        this.statsStripContainer.addChild(strip);
-        this.statsStripContainer.position.set(mx, y - overlapStats);
-        y += stripH + GAP.md - overlapStats;
-
-        // ── Mission Select — launch CTA (energy deck + deploy strip) ───────
-        const cta = createMenuButton(
-            'MISSION SELECT', 'cta', 'primary',
-            () => gameFlow().openMissionSelect(),
+        const topBar = buildTopUtilityBar(
             cw,
-            { ctaLaunch: true },
+            () => ui.showScreen('achievements', true),
+            () => ui.showScreen('settings', true),
+            prog,
+            score,
         );
-        this._ctaBtn = cta;
-        this.mainMenuContainer.addChild(cta);
-        this.mainMenuContainer.position.set(mx, y - overlapCta);
-        y += MENU_TIER_HEIGHT.cta + GAP.sm - overlapCta;
+        this.topRefs = topBar.refs;
+        topBar.root.position.set(mx, topY);
+        this.content.addChild(topBar.root);
 
-        // ── Leaderboard + Achievements — prestige columns, tuck under CTA ──
-        const secW = Math.floor((cw - GAP.sm) / 2);
-        const lb = createMenuButton(
-            'LEADERBOARD', 'secondary', 'secondary',
-            () => this.uiManager.showScreen('leaderboard', true),
-            secW,
-            { social: 'leaderboard' },
-        );
-        const ach = createMenuButton(
-            'ACHIEVEMENTS', 'secondary', 'secondary',
-            () => this.uiManager.showScreen('achievements', true),
-            secW,
-            { social: 'achievements' },
-        );
-        ach.position.set(secW + GAP.sm, 0);
-        this.secondaryMenuContainer.addChild(lb, ach);
-        this.secondaryMenuContainer.position.set(mx, y - overlapSec);
-        y += MENU_TIER_HEIGHT.secondary + GAP.md - overlapSec;
+        let y = topY + 64 + GAP_Y;
 
-        // ── Economy row — reward buttons with icon sockets ────────────────
-        const ecoW    = Math.floor((cw - GAP.sm) / 2);
-        const ecoH    = rewardRowH;
-        const store   = createRewardButton(
-            'store', 'STORE',
-            () => this.uiManager.showScreen('store', true),
-            ecoW, ecoH,
-        );
-        const rewards = createRewardButton(
-            'rewards', 'REWARDS',
-            () => this.uiManager.showScreen('rewards', true),
-            ecoW, ecoH,
-        );
-        rewards.position.set(ecoW + GAP.sm, 0);
-        this._storeBtn   = store;
-        this._rewardsBtn = rewards;
-        this.economyRowContainer.addChild(store, rewards);
-        this.economyRowContainer.position.set(mx, y);
-        y += ecoH + ecoSettingsGap;
+        const heroH = Math.min(190, Math.max(150, Math.floor(sh * 0.28)));
+        const unlocked = getUnlockedLevelIds();
+        const firstPlayable = [...unlocked].sort((a, b) => a - b)[0] ?? 1;
 
-        // ── Settings — flush to safe bottom (no dead band below) ─
-        const settings = createSettingsDock(
-            'SETTINGS',
-            () => this.uiManager.showScreen('settings', true),
-            cw,
-        );
-        this.floatingActionsContainer.addChild(settings);
-        this.floatingActionsContainer.position.set(mx, y);
+        const hero = buildHeroFlightCard(cw, heroH, prog, rank, () => {
+            gameFlow().startLevelWithMicGate?.(firstPlayable);
+        }, () => {
+            gameFlow().openMissionSelect();
+        });
+        hero.position.set(mx, y);
+        this.content.addChild(hero);
+        this._flyBtn = hero.children[hero.children.length - 1] as Container;
 
-        this._secLb  = lb;
-        this._secAch = ach;
+        y += heroH + GAP_Y;
 
-        this._refreshChipTexts();
+        const tabsY = y;
+        y += 46 + GAP_Y;
+
+        const bottomNavH = 68;
+        const listH = Math.max(160, sh - y - bottomNavH - safe.bottom - 16);
+
+        const bundle = buildMissionList(cw, listH, (levelId) => {
+            gameFlow().startLevelWithMicGate?.(levelId);
+        }, () => getMainMenuProgress());
+        this.missionBundle = bundle;
+        bundle.root.position.set(mx, y);
+        this.content.addChild(bundle.root);
+        this.setupListScroll(bundle);
+
+        const tabs = buildModeTabs(cw, (idx) => {
+            this.missionBundle.rebuild(idx);
+            this.tabsSetActive(idx);
+        });
+        this.tabsSetActive = tabs.setActive;
+        tabs.root.position.set(mx, tabsY);
+        this.content.addChild(tabs.root);
+
+        const dock = buildBottomNavDock(cw, ui, () => this.navSetActive(0), (slot) => this.navSetActive(slot));
+        this.navSetActive = dock.setActive;
+        dock.root.position.set(mx, sh - safe.bottom - bottomNavH - 8);
+        this.content.addChild(dock.root);
+
+        this._refreshTopBar();
     }
 
-    // ─── Chip text refresh ────────────────────────────────────────────────────
+    private setupListScroll(bundle: MissionListBundle): void {
+        const root = bundle.root;
+        root.eventMode = 'static';
+        root.cursor = 'grab';
 
-    private _refreshChipTexts(): void {
-        if (this._chipScoreVal)  this._chipScoreVal.text  = String(getMenuHighScore());
+        root.on('pointerdown', (e: FederatedPointerEvent) => {
+            this.listDrag = true;
+            this.listDragY = e.global.y;
+            this.listScrollStart = bundle.getScrollY();
+            root.cursor = 'grabbing';
+        });
+        root.on('pointermove', (e: FederatedPointerEvent) => {
+            if (!this.listDrag) return;
+            const dy = e.global.y - this.listDragY;
+            bundle.setScrollY(this.listScrollStart - dy);
+        });
+        const endDrag = () => {
+            this.listDrag = false;
+            root.cursor = 'grab';
+        };
+        root.on('pointerup', endDrag);
+        root.on('pointerupoutside', endDrag);
+        root.on('pointercancel', endDrag);
+    }
+
+    private _refreshTopBar(): void {
         const p = getMainMenuProgress();
-        if (this._chipRankVal)   this._chipRankVal.text   = `${p.maxUnlocked}`;
-        if (this._chipStreakVal) this._chipStreakVal.text  = `${p.unlockedCount}`;
+        this.topRefs.bestText.text = String(getMenuHighScore());
+        this.topRefs.premiumText.text = `${p.unlockedCount}`;
+        this.topRefs.energyText.text = `${p.maxUnlocked}`;
     }
-
-    // ─── Idle animation ───────────────────────────────────────────────────────
 
     update(deltaTime: number): void {
         if (!this.container.visible) return;
-
         this._tick += deltaTime;
-        const t = this._tick;
+        this.shell.backdropTick?.(this._tick);
 
-        this.shell.backdropTick?.(t);
-
-        // Mission Select — scale + border energy (dominant CTA)
-        if (this._ctaBtn) {
-            const s = 1.0 + Math.sin(t * CTA_PULSE_SPEED) * CTA_PULSE_STRENGTH;
-            this._ctaBtn.scale.set(s);
-            this._ctaBtn.alpha = 0.97 + Math.sin(t * 0.09) * 0.03;
+        if (this._flyBtn) {
+            this._flyShimmer += deltaTime * 0.9;
+            const a = 0.04 * Math.sin(this._flyShimmer);
+            this._flyBtn.alpha = 0.92 + a;
         }
-
-        const secPulse = 1.0 + Math.sin(t * 0.055) * 0.006;
-        if (this._secLb)  this._secLb.scale.set(secPulse);
-        if (this._secAch) this._secAch.scale.set(secPulse);
-
-        if (this._storeBtn && this._storeBtn.scale.x > 0.98) {
-            this._storeBtn.alpha =
-                0.94 + Math.sin(t * ECO_PULSE_SPEED + Math.PI * 0.5) * ECO_PULSE_STRENGTH;
-        }
-        if (this._rewardsBtn && this._rewardsBtn.scale.x > 0.98) {
-            this._rewardsBtn.alpha =
-                0.94 + Math.sin(t * ECO_PULSE_SPEED + Math.PI * 1.5) * ECO_PULSE_STRENGTH;
-        }
-
     }
-
-    // ─── Lifecycle ────────────────────────────────────────────────────────────
 
     show(): void {
         super.show();
-        // Rebuild on show so pilot rank, score, and progress are always fresh
         this.rebuildLayout(this.app.screen.width, this.app.screen.height);
     }
 

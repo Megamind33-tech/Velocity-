@@ -5,6 +5,8 @@
 export type GameFlowCallbacks = {
     openMissionSelect: () => void;
     openMainMenu: () => void;
+    /** Start a level after mic gate (main menu mission rows). */
+    startLevelWithMicGate?: (levelId: number) => void;
 };
 
 let flow: Partial<GameFlowCallbacks> = {};
@@ -17,6 +19,7 @@ export function gameFlow(): GameFlowCallbacks {
     return {
         openMissionSelect: () => flow.openMissionSelect?.(),
         openMainMenu: () => flow.openMainMenu?.(),
+        startLevelWithMicGate: (levelId: number) => flow.startLevelWithMicGate?.(levelId),
     };
 }
 
