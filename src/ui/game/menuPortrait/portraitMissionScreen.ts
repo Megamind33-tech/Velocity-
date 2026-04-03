@@ -17,6 +17,7 @@ import { LEVEL_DEFINITIONS, type LevelDefinition } from '../../../data/levelDefi
 import { gameFlow } from '../gameFlowBridge';
 import type { GameUIManager } from '../GameUIManager';
 import { getVelocityUiTexture, type VelocityUiTextureKey } from '../velocityUiArt';
+import { VELOCITY_UI_SLICE } from '../velocityUiSlice';
 import { kenneyButton, kenneyProgressBar, spriteIcon } from '../menuLandscape/kenneyLandscapeWidgets';
 import { P_COLORS, P_ICON, P_MOTION, P_OPACITY, P_RADIUS, P_SHADOW, P_SPACE, P_TYPO, P_Z } from './missionPortraitTokens';
 import {
@@ -26,7 +27,6 @@ import {
     drawIconMap,
     drawIconMic,
     drawIconProfile,
-    drawIconRetry,
     drawIconRouteNode,
     drawIconStore,
     drawIconWing,
@@ -196,7 +196,6 @@ export type StatusStripProps = {
     bestVal: string;
     premiumVal: string;
     onProfile: () => void;
-    onSettings: () => void;
     onPremiumTap?: () => void;
 };
 
@@ -205,9 +204,8 @@ function buildStatusStrip(p: StatusStripProps): { root: Container; signal: Text;
     const root = new Container();
     const gap = P_SPACE.s8;
     const side = 48;
-    const gearW = 48;
     const chipCount = 3;
-    const chipW = Math.floor((p.cw - side - gearW - gap * (chipCount + 2)) / chipCount);
+    const chipW = Math.floor((p.cw - side - gap * (chipCount + 1)) / chipCount);
     const wChip = Math.max(92, chipW);
 
     const av = new Container();
@@ -237,19 +235,6 @@ function buildStatusStrip(p: StatusStripProps): { root: Container; signal: Text;
         pressable(c3, p.onPremiumTap);
     }
     root.addChild(c3);
-
-    const gear = new Container();
-    const gb = new Graphics();
-    gb.roundRect(0, 0, gearW, H - 4, P_RADIUS.chip);
-    gb.fill({ color: P_COLORS.bgElevated, alpha: 1 });
-    gb.stroke({ color: P_COLORS.strokeSubtle, width: 1, alpha: 0.7 });
-    gear.addChild(gb);
-    const gg = new Graphics();
-    drawIconRetry(gg, gearW / 2, (H - 4) / 2, 20);
-    gear.addChild(gg);
-    gear.position.set(p.cw - gearW, 2);
-    pressable(gear, p.onSettings);
-    root.addChild(gear);
 
     return {
         root,
@@ -418,8 +403,8 @@ function buildFeaturedMissionCard(p: FeaturedProps): {
     starLbl.position.set(pad, rowY - 20);
     root.addChild(starLbl);
 
-    const fly =
-        kenneyButton('FLY NOW', flyW, 40, 'button_primary', false, p.onFly) ?? buildFallbackFly(flyW, 40, p.onFly);
+        const fly =
+            kenneyButton('FLY NOW', flyW, 36, 'button_primary', false, p.onFly) ?? buildFallbackFly(flyW, 36, p.onFly);
     fly.label = 'heroFlyCta';
     fly.position.set(p.cw - pad - flyW, rowY);
     root.addChild(fly);
@@ -482,10 +467,10 @@ function buildSegmentTabs(
         if (useK) {
             const spr = new NineSliceSprite({
                 texture: getVelocityUiTexture('button_secondary')!,
-                leftWidth: 56,
-                rightWidth: 56,
-                topHeight: 20,
-                bottomHeight: 20,
+                leftWidth: VELOCITY_UI_SLICE.button.L,
+                rightWidth: VELOCITY_UI_SLICE.button.R,
+                topHeight: VELOCITY_UI_SLICE.button.T,
+                bottomHeight: VELOCITY_UI_SLICE.button.B,
                 width: tabW - 4,
                 height: H - 12,
             });
@@ -603,8 +588,8 @@ function buildMissionCardPortrait(
     else drawIconLock(ic, icX, icY, 20);
     root.addChild(ic);
 
-    const btnW = 100;
-    const btnH = 44;
+    const btnW = 96;
+    const btnH = 38;
     const tx = icX + P_ICON.emblem + P_SPACE.s12;
     const tw = cw - tx - btnW - P_SPACE.s16 - 56;
 
@@ -892,7 +877,6 @@ export function buildPortraitMissionScreen(p: BuildPortraitMissionScreenParams):
         bestVal: String(p.getBestScore()),
         premiumVal: `${prog.unlockedCount}`,
         onProfile: () => p.ui.showScreen('settings', true),
-        onSettings: () => p.ui.showScreen('settings', true),
         onPremiumTap: () => gameFlow().openAchievements?.(),
     });
     strip.root.position.set(0, y);

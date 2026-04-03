@@ -1,5 +1,5 @@
 /**
- * Kenney UI Pack chrome for landscape main menu — nine-slice buttons, panels, progress, icons.
+ * SunGraphica sci-fi UI chrome — nine-slice buttons, panels, progress, icons.
  */
 
 import {
@@ -14,10 +14,11 @@ import {
 import { getVelocityUiTexture, type VelocityUiTextureKey } from '../velocityUiArt';
 import { GAME_COLORS, GAME_FONTS } from '../GameUITheme';
 import { createKenneyFramedPanelWithContent, createKenneyHProgressBar } from '../kenneyNineSlice';
+import { VELOCITY_UI_SLICE } from '../velocityUiSlice';
 
-const KS = { L: 56, R: 56, T: 20, B: 20 } as const;
+const BS = VELOCITY_UI_SLICE.button;
+const PS = VELOCITY_UI_SLICE.panel;
 
-/** Velocity identity on Kenney blue chrome */
 const CYAN_TINT = 0x22ddcc;
 
 function press(root: Container, onClick: () => void): void {
@@ -37,7 +38,7 @@ function press(root: Container, onClick: () => void): void {
     root.on('pointercancel', () => root.scale.set(1));
 }
 
-/** Kenney nine-slice button; returns null if textures not loaded. */
+/** Nine-slice button; returns null if textures not loaded. */
 export function kenneyButton(
     label: string,
     w: number,
@@ -51,10 +52,10 @@ export function kenneyButton(
     const root = new Container();
     const spr = new NineSliceSprite({
         texture: tex,
-        leftWidth: KS.L,
-        rightWidth: KS.R,
-        topHeight: KS.T,
-        bottomHeight: KS.B,
+        leftWidth: BS.L,
+        rightWidth: BS.R,
+        topHeight: BS.T,
+        bottomHeight: BS.B,
         width: w,
         height: h,
     });
@@ -66,7 +67,7 @@ export function kenneyButton(
         text: label,
         style: new TextStyle({
             fill: textLight ? 0xffffff : 0x0a1218,
-            fontSize: Math.min(16, Math.floor(h * 0.32)),
+            fontSize: Math.min(14, Math.floor(h * 0.34)),
             fontWeight: '700',
             fontFamily: GAME_FONTS.standard,
             align: 'center',
@@ -81,7 +82,7 @@ export function kenneyButton(
     return root;
 }
 
-/** Compact stat chip: grey Kenney button + icon + two text lines. */
+/** Compact stat chip: secondary button chrome + icon + two text lines. */
 export function kenneyStatChip(
     iconKey: VelocityUiTextureKey,
     label: string,
@@ -95,10 +96,10 @@ export function kenneyStatChip(
     const root = new Container();
     const spr = new NineSliceSprite({
         texture: tex,
-        leftWidth: KS.L,
-        rightWidth: KS.R,
-        topHeight: KS.T,
-        bottomHeight: KS.B,
+        leftWidth: BS.L,
+        rightWidth: BS.R,
+        topHeight: BS.T,
+        bottomHeight: BS.B,
         width: w,
         height: h,
     });
@@ -152,10 +153,10 @@ export function kenneyChromeHit(w: number, h: number, onClick: () => void): Cont
     const root = new Container();
     const spr = new NineSliceSprite({
         texture: tex,
-        leftWidth: KS.L,
-        rightWidth: KS.R,
-        topHeight: KS.T,
-        bottomHeight: KS.B,
+        leftWidth: BS.L,
+        rightWidth: BS.R,
+        topHeight: BS.T,
+        bottomHeight: BS.B,
         width: w,
         height: h,
     });
@@ -165,7 +166,7 @@ export function kenneyChromeHit(w: number, h: number, onClick: () => void): Cont
     return root;
 }
 
-/** Circular pilot plate using Kenney round button. */
+/** Circular pilot plate using unlocked-node icon. */
 export function kenneyAvatarPlate(size: number, onClick: () => void): Container | null {
     const tex = getVelocityUiTexture('node_unlocked');
     if (!tex) return null;
@@ -238,10 +239,10 @@ export function kenneyRowPanel(cw: number, rowH: number): Container | null {
     const root = new Container();
     const spr = new NineSliceSprite({
         texture: tex,
-        leftWidth: KS.L,
-        rightWidth: KS.R,
-        topHeight: KS.T,
-        bottomHeight: KS.B,
+        leftWidth: BS.L,
+        rightWidth: BS.R,
+        topHeight: BS.T,
+        bottomHeight: BS.B,
         width: cw,
         height: rowH,
     });
@@ -261,10 +262,10 @@ export function kenneyTabTrack(cw: number, h: number): Container | null {
     const root = new Container();
     const spr = new NineSliceSprite({
         texture: tex,
-        leftWidth: KS.L,
-        rightWidth: KS.R,
-        topHeight: KS.T,
-        bottomHeight: KS.B,
+        leftWidth: PS.L,
+        rightWidth: PS.R,
+        topHeight: PS.T,
+        bottomHeight: PS.B,
         width: cw,
         height: h,
     });
@@ -284,10 +285,10 @@ export function kenneyDockBar(cw: number, h: number): Container | null {
     const root = new Container();
     const spr = new NineSliceSprite({
         texture: tex,
-        leftWidth: KS.L,
-        rightWidth: KS.R,
-        topHeight: KS.T,
-        bottomHeight: KS.B,
+        leftWidth: PS.L,
+        rightWidth: PS.R,
+        topHeight: PS.T,
+        bottomHeight: PS.B,
         width: cw,
         height: h,
     });

@@ -1,5 +1,5 @@
 /**
- * Uniform buttons: Kenney UI Pack when preloaded, else vector fallback.
+ * Uniform buttons: SunGraphica nine-slice when preloaded, else vector fallback.
  */
 
 import { Container } from 'pixi.js';
@@ -26,8 +26,8 @@ export function createVelocityGameButton(
     onClick: () => void,
     opts?: { width?: number; height?: number }
 ): Container {
-    const w = opts?.width ?? 200;
-    const h = opts?.height ?? 48;
+    const w = opts?.width ?? 180;
+    const h = opts?.height ?? 42;
     const fallbackType =
         type === 'success' ? 'success' : type === 'primary' ? 'primary' : type === 'danger' ? 'danger' : type === 'accent' ? 'accent' : 'secondary';
 

@@ -59,3 +59,13 @@ export function getMainMenuProgress(): { maxUnlocked: number; unlockedCount: num
     const maxUnlocked = s.size ? Math.max(...s) : 1;
     return { maxUnlocked, unlockedCount: s.size, totalLevels: 20 };
 }
+
+/** Clear unlocks and menu high score (settings “reset progress”). */
+export function resetLocalProgress(): void {
+    try {
+        localStorage.removeItem(STORAGE_KEY);
+        localStorage.removeItem(HIGH_SCORE_KEY);
+    } catch {
+        /* ignore */
+    }
+}

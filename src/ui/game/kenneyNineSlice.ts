@@ -1,26 +1,24 @@
 /**
- * Nine-slice for Kenney UI Pack rectangles (192×64): buttons + input outline panel.
+ * Nine-slice for SunGraphica sci-fi UI PNGs (see `public/sungraphica-ui/`).
  */
 
 import { Container, FederatedPointerEvent, NineSliceSprite, Text, TextStyle, TilingSprite } from 'pixi.js';
 import { getVelocityUiTexture, type VelocityUiTextureKey } from './velocityUiArt';
 import { GAME_COLORS, GAME_FONTS } from './GameUITheme';
+import { VELOCITY_UI_SLICE } from './velocityUiSlice';
 
-/** Shared 192×64 Kenney slices (buttons + input_outline_rectangle). */
-const SLICE_L = 56;
-const SLICE_R = 56;
-const SLICE_T = 20;
-const SLICE_B = 20;
+const BS = VELOCITY_UI_SLICE.button;
+const PS = VELOCITY_UI_SLICE.panel;
 
 export function createKenneyPanelNineSlice(width: number, height: number): NineSliceSprite | null {
     const tex = getVelocityUiTexture('panel_frame');
     if (!tex) return null;
     return new NineSliceSprite({
         texture: tex,
-        leftWidth: SLICE_L,
-        rightWidth: SLICE_R,
-        topHeight: SLICE_T,
-        bottomHeight: SLICE_B,
+        leftWidth: PS.L,
+        rightWidth: PS.R,
+        topHeight: PS.T,
+        bottomHeight: PS.B,
         width,
         height,
     });
@@ -50,10 +48,10 @@ export function createKenneyNineSliceButton(
 
     const bg = new NineSliceSprite({
         texture: tex,
-        leftWidth: SLICE_L,
-        rightWidth: SLICE_R,
-        topHeight: SLICE_T,
-        bottomHeight: SLICE_B,
+        leftWidth: BS.L,
+        rightWidth: BS.R,
+        topHeight: BS.T,
+        bottomHeight: BS.B,
         width,
         height,
     });
@@ -63,7 +61,7 @@ export function createKenneyNineSliceButton(
         variant === 'accent' ? 0x1a1a22 : 0xffffff;
     const style = new TextStyle({
         fill: textFill,
-        fontSize: Math.min(16, Math.floor(height * 0.34)),
+        fontSize: Math.min(15, Math.floor(height * 0.36)),
         fontWeight: 'bold',
         fontFamily: GAME_FONTS.arcade,
         align: 'center',
@@ -121,10 +119,10 @@ export function createKenneyFramedPanelWithContent(
 
     const fill = new NineSliceSprite({
         texture: fillTex,
-        leftWidth: SLICE_L,
-        rightWidth: SLICE_R,
-        topHeight: SLICE_T,
-        bottomHeight: SLICE_B,
+        leftWidth: PS.L,
+        rightWidth: PS.R,
+        topHeight: PS.T,
+        bottomHeight: PS.B,
         width: iw,
         height: ih,
     });
@@ -133,10 +131,10 @@ export function createKenneyFramedPanelWithContent(
 
     const frame = new NineSliceSprite({
         texture: frameTex,
-        leftWidth: SLICE_L,
-        rightWidth: SLICE_R,
-        topHeight: SLICE_T,
-        bottomHeight: SLICE_B,
+        leftWidth: PS.L,
+        rightWidth: PS.R,
+        topHeight: PS.T,
+        bottomHeight: PS.B,
         width,
         height,
     });

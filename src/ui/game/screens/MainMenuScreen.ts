@@ -140,7 +140,6 @@ export class MainMenuScreen extends BaseGameScreen {
         const topBar = buildTopUtilityBar(
             cw,
             () => ui.showScreen('settings', true),
-            () => ui.showScreen('settings', true),
             prog,
             score,
             () => gameFlow().openAchievements?.(),
