@@ -16,11 +16,12 @@ import { getMainMenuProgress, isLevelUnlocked } from '../../../data/localProgres
 import { LEVEL_DEFINITIONS, type LevelDefinition } from '../../../data/levelDefinitions';
 import { gameFlow } from '../gameFlowBridge';
 import type { GameUIManager } from '../GameUIManager';
-import { getVelocityUiTexture } from '../velocityUiArt';
+import { getVelocityUiTexture, type VelocityUiTextureKey } from '../velocityUiArt';
+import { mountKenneySpriteIcon } from '../kenneyUiSprites';
 import { VELOCITY_UI_SLICE } from '../velocityUiSlice';
+import { kenneyButton, kenneyProgressBar, kenneyRowPanel } from '../menuLandscape/kenneyLandscapeWidgets';
 
 const PORTRAIT_TAB_BS = VELOCITY_UI_SLICE.button;
-import { kenneyButton, kenneyProgressBar } from '../menuLandscape/kenneyLandscapeWidgets';
 import { P_COLORS, P_ICON, P_MOTION, P_OPACITY, P_RADIUS, P_SHADOW, P_SPACE, P_TYPO, P_Z } from './missionPortraitTokens';
 import {
     drawIconHangar,
@@ -169,6 +170,7 @@ function buildStatusChip(
     w: number,
     h: number,
     accent: 'cyan' | 'gold',
+    icon?: { key: VelocityUiTextureKey; tint?: number; size?: number },
 ): Container {
     const root = new Container();
     const g = new Graphics();
@@ -182,11 +184,19 @@ function buildStatusChip(
     rim.stroke({ color: P_COLORS.strokeSubtle, width: 1, alpha: 0.4 });
     root.addChild(rim);
 
+    const textX = icon ? 40 : P_SPACE.s10;
+    if (icon) {
+        mountKenneySpriteIcon(root, icon.key, 22, h / 2, icon.size ?? 20, {
+            tint: icon.tint,
+            alpha: 0.95,
+        });
+    }
+
     const lb = new Text({ text: label, style: ts(P_TYPO.label, P_COLORS.textMuted) });
-    lb.position.set(P_SPACE.s10, P_SPACE.s6);
+    lb.position.set(textX, P_SPACE.s6);
     root.addChild(lb);
     const vt = new Text({ text: value, style: ts(P_TYPO.meta, P_COLORS.textPrimary) });
-    vt.position.set(P_SPACE.s10, P_SPACE.s6 + 14);
+    vt.position.set(textX, P_SPACE.s6 + 14);
     root.addChild(vt);
     return root;
 }
@@ -215,20 +225,34 @@ function buildStatusStrip(p: StatusStripProps): { root: Container; signal: Text;
     avBg.fill({ color: P_COLORS.bgPanel, alpha: 1 });
     avBg.stroke({ color: P_COLORS.strokeActive, width: 1.5, alpha: 0.45 });
     av.addChild(avBg);
-    const avG = new Graphics();
-    drawIconProfile(avG, side / 2, side / 2, P_ICON.strip);
-    av.addChild(avG);
+    if (!mountKenneySpriteIcon(av, 'menu_profile_star_outline', side / 2, side / 2, 28, { tint: P_COLORS.accentCyan })) {
+        const avG = new Graphics();
+        drawIconProfile(avG, side / 2, side / 2, P_ICON.strip);
+        av.addChild(avG);
+    }
     pressable(av, p.onProfile);
     root.addChild(av);
 
     const x0 = side + gap;
-    const c1 = buildStatusChip('SIGNAL', p.signalVal, wChip, H - 4, 'cyan');
+    const c1 = buildStatusChip('SIGNAL', p.signalVal, wChip, H - 4, 'cyan', {
+        key: 'menu_routes_repeat',
+        tint: P_COLORS.accentCyan,
+        size: 20,
+    });
     c1.position.set(x0, 2);
     root.addChild(c1);
-    const c2 = buildStatusChip('BEST', p.bestVal, wChip, H - 4, 'gold');
+    const c2 = buildStatusChip('BEST', p.bestVal, wChip, H - 4, 'gold', {
+        key: 'menu_best_star',
+        tint: P_COLORS.accentGold,
+        size: 20,
+    });
     c2.position.set(x0 + wChip + gap, 2);
     root.addChild(c2);
-    const c3 = buildStatusChip('PREMIUM', p.premiumVal, wChip, H - 4, 'gold');
+    const c3 = buildStatusChip('PREMIUM', p.premiumVal, wChip, H - 4, 'gold', {
+        key: 'menu_rewards_star_outline',
+        tint: 0xcc88ff,
+        size: 20,
+    });
     c3.position.set(x0 + (wChip + gap) * 2, 2);
     if (p.onPremiumTap) {
         c3.eventMode = 'static';
@@ -337,11 +361,18 @@ function buildFeaturedMissionCard(p: FeaturedProps): {
     const emblemR = 28;
     const ex = p.cw - pad - emblemR;
     const ey = pad + 24;
-    const eg = new Graphics();
-    eg.circle(ex, ey, 22);
-    eg.stroke({ color: P_COLORS.accentGold, width: 1.2, alpha: 0.4 });
-    drawIconRouteNode(eg, ex, ey, emblemR * 0.5, { color: P_COLORS.accentGold, width: 2, alpha: 0.9 });
-    root.addChild(eg);
+    const emblem = new Container();
+    emblem.position.set(ex, ey);
+    const egRing = new Graphics();
+    egRing.circle(0, 0, 22);
+    egRing.stroke({ color: P_COLORS.accentGold, width: 1.2, alpha: 0.4 });
+    emblem.addChild(egRing);
+    if (!mountKenneySpriteIcon(emblem, 'menu_radar_center', 0, 0, 34, { tint: P_COLORS.accentGold })) {
+        const eg = new Graphics();
+        drawIconRouteNode(eg, 0, 0, emblemR * 0.5, { color: P_COLORS.accentGold, width: 2, alpha: 0.9 });
+        emblem.addChild(eg);
+    }
+    root.addChild(emblem);
 
     const rewardShimmer = new Graphics();
     rewardShimmer.position.set(ex - emblemR, ey - emblemR);
@@ -370,9 +401,16 @@ function buildFeaturedMissionCard(p: FeaturedProps): {
     rankRoot.addChild(rankGlow);
     const wingX = 14;
     const textPad = 36;
-    const wg = new Graphics();
-    drawIconWing(wg, wingX, chipH / 2, 13);
-    rankRoot.addChild(wg);
+    if (
+        !mountKenneySpriteIcon(rankRoot, 'menu_pilot_class_star', wingX, chipH / 2, 20, {
+            tint: P_COLORS.accentGold,
+            alpha: 0.92,
+        })
+    ) {
+        const wg = new Graphics();
+        drawIconWing(wg, wingX, chipH / 2, 13);
+        rankRoot.addChild(wg);
+    }
     const rt = new Text({
         text: trunc(`Class: ${p.rank}`, Math.max(10, Math.floor((rankW - textPad - 8) / 7))),
         style: ts(P_TYPO.chip, P_COLORS.textPrimary),
@@ -389,8 +427,8 @@ function buildFeaturedMissionCard(p: FeaturedProps): {
     starLbl.position.set(pad, rowY - 20);
     root.addChild(starLbl);
 
-        const fly =
-            kenneyButton('FLY NOW', flyW, 36, 'button_primary', false, p.onFly) ?? buildFallbackFly(flyW, 36, p.onFly);
+    const fly =
+        kenneyButton('FLY NOW', flyW, 36, 'button_primary', false, p.onFly) ?? buildFallbackFly(flyW, 36, p.onFly);
     fly.label = 'heroFlyCta';
     fly.position.set(p.cw - pad - flyW, rowY);
     root.addChild(fly);
@@ -544,20 +582,34 @@ function buildMissionCardPortrait(
     const completed = unlocked && level.id < maxUnlocked;
     const elite = level.id >= 18;
 
-    const g = new Graphics();
-    g.roundRect(0, 0, cw, rowH, P_RADIUS.panel - 2);
-    if (unlocked) {
-        g.fill({ color: P_COLORS.bgPanelActive, alpha: 1 });
-        g.stroke({ color: P_COLORS.strokeActive, width: 1.5, alpha: 0.35 });
+    const kPlate = kenneyRowPanel(cw, rowH);
+    if (kPlate) {
+        kPlate.alpha = unlocked ? 0.95 : 0.72;
+        const baseSpr = kPlate.children[0];
+        if (baseSpr && 'tint' in baseSpr) {
+            (baseSpr as { tint: number }).tint = unlocked ? 0xc8e0f5 : 0x8a94a4;
+        }
+        root.addChild(kPlate);
     } else {
-        g.fill({ color: P_COLORS.bgPanelLocked, alpha: P_OPACITY.lockedSurface });
-        g.stroke({ color: P_COLORS.stateLocked, width: 1, alpha: P_OPACITY.lockedStroke });
+        const g = new Graphics();
+        g.roundRect(0, 0, cw, rowH, P_RADIUS.panel - 2);
+        if (unlocked) {
+            g.fill({ color: P_COLORS.bgPanelActive, alpha: 1 });
+            g.stroke({ color: P_COLORS.strokeActive, width: 1.5, alpha: 0.35 });
+        } else {
+            g.fill({ color: P_COLORS.bgPanelLocked, alpha: P_OPACITY.lockedSurface });
+            g.stroke({ color: P_COLORS.stateLocked, width: 1, alpha: P_OPACITY.lockedStroke });
+        }
+        root.addChild(g);
     }
-    root.addChild(g);
 
     const ridge = new Graphics();
     ridge.roundRect(2, 2, cw - 4, rowH - 4, P_RADIUS.panel - 4);
-    ridge.stroke({ color: P_COLORS.strokeSubtle, width: 1, alpha: unlocked ? 0.25 : 0.5 });
+    ridge.stroke({
+        color: unlocked ? P_COLORS.strokeActive : P_COLORS.strokeSubtle,
+        width: 1,
+        alpha: unlocked ? 0.35 : 0.5,
+    });
     root.addChild(ridge);
 
     const badge = new Graphics();
@@ -572,10 +624,20 @@ function buildMissionCardPortrait(
     });
     root.addChild(badge);
 
-    const ic = new Graphics();
-    if (unlocked) drawIconRouteNode(ic, icX, icY, 10, { color: P_COLORS.accentCyan, width: 2, alpha: 0.9 });
-    else drawIconLock(ic, icX, icY, 20);
-    root.addChild(ic);
+    const icHolder = new Container();
+    icHolder.position.set(icX, icY);
+    if (unlocked) {
+        if (!mountKenneySpriteIcon(icHolder, 'menu_radar_center', 0, 0, P_ICON.emblem * 1.35, { tint: P_COLORS.accentCyan })) {
+            const ic = new Graphics();
+            drawIconRouteNode(ic, 0, 0, 10, { color: P_COLORS.accentCyan, width: 2, alpha: 0.9 });
+            icHolder.addChild(ic);
+        }
+    } else if (!mountKenneySpriteIcon(icHolder, 'node_locked', 0, 0, P_ICON.emblem * 1.85, { tint: P_COLORS.stateLocked })) {
+        const ic = new Graphics();
+        drawIconLock(ic, 0, 0, 20);
+        icHolder.addChild(ic);
+    }
+    root.addChild(icHolder);
 
     const btnW = 96;
     const btnH = 38;
@@ -641,18 +703,35 @@ function buildPlayFallback(w: number, h: number, onPlay: () => void): Container 
 function buildLockedButton(w: number, h: number): Container {
     const c = new Container();
     c.eventMode = 'none';
-    const g = new Graphics();
-    g.roundRect(0, 0, w, h, P_RADIUS.button);
-    g.fill({ color: P_COLORS.bgElevated, alpha: 1 });
-    g.stroke({ color: P_COLORS.stateLocked, width: 1.5, alpha: 0.7 });
-    c.addChild(g);
-    const inset = new Graphics();
-    inset.roundRect(2, 2, w - 4, h - 4, P_RADIUS.button - 2);
-    inset.stroke({ color: P_COLORS.strokeSubtle, width: 1, alpha: 0.5 });
-    c.addChild(inset);
+    const tex = getVelocityUiTexture('button_secondary');
+    if (tex) {
+        const spr = new NineSliceSprite({
+            texture: tex,
+            leftWidth: PORTRAIT_TAB_BS.L,
+            rightWidth: PORTRAIT_TAB_BS.R,
+            topHeight: PORTRAIT_TAB_BS.T,
+            bottomHeight: PORTRAIT_TAB_BS.B,
+            width: w,
+            height: h,
+        });
+        spr.alpha = 0.55;
+        spr.tint = 0x6a7585;
+        c.addChild(spr);
+        mountKenneySpriteIcon(c, 'node_locked', w / 2, h / 2 - 9, 20, { tint: P_COLORS.stateLocked, alpha: 0.9 });
+    } else {
+        const g = new Graphics();
+        g.roundRect(0, 0, w, h, P_RADIUS.button);
+        g.fill({ color: P_COLORS.bgElevated, alpha: 1 });
+        g.stroke({ color: P_COLORS.stateLocked, width: 1.5, alpha: 0.7 });
+        c.addChild(g);
+        const inset = new Graphics();
+        inset.roundRect(2, 2, w - 4, h - 4, P_RADIUS.button - 2);
+        inset.stroke({ color: P_COLORS.strokeSubtle, width: 1, alpha: 0.5 });
+        c.addChild(inset);
+    }
     const t = new Text({ text: 'LOCKED', style: ts(P_TYPO.button, P_COLORS.textSecondary) });
     t.anchor.set(0.5);
-    t.position.set(w / 2, h / 2);
+    t.position.set(w / 2, h / 2 + 11);
     c.addChild(t);
     return c;
 }
@@ -730,8 +809,16 @@ function buildBottomDockPortrait(
         label: string;
         onTap: () => void;
         draw: (g: Graphics, cx: number, cy: number, s: number) => void;
+        kenney?: VelocityUiTextureKey;
+        kenneyTint?: number;
     }[] = [
-        { label: 'Home', onTap: () => { navIndexBySlot?.(0); onHome(); }, draw: (g, cx, cy, s) => drawIconHome(g, cx, cy, s) },
+        {
+            label: 'Home',
+            onTap: () => { navIndexBySlot?.(0); onHome(); },
+            draw: (g, cx, cy, s) => drawIconHome(g, cx, cy, s),
+            kenney: 'icon_nav_home',
+            kenneyTint: P_COLORS.accentCyan,
+        },
         {
             label: 'Missions',
             onTap: () => {
@@ -739,6 +826,8 @@ function buildBottomDockPortrait(
                 gameFlow().openMissionSelect();
             },
             draw: (g, cx, cy, s) => drawIconMap(g, cx, cy, s),
+            kenney: 'menu_nav_map',
+            kenneyTint: P_COLORS.accentCyan,
         },
         {
             label: 'Hangar',
@@ -747,6 +836,8 @@ function buildBottomDockPortrait(
                 ui.showScreen('store', true);
             },
             draw: (g, cx, cy, s) => drawIconHangar(g, cx, cy, s),
+            kenney: 'menu_status_led',
+            kenneyTint: 0xaabbcc,
         },
         {
             label: 'Store',
@@ -755,6 +846,8 @@ function buildBottomDockPortrait(
                 ui.showScreen('store', true);
             },
             draw: (g, cx, cy, s) => drawIconStore(g, cx, cy, s),
+            kenney: 'menu_store_icon',
+            kenneyTint: P_COLORS.accentGold,
         },
     ];
 
@@ -777,9 +870,14 @@ function buildBottomDockPortrait(
         dockCradles.push(cradle);
         slot.addChild(cradle);
 
-        const vecG = new Graphics();
-        it.draw(vecG, cx, 26, 20);
-        slot.addChild(vecG);
+        if (
+            !it.kenney ||
+            !mountKenneySpriteIcon(slot, it.kenney, cx, 26, 24, { tint: it.kenneyTint, alpha: 0.95 })
+        ) {
+            const vecG = new Graphics();
+            it.draw(vecG, cx, 26, 20);
+            slot.addChild(vecG);
+        }
 
         const t = new Text({ text: it.label, style: ts(P_TYPO.navLabel, P_COLORS.navInactive) });
         t.anchor.set(0.5, 0);

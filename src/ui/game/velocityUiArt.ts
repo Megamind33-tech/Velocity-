@@ -31,7 +31,10 @@ export type VelocityUiTextureKey =
     | 'menu_icon_square_grey'
     | 'menu_store_icon'
     | 'menu_rewards_star_outline'
-    | 'menu_settings_repeat';
+    | 'menu_settings_repeat'
+    /** Dock — distinct Kenney glyphs per slot */
+    | 'icon_nav_home'
+    | 'menu_nav_map';
 
 const MANIFEST: Record<VelocityUiTextureKey, string> = {
     button_primary: `${BASE}/Blue/Default/button_rectangle_depth_gloss.png`,
@@ -59,6 +62,9 @@ const MANIFEST: Record<VelocityUiTextureKey, string> = {
     menu_store_icon: `${BASE}/Yellow/Default/icon_square.png`,
     menu_rewards_star_outline: `${BASE}/Yellow/Default/star_outline_depth.png`,
     menu_settings_repeat: `${BASE}/Extra/Default/icon_repeat_dark.png`,
+
+    icon_nav_home: `${BASE}/Blue/Default/icon_square.png`,
+    menu_nav_map: `${BASE}/Blue/Default/icon_outline_square.png`,
 };
 
 const cache = new Map<VelocityUiTextureKey, Texture>();

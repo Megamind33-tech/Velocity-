@@ -18,6 +18,7 @@ import { LEVEL_DEFINITIONS, type LevelDefinition } from '../../../data/levelDefi
 import { gameFlow } from '../gameFlowBridge';
 import type { GameUIManager } from '../GameUIManager';
 import { getVelocityUiTexture, type VelocityUiTextureKey } from '../velocityUiArt';
+import { mountKenneySpriteIcon } from '../kenneyUiSprites';
 import { VELOCITY_UI_SLICE } from '../velocityUiSlice';
 import {
     kenneyAvatarPlate,
@@ -233,20 +234,35 @@ export function buildTopUtilityBar(
 
     const x0 = 60 + gap;
     const c1 =
-        kenneyStatChip(icoBarsSignal, 'SIGNAL', `${prog.maxUnlocked}`, chipW, H - 4) ??
-        vectorStatChip(icoBarsSignal, 'SIGNAL', `${prog.maxUnlocked}`, chipW, H - 4);
+        kenneyStatChip(
+            { kind: 'texture', key: 'menu_routes_repeat', size: 22, tint: C.cyan },
+            'SIGNAL',
+            `${prog.maxUnlocked}`,
+            chipW,
+            H - 4,
+        ) ?? vectorStatChip(icoBarsSignal, 'SIGNAL', `${prog.maxUnlocked}`, chipW, H - 4);
     c1.position.set(x0, 2);
     root.addChild(c1);
 
     const c2 =
-        kenneyStatChip(icoStarBadge, 'BEST', String(bestScore), chipW, H - 4) ??
-        vectorStatChip(icoStarBadge, 'BEST', String(bestScore), chipW, H - 4);
+        kenneyStatChip(
+            { kind: 'texture', key: 'menu_best_star', size: 22, tint: C.gold },
+            'BEST',
+            String(bestScore),
+            chipW,
+            H - 4,
+        ) ?? vectorStatChip(icoStarBadge, 'BEST', String(bestScore), chipW, H - 4);
     c2.position.set(x0 + chipW + gap, 2);
     root.addChild(c2);
 
     const c3 =
-        kenneyStatChip(icoGemPremium, 'PREMIUM', `${prog.unlockedCount}`, chipW, H - 4) ??
-        vectorStatChip(icoGemPremium, 'PREMIUM', `${prog.unlockedCount}`, chipW, H - 4);
+        kenneyStatChip(
+            { kind: 'texture', key: 'menu_rewards_star_outline', size: 22, tint: 0xcc88ff },
+            'PREMIUM',
+            `${prog.unlockedCount}`,
+            chipW,
+            H - 4,
+        ) ?? vectorStatChip(icoGemPremium, 'PREMIUM', `${prog.unlockedCount}`, chipW, H - 4);
     c3.position.set(x0 + (chipW + gap) * 2, 2);
     if (onPremiumTap) {
         c3.eventMode = 'static';
@@ -386,11 +402,14 @@ export function buildHeroFlightCard(
 
         const emblemX = ox + contentW - rightEmblem / 2;
         const emblemY = 34;
-        const rg = new Graphics();
-        rg.circle(emblemX, emblemY, 26);
-        rg.stroke({ color: C.cyan, width: 1.5, alpha: 0.35 });
-        icoRadar(rg, emblemX, emblemY, 18);
-        content.addChild(rg);
+        const emblem = new Container();
+        emblem.position.set(emblemX, emblemY);
+        const ring = new Graphics();
+        ring.circle(0, 0, 26);
+        ring.stroke({ color: C.cyan, width: 1.5, alpha: 0.35 });
+        emblem.addChild(ring);
+        mountKenneySpriteIcon(emblem, 'menu_radar_center', 0, 0, 34, { tint: C.gold, alpha: 0.95 });
+        content.addChild(emblem);
 
         const prog01 = prog.totalLevels > 0 ? prog.unlockedCount / prog.totalLevels : 0;
         const progLbl = new Text({
@@ -426,9 +445,16 @@ export function buildHeroFlightCard(
         cls.addChild(cb);
         const wingX = 14;
         const textPad = 36;
-        const wg = new Graphics();
-        icoWing(wg, wingX, useBtnH / 2, 13);
-        cls.addChild(wg);
+        if (
+            !mountKenneySpriteIcon(cls, 'menu_pilot_class_star', wingX, useBtnH / 2, 20, {
+                tint: C.gold,
+                alpha: 0.92,
+            })
+        ) {
+            const wg = new Graphics();
+            icoWing(wg, wingX, useBtnH / 2, 13);
+            cls.addChild(wg);
+        }
         const clab = new Text({
             text: trunc(`Class: ${rank}`, Math.max(8, Math.floor((clsW - textPad - 8) / 7))),
             style: style(12, '700', C.text),
@@ -599,10 +625,20 @@ function missionRow(
     icBg.fill({ color: C.surface2, alpha: 1 });
     icBg.stroke({ color: unlocked ? C.cyan : C.muted, width: 2, alpha: unlocked ? 0.55 : 0.4 });
     root.addChild(icBg);
-    const icGlyph = new Graphics();
-    if (unlocked) icoRadar(icGlyph, icX, icY, iconR * 0.55);
-    else icoLockSmall(icGlyph, icX, icY, iconR * 1.1);
-    root.addChild(icGlyph);
+    const icHolder = new Container();
+    icHolder.position.set(icX, icY);
+    if (unlocked) {
+        if (!mountKenneySpriteIcon(icHolder, 'menu_radar_center', 0, 0, iconR * 1.35, { tint: C.cyan })) {
+            const icGlyph = new Graphics();
+            icoRadar(icGlyph, 0, 0, iconR * 0.55);
+            icHolder.addChild(icGlyph);
+        }
+    } else if (!mountKenneySpriteIcon(icHolder, 'node_locked', 0, 0, iconR * 1.85, { tint: C.muted })) {
+        const icGlyph = new Graphics();
+        icoLockSmall(icGlyph, 0, 0, iconR * 1.1);
+        icHolder.addChild(icGlyph);
+    }
+    root.addChild(icHolder);
 
     const btnW = 100;
     const btnH = 42;
@@ -659,15 +695,19 @@ function missionRow(
             spr.alpha = 0.55;
             spr.tint = 0x6a7585;
             lock.addChild(spr);
+            mountKenneySpriteIcon(lock, 'node_locked', btnW / 2, btnH / 2 - 10, 22, {
+                tint: C.muted,
+                alpha: 0.85,
+            });
         } else {
             const lb = new Graphics();
             lb.roundRect(0, 0, btnW, btnH, 10);
             lb.fill({ color: C.surface2, alpha: 0.6 });
             lock.addChild(lb);
         }
-        const lt = new Text({ text: 'LOCKED', style: style(13, '700', C.muted) });
+        const lt = new Text({ text: 'LOCKED', style: style(11, '700', C.muted) });
         lt.anchor.set(0.5);
-        lt.position.set(btnW / 2, btnH / 2);
+        lt.position.set(btnW / 2, btnH / 2 + 12);
         lock.addChild(lt);
         lock.position.set(bx, by);
         lock.eventMode = 'none';
@@ -754,8 +794,17 @@ export function buildBottomNavDock(
         slot: number;
         onTap: () => void;
         vec: (g: Graphics, cx: number, cy: number, s: number) => void;
+        kenney?: VelocityUiTextureKey;
+        kenneyTint?: number;
     }[] = [
-        { label: 'Home', slot: 0, onTap: () => { navIndexBySlot?.(0); onHome(); }, vec: icoHome },
+        {
+            label: 'Home',
+            slot: 0,
+            onTap: () => { navIndexBySlot?.(0); onHome(); },
+            vec: icoHome,
+            kenney: 'icon_nav_home',
+            kenneyTint: C.cyan,
+        },
         {
             label: 'Missions',
             slot: 1,
@@ -764,18 +813,24 @@ export function buildBottomNavDock(
                 gameFlow().openMissionSelect();
             },
             vec: icoMap,
+            kenney: 'menu_nav_map',
+            kenneyTint: C.cyan,
         },
         {
             label: 'Hangar',
             slot: 2,
             onTap: () => { navIndexBySlot?.(2); ui.showScreen('store', true); },
             vec: icoHangar,
+            kenney: 'menu_status_led',
+            kenneyTint: 0xaabbcc,
         },
         {
             label: 'Store',
             slot: 3,
             onTap: () => { navIndexBySlot?.(3); ui.showScreen('store', true); },
             vec: icoStore,
+            kenney: 'menu_store_icon',
+            kenneyTint: C.gold,
         },
     ];
 
@@ -790,9 +845,15 @@ export function buildBottomNavDock(
         slot.cursor = 'pointer';
 
         const cx = slotW / 2;
-        const vg = new Graphics();
-        it.vec(vg, cx, H / 2 - 8, 22);
-        slot.addChild(vg);
+        const icy = H / 2 - 8;
+        if (
+            !it.kenney ||
+            !mountKenneySpriteIcon(slot, it.kenney, cx, icy, 26, { tint: it.kenneyTint, alpha: 0.95 })
+        ) {
+            const vg = new Graphics();
+            it.vec(vg, cx, icy, 22);
+            slot.addChild(vg);
+        }
 
         const t = new Text({ text: it.label, style: style(11, '600', C.muted) });
         t.anchor.set(0.5, 0);

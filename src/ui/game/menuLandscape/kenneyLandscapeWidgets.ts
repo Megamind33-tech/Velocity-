@@ -14,6 +14,7 @@ import {
 import { getVelocityUiTexture, type VelocityUiTextureKey } from '../velocityUiArt';
 import { GAME_COLORS, GAME_FONTS } from '../GameUITheme';
 import { createKenneyFramedPanelWithContent, createKenneyHProgressBar } from '../kenneyNineSlice';
+import { mountKenneySpriteIcon } from '../kenneyUiSprites';
 import { VELOCITY_UI_SLICE } from '../velocityUiSlice';
 
 const PS = VELOCITY_UI_SLICE.panel;
@@ -87,9 +88,13 @@ export function kenneyButton(
     return root;
 }
 
-/** Compact stat chip: Kenney secondary chrome + vector icon. */
+export type KenneyStatChipIcon =
+    | { kind: 'texture'; key: VelocityUiTextureKey; size?: number; tint?: number }
+    | { kind: 'vector'; draw: (g: Graphics, cx: number, cy: number, s: number) => void; size?: number };
+
+/** Compact stat chip: Kenney secondary chrome + Kenney sprite or vector icon. */
 export function kenneyStatChip(
-    drawIcon: (g: Graphics, cx: number, cy: number, s: number) => void,
+    icon: KenneyStatChipIcon,
     label: string,
     value: string,
     w: number,
@@ -102,9 +107,17 @@ export function kenneyStatChip(
     const root = new Container();
     root.addChild(spr);
 
-    const ig = new Graphics();
-    drawIcon(ig, 22, h / 2, 18);
-    root.addChild(ig);
+    const iconS = icon.kind === 'texture' ? icon.size ?? 20 : icon.size ?? 18;
+    if (icon.kind === 'texture') {
+        mountKenneySpriteIcon(root, icon.key, 22, h / 2, iconS, {
+            tint: icon.tint,
+            alpha: 0.95,
+        });
+    } else {
+        const ig = new Graphics();
+        icon.draw(ig, 22, h / 2, iconS);
+        root.addChild(ig);
+    }
 
     const lb = new Text({
         text: label,
@@ -157,6 +170,18 @@ export function kenneyAvatarPlate(size: number, onClick: () => void): Container 
         s.position.set(size / 2, size / 2);
         s.tint = 0xb8e0ff;
         root.addChild(s);
+        const starTex = getVelocityUiTexture('menu_profile_star_outline');
+        if (starTex) {
+            const st = new Sprite(starTex);
+            st.anchor.set(0.5);
+            const is = size * 0.42;
+            st.width = is;
+            st.height = is;
+            st.position.set(size / 2, size / 2 - size * 0.04);
+            st.tint = GAME_COLORS.primary;
+            st.alpha = 0.88;
+            root.addChild(st);
+        }
     } else {
         const g = new Graphics();
         const cx = size / 2;

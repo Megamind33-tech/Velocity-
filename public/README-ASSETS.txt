@@ -10,6 +10,8 @@ Nine-slice insets: src/ui/game/velocityUiSlice.ts (Kenney rectangles: L/R 56, T/
 
 Buttons use Blue / Grey / Yellow / Red `button_rectangle_depth_*` variants from the pack.
 
+Menu icons (see `velocityUiArt.ts`): stars, repeat, circles, squares, play, and round nodes are mapped to Kenney `icon_*`, `star*`, and `button_round_*` assets for landscape/portrait stat chips, dock, and mission rows.
+
 In-game skin (code)
 -------------------
 - velocityScreenShell.ts — animated starfield + dimmer behind menus / map / pause
