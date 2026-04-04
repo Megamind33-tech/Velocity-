@@ -291,20 +291,20 @@ export function buildTopUtilityBar(
     const PURPLE = 0xbb88ff;
 
     const c1 =
-        kenneyStatChip(icoBarsSignal, 'SIGNAL', `${prog.maxUnlocked}`, chipW, chipH, CYAN, 'none') ??
-        vectorStatChip(icoBarsSignal, 'SIGNAL', `${prog.maxUnlocked}`, chipW, chipH, CYAN, 'none');
+        kenneyStatChip(icoBarsSignal, 'SIGNAL', `${prog.maxUnlocked}`, chipW, chipH, CYAN, 'none', 'menu_status_led') ??
+        vectorStatChip(icoBarsSignal, 'SIGNAL', `${prog.maxUnlocked}`, chipW, chipH, CYAN, 'none', 'menu_status_led');
     c1.position.set(x0, 5);
     root.addChild(c1);
 
     const c2 =
-        kenneyStatChip(icoStarBadge, 'BEST', String(bestScore), chipW, chipH, GOLD, 'prestige') ??
-        vectorStatChip(icoStarBadge, 'BEST', String(bestScore), chipW, chipH, GOLD, 'prestige');
+        kenneyStatChip(icoStarBadge, 'BEST', String(bestScore), chipW, chipH, GOLD, 'prestige', 'menu_best_star') ??
+        vectorStatChip(icoStarBadge, 'BEST', String(bestScore), chipW, chipH, GOLD, 'prestige', 'menu_best_star');
     c2.position.set(x0 + chipW + gap, 5);
     root.addChild(c2);
 
     const c3 =
-        kenneyStatChip(icoGemPremium, 'PREMIUM', `${prog.unlockedCount}`, chipW, chipH, PURPLE, 'elite') ??
-        vectorStatChip(icoGemPremium, 'PREMIUM', `${prog.unlockedCount}`, chipW, chipH, PURPLE, 'elite');
+        kenneyStatChip(icoGemPremium, 'PREMIUM', `${prog.unlockedCount}`, chipW, chipH, PURPLE, 'elite', 'menu_rewards_star_outline') ??
+        vectorStatChip(icoGemPremium, 'PREMIUM', `${prog.unlockedCount}`, chipW, chipH, PURPLE, 'elite', 'menu_rewards_star_outline');
     c3.position.set(x0 + (chipW + gap) * 2, 5);
     if (onPremiumTap) {
         c3.eventMode = 'static';
@@ -348,6 +348,7 @@ function vectorStatChip(
     h: number,
     accentColor = C.text,
     cornerBadge: VectorChipBadge = 'none',
+    menuIconKey?: VelocityUiTextureKey,
 ): Container {
     const root = new Container();
     const bg = new Graphics();
@@ -369,9 +370,23 @@ function vectorStatChip(
     root.addChild(strip);
 
     const iconCx = 15;
-    const ig = new Graphics();
-    draw(ig, iconCx, h / 2 + 2, Math.min(16, Math.floor(h * 0.28)));
-    root.addChild(ig);
+    const iconCy = h / 2 + 2;
+    const iconS = Math.min(20, Math.floor(h * 0.32));
+    const menuTex = menuIconKey ? getVelocityUiTexture(menuIconKey) : undefined;
+    if (menuTex) {
+        const sp = new Sprite(menuTex);
+        sp.anchor.set(0.5);
+        sp.width = iconS;
+        sp.height = iconS;
+        sp.position.set(iconCx, iconCy);
+        sp.tint = accentColor;
+        sp.alpha = 0.92;
+        root.addChild(sp);
+    } else {
+        const ig = new Graphics();
+        draw(ig, iconCx, iconCy, Math.min(16, Math.floor(h * 0.28)));
+        root.addChild(ig);
+    }
 
     const hasB = cornerBadge !== 'none';
     const labelMaxW = chipLabelMaxW(w, hasB);

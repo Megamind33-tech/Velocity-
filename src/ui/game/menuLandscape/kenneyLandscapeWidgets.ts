@@ -140,6 +140,8 @@ export function kenneyStatChip(
     h: number,
     accentColor = 0xf0f4fa,
     cornerBadge: StatChipCornerBadge = 'none',
+    /** When textures load, prefer authored menu icon over vector draw. */
+    menuIconKey?: VelocityUiTextureKey,
 ): Container | null {
     const spr = kenneyButtonNineSlice('button_secondary', w, h);
     if (!spr) return null;
@@ -154,9 +156,23 @@ export function kenneyStatChip(
     root.addChild(strip);
 
     const iconCx = 15;
-    const ig = new Graphics();
-    drawIcon(ig, iconCx, h / 2 + 2, Math.min(17, Math.floor(h * 0.28)));
-    root.addChild(ig);
+    const iconCy = h / 2 + 2;
+    const iconS = Math.min(20, Math.floor(h * 0.32));
+    const menuTex = menuIconKey ? getVelocityUiTexture(menuIconKey) : undefined;
+    if (menuTex) {
+        const sp = new Sprite(menuTex);
+        sp.anchor.set(0.5);
+        sp.width = iconS;
+        sp.height = iconS;
+        sp.position.set(iconCx, iconCy);
+        sp.tint = accentColor;
+        sp.alpha = 0.92;
+        root.addChild(sp);
+    } else {
+        const ig = new Graphics();
+        drawIcon(ig, iconCx, iconCy, Math.min(17, Math.floor(h * 0.28)));
+        root.addChild(ig);
+    }
 
     const hasB = cornerBadge !== 'none';
     const labelMaxW = chipLabelMaxW(w, hasB);
