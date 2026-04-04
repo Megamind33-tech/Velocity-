@@ -854,10 +854,10 @@ function missionRow(
         icBg.stroke({ color: C.muted, width: 1, alpha: 0.10 });
     }
     root.addChild(icBg);
+    const lockBadge = isLocked ? getVelocityCustomTexture('badge_locked') : undefined;
     const icGlyph = new Graphics();
     if (unlocked) icoRadar(icGlyph, icX, icY, iconR * 0.55);
-    else {
-        // Lock glyph — gold for elite, muted for regular
+    else if (!lockBadge) {
         const lockColor = elite ? C.gold : C.muted;
         const lockAlpha = elite ? 0.55 : 0.50;
         icGlyph.roundRect(icX - iconR * 0.22, icY - iconR * 0.02, iconR * 0.44, iconR * 0.30, 3);
@@ -866,17 +866,14 @@ function missionRow(
         icGlyph.stroke({ color: lockColor, width: 1.5, alpha: lockAlpha });
     }
     root.addChild(icGlyph);
-    if (isLocked) {
-        const lockBadge = getVelocityCustomTexture('badge_locked');
-        if (lockBadge) {
-            const seal = new Sprite(lockBadge);
-            seal.anchor.set(0.5);
-            seal.width = Math.floor(iconR * 1.2);
-            seal.height = Math.floor(iconR * 1.2);
-            seal.position.set(icX, icY);
-            seal.alpha = primaryState === 'elite_locked' ? 0.9 : 0.72;
-            root.addChild(seal);
-        }
+    if (lockBadge) {
+        const seal = new Sprite(lockBadge);
+        seal.anchor.set(0.5);
+        seal.width = Math.floor(iconR * 1.2);
+        seal.height = Math.floor(iconR * 1.2);
+        seal.position.set(icX, icY);
+        seal.alpha = primaryState === 'elite_locked' ? 0.9 : 0.72;
+        root.addChild(seal);
     }
 
     const title = new Text({
@@ -1020,15 +1017,18 @@ function missionRow(
     actionDock.roundRect(actionDockX + 8, 11, btnW - 2, 2, 1);
     actionDock.fill({ color: primaryState === 'claimable' ? C.gold : unlocked ? C.cyan : C.muted, alpha: 0.28 });
     root.addChild(actionDock);
-    const frameTex = getVelocityCustomTexture(
-        primaryState === 'claimable' ? 'frame_premium' : isLocked ? 'frame_locked' : 'frame_premium',
-    );
+    const frameTex =
+        primaryState === 'claimable'
+            ? getVelocityCustomTexture('frame_premium')
+            : isLocked
+              ? getVelocityCustomTexture('frame_locked')
+              : undefined;
     if (frameTex) {
         const frame = new Sprite(frameTex);
         frame.width = btnW + 18;
         frame.height = rowH - 10;
         frame.position.set(actionDockX - 3, 5);
-        frame.alpha = primaryState === 'claimable' ? 0.72 : isLocked ? 0.62 : 0.42;
+        frame.alpha = primaryState === 'claimable' ? 0.72 : 0.62;
         root.addChild(frame);
     }
 

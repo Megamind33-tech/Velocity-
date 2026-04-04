@@ -8,6 +8,7 @@ import {
     FederatedPointerEvent,
     Graphics,
     NineSliceSprite,
+    Sprite,
     Text,
     TextStyle,
 } from 'pixi.js';
@@ -16,7 +17,7 @@ import { getMainMenuProgress, isLevelUnlocked } from '../../../data/localProgres
 import { LEVEL_DEFINITIONS, type LevelDefinition } from '../../../data/levelDefinitions';
 import { gameFlow } from '../gameFlowBridge';
 import type { GameUIManager } from '../GameUIManager';
-import { getVelocityUiTexture } from '../velocityUiArt';
+import { getVelocityCustomTexture, getVelocityUiTexture } from '../velocityUiArt';
 import { VELOCITY_UI_SLICE } from '../velocityUiSlice';
 
 const PORTRAIT_TAB_BS = VELOCITY_UI_SLICE.button;
@@ -392,9 +393,29 @@ function buildStatusStrip(p: StatusStripProps): { root: Container; signal: Text;
     root.addChild(c1);
     const c2 = buildStatusChip('BEST', p.bestVal, wChip, H - 4, 'gold', drawChipStar);
     c2.position.set(x0 + wChip + gap, 2);
+    const prestigeTex = getVelocityCustomTexture('rank_prestige');
+    if (prestigeTex) {
+        const em = new Sprite(prestigeTex);
+        em.anchor.set(1, 0);
+        em.width = 22;
+        em.height = 22;
+        em.position.set(wChip - 5, 5);
+        em.alpha = 0.88;
+        c2.addChild(em);
+    }
     root.addChild(c2);
     const c3 = buildStatusChip('PREMIUM', p.premiumVal, wChip, H - 4, 'purple', drawChipGem);
     c3.position.set(x0 + (wChip + gap) * 2, 2);
+    const eliteTex = getVelocityCustomTexture('rank_elite');
+    if (eliteTex) {
+        const em = new Sprite(eliteTex);
+        em.anchor.set(1, 0);
+        em.width = 22;
+        em.height = 22;
+        em.position.set(wChip - 5, 5);
+        em.alpha = 0.88;
+        c3.addChild(em);
+    }
     if (p.onPremiumTap) {
         c3.eventMode = 'static';
         c3.cursor = 'pointer';
@@ -620,6 +641,16 @@ function buildFeaturedMissionCard(p: FeaturedProps): {
     });
     rt.position.set(textPad, Math.floor((chipH - 13) / 2));
     rankRoot.addChild(rt);
+    const rankPrestige = getVelocityCustomTexture('rank_prestige');
+    if (rankPrestige) {
+        const rs = new Sprite(rankPrestige);
+        rs.anchor.set(1, 0);
+        rs.width = 26;
+        rs.height = 26;
+        rs.position.set(rankW - 6, 6);
+        rs.alpha = 0.9;
+        rankRoot.addChild(rs);
+    }
     rankRoot.position.set(pad, rowY);
     root.addChild(rankRoot);
 
@@ -919,19 +950,29 @@ function buildMissionCardPortrait(
     }
     root.addChild(badge);
 
+    const lockSeal = !unlocked ? getVelocityCustomTexture('badge_locked') : undefined;
     const ic = new Graphics();
     if (unlocked) {
         // Route node icon for playable missions
         const iconColor = elite ? P_COLORS.accentGold : P_COLORS.accentCyan;
         drawIconRouteNode(ic, icX, icY, 10, { color: iconColor, width: 2, alpha: 0.90 });
-    } else if (elite) {
-        // Elite locked: gold lock — visually distinct from regular
-        drawIconLock(ic, icX, icY, 14, { color: P_COLORS.accentGold, width: 1.5, alpha: 0.55 });
-    } else {
-        // Regular locked: muted grey lock — clearly unavailable
-        drawIconLock(ic, icX, icY, 14, { color: P_COLORS.stateLocked, width: 1.5, alpha: 0.60 });
+    } else if (!lockSeal) {
+        if (elite) {
+            drawIconLock(ic, icX, icY, 14, { color: P_COLORS.accentGold, width: 1.5, alpha: 0.55 });
+        } else {
+            drawIconLock(ic, icX, icY, 14, { color: P_COLORS.stateLocked, width: 1.5, alpha: 0.60 });
+        }
     }
     root.addChild(ic);
+    if (lockSeal) {
+        const seal = new Sprite(lockSeal);
+        seal.anchor.set(0.5);
+        seal.width = Math.floor(P_ICON.emblem * 2.35);
+        seal.height = Math.floor(P_ICON.emblem * 2.35);
+        seal.position.set(icX, icY);
+        seal.alpha = primaryState === 'elite_locked' ? 0.88 : 0.7;
+        root.addChild(seal);
+    }
 
     const btnW = 104;
     const btnH = 44;
@@ -969,7 +1010,7 @@ function buildMissionCardPortrait(
     // For locked cards: elite badge IS shown (aspirational value signal), nothing else.
     // For unlocked cards: show completion or reward status.
     let metaStr = '';
-    let metaColor = P_COLORS.accentCyanSoft;
+    let metaColor: number = P_COLORS.accentCyanSoft;
     if (primaryState === 'claimable') {
         metaStr = 'READY TO CLAIM';
         metaColor = P_COLORS.accentGold;
@@ -1009,13 +1050,36 @@ function buildMissionCardPortrait(
     rewardRail.fill({ color: primaryState === 'claimable' ? 0x231b0f : 0x0a121d, alpha: 0.72 });
     rewardRail.stroke({ color: primaryState === 'claimable' ? P_COLORS.accentGoldSoft : P_COLORS.strokeSubtle, width: 1, alpha: 0.4 });
     root.addChild(rewardRail);
+    const rewardGem = new Graphics();
+    rewardGem.circle(tx + 6, rowH - 13, 5);
+    rewardGem.fill({
+        color: primaryState === 'elite_locked' || primaryState === 'claimable' ? P_COLORS.accentGold : P_COLORS.accentCyanSoft,
+        alpha: 0.88,
+    });
+    rewardGem.circle(tx + 6, rowH - 13, 8);
+    rewardGem.stroke({
+        color: primaryState === 'elite_locked' || primaryState === 'claimable' ? P_COLORS.accentGoldSoft : P_COLORS.strokeSubtle,
+        width: 1,
+        alpha: 0.42,
+    });
+    root.addChild(rewardGem);
+    const rewardBadge = getVelocityCustomTexture('badge_reward');
+    if (rewardBadge) {
+        const rb = new Sprite(rewardBadge);
+        rb.anchor.set(0.5);
+        rb.width = 15;
+        rb.height = 15;
+        rb.position.set(tx + 6, rowH - 13);
+        rb.alpha = 0.86;
+        root.addChild(rb);
+    }
     const rewardText = new Text({
         text: primaryState === 'elite_locked'
             ? `SEALED CACHE +${Math.max(140, level.gateCount * 24)}`
             : `REWARD +${Math.max(90, level.gateCount * 18)} SIGNAL`,
         style: ts(P_TYPO.navLabel, primaryState === 'claimable' ? P_COLORS.accentGold : P_COLORS.accentCyanSoft),
     });
-    rewardText.position.set(tx + 6, rowH - 18);
+    rewardText.position.set(tx + 18, rowH - 18);
     root.addChild(rewardText);
 
     const bx = cw - btnW - P_SPACE.s10;
@@ -1029,6 +1093,20 @@ function buildMissionCardPortrait(
         alpha: 0.34,
     });
     root.addChild(actionDock);
+    const actionFrameTex =
+        primaryState === 'claimable'
+            ? getVelocityCustomTexture('frame_premium')
+            : !unlocked
+              ? getVelocityCustomTexture('frame_locked')
+              : undefined;
+    if (actionFrameTex) {
+        const fr = new Sprite(actionFrameTex);
+        fr.width = btnW + 18;
+        fr.height = rowH - 10;
+        fr.position.set(bx - 11, 5);
+        fr.alpha = primaryState === 'claimable' ? 0.7 : 0.6;
+        root.addChild(fr);
+    }
     if (unlocked) {
         const unlockSig = new Graphics();
         drawIconLockOpen(
