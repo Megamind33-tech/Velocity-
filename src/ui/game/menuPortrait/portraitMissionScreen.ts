@@ -21,7 +21,7 @@ import { getVelocityCustomTexture, getVelocityUiTexture } from '../velocityUiArt
 import { VELOCITY_UI_SLICE } from '../velocityUiSlice';
 
 const PORTRAIT_TAB_BS = VELOCITY_UI_SLICE.button;
-import { kenneyButton, kenneyDockBar, kenneyProgressBar } from '../menuLandscape/kenneyLandscapeWidgets';
+import { kenneyButton, kenneyProgressBar } from '../menuLandscape/kenneyLandscapeWidgets';
 import { P_COLORS, P_ICON, P_MOTION, P_OPACITY, P_RADIUS, P_SHADOW, P_SPACE, P_TYPO, P_Z } from './missionPortraitTokens';
 import {
     drawIconHangar,
@@ -843,6 +843,239 @@ function buildSegmentTabs(
     return { root, setActive: paint, tabGlows };
 }
 
+/** Locked / elite-locked — gated prestige layout (not a dimmed playable row). */
+function buildLockedMissionCardPortrait(
+    level: LevelDefinition,
+    cw: number,
+    rowH: number,
+    primaryState: 'locked' | 'elite_locked',
+    elite: boolean,
+): Container {
+    const root = new Container();
+    const plaqueW = Math.min(118, Math.max(100, Math.floor(cw * 0.28)));
+    const leftRailW = 6;
+    const leftPad = 10;
+    const emblemWellW = 48;
+    const zoneAEnd = leftPad + emblemWellW + P_SPACE.s8;
+    const centerW = Math.max(120, cw - zoneAEnd - plaqueW - P_SPACE.s12 - P_SPACE.s10);
+    const tx = zoneAEnd;
+    const rewardValue = Math.max(primaryState === 'elite_locked' ? 140 : 90, level.gateCount * (primaryState === 'elite_locked' ? 24 : 18));
+
+    const face = new Graphics();
+    face.roundRect(0, 0, cw, rowH, P_RADIUS.panel - 2);
+    face.fill({
+        color: elite ? P_COLORS.lockedFaceElite : P_COLORS.lockedFace,
+        alpha: 1,
+    });
+    face.stroke({
+        color: elite ? P_COLORS.lockedPlaqueRimElite : P_COLORS.lockedPlaqueRim,
+        width: 1.5,
+        alpha: elite ? 0.45 : 0.38,
+    });
+    root.addChild(face);
+
+    const innerFrame = new Graphics();
+    innerFrame.roundRect(3, 3, cw - 6, rowH - 6, P_RADIUS.panel - 4);
+    innerFrame.stroke({ color: 0xffffff, width: 1, alpha: elite ? 0.04 : 0.025 });
+    root.addChild(innerFrame);
+
+    const spine = new Graphics();
+    spine.roundRect(0, 8, leftRailW, rowH - 16, 2);
+    spine.fill({
+        color: elite ? P_COLORS.accentGoldSoft : P_COLORS.stateLocked,
+        alpha: elite ? 0.55 : 0.4,
+    });
+    root.addChild(spine);
+
+    const well = new Graphics();
+    well.roundRect(leftPad, 10, emblemWellW, rowH - 20, 10);
+    well.fill({
+        color: elite ? P_COLORS.lockedGateWellElite : P_COLORS.lockedGateWell,
+        alpha: 1,
+    });
+    well.stroke({
+        color: elite ? P_COLORS.accentGoldSoft : P_COLORS.lockedPlaqueRim,
+        width: 1,
+        alpha: elite ? 0.35 : 0.28,
+    });
+    root.addChild(well);
+
+    const emX = leftPad + emblemWellW / 2;
+    const emY = rowH / 2;
+    const lockSeal = getVelocityCustomTexture('badge_locked');
+    if (lockSeal) {
+        const seal = new Sprite(lockSeal);
+        seal.anchor.set(0.5);
+        const sealS = Math.min(emblemWellW - 8, rowH - 36);
+        seal.width = sealS;
+        seal.height = sealS;
+        seal.position.set(emX, emY);
+        seal.alpha = elite ? 0.92 : 0.78;
+        root.addChild(seal);
+    } else {
+        const ic = new Graphics();
+        drawIconLock(ic, emX, emY, 16, {
+            color: elite ? P_COLORS.accentGold : P_COLORS.stateLocked,
+            width: 2,
+            alpha: elite ? 0.65 : 0.55,
+        });
+        root.addChild(ic);
+    }
+
+    const titleColor = elite ? 0xd4c4a8 : P_COLORS.textSecondary;
+    const title = new Text({
+        text: trunc(level.name, Math.max(10, Math.floor(centerW / 7.5))),
+        style: ts(P_TYPO.missionTitle, titleColor),
+    });
+    title.position.set(tx, P_SPACE.s10);
+    root.addChild(title);
+
+    let tierY = P_SPACE.s10 + 22;
+    if (elite) {
+        const tierPlate = new Graphics();
+        const tierW = 102;
+        tierPlate.roundRect(tx, tierY, tierW, 16, 7);
+        tierPlate.fill({ color: P_COLORS.lockedPlaqueElite, alpha: 0.85 });
+        tierPlate.stroke({ color: P_COLORS.accentGoldSoft, width: 1, alpha: 0.4 });
+        root.addChild(tierPlate);
+        const tier = new Text({
+            text: 'ELITE ROUTE',
+            style: new TextStyle({
+                fontFamily: FONT,
+                fontSize: 9,
+                fontWeight: '800',
+                fill: P_COLORS.accentGold,
+                letterSpacing: 1.2,
+            }),
+        });
+        tier.position.set(tx + 8, tierY + 2);
+        root.addChild(tier);
+        tierY += 20;
+    }
+
+    const teaser = level.learningObjectives[0]?.hint ?? `${level.gateCount} voice gates`;
+    const sub = new Text({
+        text: trunc(teaser, Math.max(14, Math.floor(centerW / 6))),
+        style: ts(P_TYPO.missionBody, 0x5a6574),
+    });
+    sub.position.set(tx, tierY + 4);
+    root.addChild(sub);
+
+    const reqLine =
+        primaryState === 'elite_locked'
+            ? `Breach prior route ${Math.max(1, level.id - 1)} to open`
+            : `Clear route ${Math.max(1, level.id - 1)} to gain access`;
+    const helper = new Text({
+        text: trunc(reqLine, Math.max(12, Math.floor(centerW / 5.5))),
+        style: new TextStyle({
+            fontFamily: FONT,
+            fontSize: 9,
+            fontWeight: '600',
+            fill: 0x4a5568,
+            letterSpacing: 0.2,
+        }),
+    });
+    helper.position.set(tx, rowH - 52);
+    root.addChild(helper);
+
+    const rewardRail = new Graphics();
+    rewardRail.roundRect(tx - 2, rowH - 24, centerW + 4, 16, 7);
+    rewardRail.fill({ color: elite ? 0x120e0a : 0x060a10, alpha: 0.88 });
+    rewardRail.stroke({
+        color: elite ? P_COLORS.accentGoldSoft : P_COLORS.lockedPlaqueRim,
+        width: 1,
+        alpha: 0.32,
+    });
+    root.addChild(rewardRail);
+    const rewardBadge = getVelocityCustomTexture('badge_reward');
+    if (rewardBadge) {
+        const rb = new Sprite(rewardBadge);
+        rb.anchor.set(0.5);
+        rb.width = 14;
+        rb.height = 14;
+        rb.position.set(tx + 8, rowH - 16);
+        rb.alpha = 0.82;
+        root.addChild(rb);
+    }
+    const rewardText = new Text({
+        text:
+            primaryState === 'elite_locked'
+                ? `WITHHELD CACHE  +${rewardValue} SIGNAL`
+                : `CLEAR BONUS  +${rewardValue} SIGNAL`,
+        style: new TextStyle({
+            fontFamily: FONT,
+            fontSize: 9,
+            fontWeight: '700',
+            fill: elite ? P_COLORS.accentGold : 0x6b7d90,
+            letterSpacing: 0.5,
+        }),
+    });
+    rewardText.position.set(tx + 20, rowH - 21);
+    root.addChild(rewardText);
+
+    const px = cw - plaqueW - P_SPACE.s10;
+    const py = 10;
+    const ph = rowH - 20;
+    const plaque = new Graphics();
+    plaque.roundRect(px, py, plaqueW, ph, 12);
+    plaque.fill({
+        color: elite ? P_COLORS.lockedPlaqueElite : P_COLORS.lockedPlaque,
+        alpha: 0.96,
+    });
+    plaque.stroke({
+        color: elite ? P_COLORS.accentGold : P_COLORS.lockedPlaqueRim,
+        width: 2,
+        alpha: elite ? 0.55 : 0.5,
+    });
+    root.addChild(plaque);
+    const plaqueInner = new Graphics();
+    plaqueInner.roundRect(px + 4, py + 4, plaqueW - 8, ph - 8, 9);
+    plaqueInner.stroke({ color: 0xffffff, width: 1, alpha: elite ? 0.06 : 0.04 });
+    root.addChild(plaqueInner);
+
+    const stateWord = primaryState === 'elite_locked' ? 'SEALED' : 'LOCKED';
+    const stateMain = new Text({
+        text: stateWord,
+        style: new TextStyle({
+            fontFamily: FONT,
+            fontSize: P_TYPO.lockedPlaqueState.fontSize,
+            fontWeight: P_TYPO.lockedPlaqueState.fontWeight,
+            fill: elite ? P_COLORS.accentGold : 0x8fa3b8,
+            letterSpacing: P_TYPO.lockedPlaqueState.letterSpacing,
+            align: 'center',
+        }),
+    });
+    stateMain.anchor.set(0.5, 0);
+    stateMain.position.set(px + plaqueW / 2, py + Math.floor(ph * 0.28));
+    root.addChild(stateMain);
+
+    const stateSub = new Text({
+        text: elite ? 'ELITE GATE' : 'ACCESS',
+        style: new TextStyle({
+            fontFamily: FONT,
+            fontSize: P_TYPO.lockedPlaqueSub.fontSize,
+            fontWeight: P_TYPO.lockedPlaqueSub.fontWeight,
+            fill: elite ? 0x7a6848 : 0x4d5a6a,
+            letterSpacing: P_TYPO.lockedPlaqueSub.letterSpacing,
+            align: 'center',
+        }),
+    });
+    stateSub.anchor.set(0.5, 0);
+    stateSub.position.set(px + plaqueW / 2, py + Math.floor(ph * 0.52));
+    root.addChild(stateSub);
+
+    const rivetA = new Graphics();
+    rivetA.circle(px + 10, py + 12, 2);
+    rivetA.fill({ color: P_COLORS.dockBolt, alpha: 0.5 });
+    root.addChild(rivetA);
+    const rivetB = new Graphics();
+    rivetB.circle(px + plaqueW - 10, py + ph - 12, 2);
+    rivetB.fill({ color: P_COLORS.dockBolt, alpha: 0.5 });
+    root.addChild(rivetB);
+
+    return root;
+}
+
 function buildMissionCardPortrait(
     level: LevelDefinition,
     cw: number,
@@ -858,31 +1091,25 @@ function buildMissionCardPortrait(
     const primaryState: 'claimable' | 'playable' | 'locked' | 'elite_locked' =
         claimable ? 'claimable' : unlocked ? 'playable' : elite ? 'elite_locked' : 'locked';
 
-    // ── Card surface — state-differentiated, not a uniform formula ──────────
+    if (primaryState === 'locked' || primaryState === 'elite_locked') {
+        return buildLockedMissionCardPortrait(level, cw, rowH, primaryState, elite);
+    }
+
+    // ── Playable / claimable row (locked uses dedicated gated layout above) ──
     const g = new Graphics();
     g.roundRect(0, 0, cw, rowH, P_RADIUS.panel - 2);
     if (primaryState === 'claimable') {
         g.fill({ color: 0x17120d, alpha: 1 });
         g.stroke({ color: P_COLORS.accentGold, width: 1.5, alpha: 0.52 });
-    } else if (unlocked) {
+    } else {
         g.fill({ color: P_COLORS.bgPanelActive, alpha: 1 });
         g.stroke({ color: P_COLORS.strokeActive, width: 1.5, alpha: 0.28 });
-    } else if (elite) {
-        // ELITE LOCKED: warm dark surface — premium, sealed, aspirational
-        // Slightly warmer than regular locked — "this is something worth unlocking"
-        g.fill({ color: 0x0e0c10, alpha: 1 });
-        g.stroke({ color: P_COLORS.accentGoldSoft, width: 1, alpha: 0.38 });
-    } else {
-        // REGULAR LOCKED: cold dark surface — neutral, sealed
-        g.fill({ color: P_COLORS.bgPanelLocked, alpha: P_OPACITY.lockedSurface });
-        g.stroke({ color: P_COLORS.stateLocked, width: 1, alpha: P_OPACITY.lockedStroke });
     }
     root.addChild(g);
 
-    // Inner bevel highlight
     const ridge = new Graphics();
     ridge.roundRect(2, 2, cw - 4, Math.floor(rowH * 0.4), P_RADIUS.panel - 4);
-    ridge.fill({ color: 0xffffff, alpha: unlocked ? 0.02 : 0.01 });
+    ridge.fill({ color: 0xffffff, alpha: 0.02 });
     root.addChild(ridge);
     if (primaryState === 'claimable') {
         const topGold = new Graphics();
@@ -891,115 +1118,47 @@ function buildMissionCardPortrait(
         root.addChild(topGold);
     }
 
-    // ELITE LOCKED: faint gold ambient strip at top — premium designation
-    if (!unlocked && elite) {
-        const eliteGlow = new Graphics();
-        eliteGlow.roundRect(4, 0, cw - 8, 2, 1);
-        eliteGlow.fill({ color: P_COLORS.accentGold, alpha: 0.18 });
-        root.addChild(eliteGlow);
-    }
-
-    // ── Left accent strip — state indicator bar, color-coded per state ────────
     const leftStrip = new Graphics();
     leftStrip.roundRect(0, 6, 3, rowH - 12, 1.5);
-    if (unlocked) {
-        const stripColor = elite ? P_COLORS.accentGold : completed ? P_COLORS.stateLive : P_COLORS.accentCyan;
-        leftStrip.fill({ color: stripColor, alpha: 0.78 });
-    } else if (elite) {
-        // Elite locked: gold strip, reduced — "premium, not yet available"
-        leftStrip.fill({ color: P_COLORS.accentGold, alpha: 0.30 });
-    } else {
-        // Regular locked: grey-blue, minimal
-        leftStrip.fill({ color: P_COLORS.stateLocked, alpha: 0.28 });
-    }
+    const stripColor = elite ? P_COLORS.accentGold : completed ? P_COLORS.stateLive : P_COLORS.accentCyan;
+    leftStrip.fill({ color: stripColor, alpha: 0.78 });
     root.addChild(leftStrip);
 
     const badge = new Graphics();
     const icX = 18 + P_ICON.emblem;
     const icY = rowH / 2;
-    if (unlocked) {
-        // ── UNLOCKED: double ring + ambient glow ────────────────────────────
-        const glowColor = elite ? P_COLORS.accentGold : P_COLORS.accentCyan;
-        badge.circle(icX, icY, P_ICON.emblem + 4);
-        badge.fill({ color: glowColor, alpha: 0.05 });
-        badge.circle(icX, icY, P_ICON.emblem);
-        badge.fill({ color: P_COLORS.bgElevated, alpha: 1 });
-        badge.circle(icX, icY, P_ICON.emblem);
-        badge.stroke({ color: elite ? P_COLORS.accentGold : P_COLORS.accentCyanSoft, width: 2, alpha: 0.55 });
-        badge.circle(icX, icY, P_ICON.emblem - 5);
-        badge.stroke({ color: elite ? P_COLORS.accentGoldSoft : P_COLORS.accentCyanSoft, width: 1, alpha: 0.25 });
-    } else if (elite) {
-        // ── ELITE LOCKED: gold-tinted sealed badge — premium, aspirational ──
-        badge.circle(icX, icY, P_ICON.emblem + 3);
-        badge.fill({ color: P_COLORS.accentGold, alpha: 0.04 });
-        badge.circle(icX, icY, P_ICON.emblem);
-        badge.fill({ color: 0x0a0908, alpha: 1 }); // warm-dark fill
-        badge.circle(icX, icY, P_ICON.emblem);
-        badge.stroke({ color: P_COLORS.accentGoldSoft, width: 1.5, alpha: 0.50 });
-        badge.circle(icX, icY, P_ICON.emblem - 6);
-        badge.stroke({ color: P_COLORS.accentGoldSoft, width: 1, alpha: 0.18 });
-    } else {
-        // ── REGULAR LOCKED: cold sealed badge ─────────────────────────────
-        badge.circle(icX, icY, P_ICON.emblem);
-        badge.fill({ color: P_COLORS.bgBase, alpha: 1 });
-        badge.circle(icX, icY, P_ICON.emblem);
-        badge.stroke({ color: P_COLORS.stateLocked, width: 1, alpha: 0.42 });
-        // Subtle concentric inner ring — "sealed" layering
-        badge.circle(icX, icY, P_ICON.emblem - 6);
-        badge.stroke({ color: P_COLORS.stateLocked, width: 1, alpha: 0.15 });
-    }
+    const glowColor = elite ? P_COLORS.accentGold : P_COLORS.accentCyan;
+    badge.circle(icX, icY, P_ICON.emblem + 4);
+    badge.fill({ color: glowColor, alpha: 0.05 });
+    badge.circle(icX, icY, P_ICON.emblem);
+    badge.fill({ color: P_COLORS.bgElevated, alpha: 1 });
+    badge.circle(icX, icY, P_ICON.emblem);
+    badge.stroke({ color: elite ? P_COLORS.accentGold : P_COLORS.accentCyanSoft, width: 2, alpha: 0.55 });
+    badge.circle(icX, icY, P_ICON.emblem - 5);
+    badge.stroke({ color: elite ? P_COLORS.accentGoldSoft : P_COLORS.accentCyanSoft, width: 1, alpha: 0.25 });
     root.addChild(badge);
 
-    const lockSeal = !unlocked ? getVelocityCustomTexture('badge_locked') : undefined;
     const ic = new Graphics();
-    if (unlocked) {
-        // Route node icon for playable missions
-        const iconColor = elite ? P_COLORS.accentGold : P_COLORS.accentCyan;
-        drawIconRouteNode(ic, icX, icY, 10, { color: iconColor, width: 2, alpha: 0.90 });
-    } else if (!lockSeal) {
-        if (elite) {
-            drawIconLock(ic, icX, icY, 14, { color: P_COLORS.accentGold, width: 1.5, alpha: 0.55 });
-        } else {
-            drawIconLock(ic, icX, icY, 14, { color: P_COLORS.stateLocked, width: 1.5, alpha: 0.60 });
-        }
-    }
+    const iconColor = elite ? P_COLORS.accentGold : P_COLORS.accentCyan;
+    drawIconRouteNode(ic, icX, icY, 10, { color: iconColor, width: 2, alpha: 0.90 });
     root.addChild(ic);
-    if (lockSeal) {
-        const seal = new Sprite(lockSeal);
-        seal.anchor.set(0.5);
-        seal.width = Math.floor(P_ICON.emblem * 2.35);
-        seal.height = Math.floor(P_ICON.emblem * 2.35);
-        seal.position.set(icX, icY);
-        seal.alpha = primaryState === 'elite_locked' ? 0.88 : 0.7;
-        root.addChild(seal);
-    }
 
     const btnW = 104;
     const btnH = 44;
     const tx = icX + P_ICON.emblem + P_SPACE.s12;
-    // Removed the unexplained 56px surplus — title now gets full available width
     const tw = Math.max(40, cw - tx - btnW - P_SPACE.s16 - 8);
 
-    // Title — state-specific contrast:
-    // unlocked: primary white; elite-locked: warm gold-tint grey (aspirational); regular-locked: muted
-    const titleColor = unlocked
-        ? P_COLORS.textPrimary
-        : elite
-        ? 0x9a8870   // warm-muted — "premium but withheld"
-        : 0x6a7280;  // cold-muted — "sealed, not for you yet"
     const title = new Text({
-        // Chars per pixel: 7.5 is accurate for Kenney Future at missionTitle size
         text: trunc(level.name, Math.max(10, Math.floor(tw / 7.5))),
-        style: ts(P_TYPO.missionTitle, titleColor),
+        style: ts(P_TYPO.missionTitle, P_COLORS.textPrimary),
     });
     title.position.set(tx, P_SPACE.s8);
     root.addChild(title);
 
     const hint = level.learningObjectives[0]?.hint ?? `${level.gateCount} voice gates`;
-    const subColor = unlocked ? P_COLORS.textMuted : 0x454e58;
     const sub = new Text({
         text: trunc(hint, Math.max(14, Math.floor(tw / 6))),
-        style: ts(P_TYPO.missionBody, subColor),
+        style: ts(P_TYPO.missionBody, P_COLORS.textMuted),
     });
     sub.position.set(tx, P_SPACE.s8 + 20);
     root.addChild(sub);
@@ -1053,12 +1212,12 @@ function buildMissionCardPortrait(
     const rewardGem = new Graphics();
     rewardGem.circle(tx + 6, rowH - 13, 5);
     rewardGem.fill({
-        color: primaryState === 'elite_locked' || primaryState === 'claimable' ? P_COLORS.accentGold : P_COLORS.accentCyanSoft,
+        color: primaryState === 'claimable' ? P_COLORS.accentGold : P_COLORS.accentCyanSoft,
         alpha: 0.88,
     });
     rewardGem.circle(tx + 6, rowH - 13, 8);
     rewardGem.stroke({
-        color: primaryState === 'elite_locked' || primaryState === 'claimable' ? P_COLORS.accentGoldSoft : P_COLORS.strokeSubtle,
+        color: primaryState === 'claimable' ? P_COLORS.accentGoldSoft : P_COLORS.strokeSubtle,
         width: 1,
         alpha: 0.42,
     });
@@ -1074,9 +1233,7 @@ function buildMissionCardPortrait(
         root.addChild(rb);
     }
     const rewardText = new Text({
-        text: primaryState === 'elite_locked'
-            ? `SEALED CACHE +${Math.max(140, level.gateCount * 24)}`
-            : `REWARD +${Math.max(90, level.gateCount * 18)} SIGNAL`,
+        text: `REWARD +${Math.max(90, level.gateCount * 18)} SIGNAL`,
         style: ts(P_TYPO.navLabel, primaryState === 'claimable' ? P_COLORS.accentGold : P_COLORS.accentCyanSoft),
     });
     rewardText.position.set(tx + 18, rowH - 18);
@@ -1086,50 +1243,37 @@ function buildMissionCardPortrait(
     const by = (rowH - btnH) / 2;
     const actionDock = new Graphics();
     actionDock.roundRect(bx - 8, 8, btnW + 14, rowH - 16, 10);
-    actionDock.fill({ color: unlocked ? 0x0a121d : 0x090f17, alpha: unlocked ? 0.45 : 0.6 });
+    actionDock.fill({ color: 0x0a121d, alpha: 0.45 });
     actionDock.stroke({
-        color: primaryState === 'claimable' ? P_COLORS.accentGold : unlocked ? P_COLORS.accentCyan : P_COLORS.stateLocked,
+        color: primaryState === 'claimable' ? P_COLORS.accentGold : P_COLORS.accentCyan,
         width: 1,
         alpha: 0.34,
     });
     root.addChild(actionDock);
-    const actionFrameTex =
-        primaryState === 'claimable'
-            ? getVelocityCustomTexture('frame_premium')
-            : !unlocked
-              ? getVelocityCustomTexture('frame_locked')
-              : undefined;
+    const actionFrameTex = primaryState === 'claimable' ? getVelocityCustomTexture('frame_premium') : undefined;
     if (actionFrameTex) {
         const fr = new Sprite(actionFrameTex);
         fr.width = btnW + 18;
         fr.height = rowH - 10;
         fr.position.set(bx - 11, 5);
-        fr.alpha = primaryState === 'claimable' ? 0.7 : 0.6;
+        fr.alpha = 0.7;
         root.addChild(fr);
     }
-    if (unlocked) {
-        const unlockSig = new Graphics();
-        drawIconLockOpen(
-            unlockSig,
-            bx - 14,
-            by + Math.floor(btnH * 0.5),
-            9,
-            { color: primaryState === 'claimable' ? P_COLORS.accentGold : P_COLORS.accentCyanSoft, width: 1.5, alpha: 0.72 },
-        );
-        root.addChild(unlockSig);
-    }
+    const unlockSig = new Graphics();
+    drawIconLockOpen(
+        unlockSig,
+        bx - 14,
+        by + Math.floor(btnH * 0.5),
+        9,
+        { color: primaryState === 'claimable' ? P_COLORS.accentGold : P_COLORS.accentCyanSoft, width: 1.5, alpha: 0.72 },
+    );
+    root.addChild(unlockSig);
 
-    if (unlocked) {
-        const btn =
-            kenneyButton(primaryState === 'claimable' ? 'CLAIM' : 'PLAY', btnW, btnH, 'button_accent', true, () => onPlay(level.id)) ??
-            buildPlayFallback(btnW, btnH, primaryState === 'claimable' ? 'CLAIM' : 'PLAY', () => onPlay(level.id));
-        btn.position.set(bx, by);
-        root.addChild(btn);
-    } else {
-        const lock = buildLockedButton(btnW, btnH, elite);
-        lock.position.set(bx, by);
-        root.addChild(lock);
-    }
+    const btn =
+        kenneyButton(primaryState === 'claimable' ? 'CLAIM' : 'PLAY', btnW, btnH, 'button_accent', true, () => onPlay(level.id)) ??
+        buildPlayFallback(btnW, btnH, primaryState === 'claimable' ? 'CLAIM' : 'PLAY', () => onPlay(level.id));
+    btn.position.set(bx, by);
+    root.addChild(btn);
 
     return root;
 }
@@ -1146,45 +1290,6 @@ function buildPlayFallback(w: number, h: number, label: 'PLAY' | 'CLAIM', onPlay
     t.position.set(w / 2, h / 2);
     c.addChild(t);
     pressable(c, onPlay);
-    return c;
-}
-
-function buildLockedButton(w: number, h: number, elite: boolean): Container {
-    const c = new Container();
-    c.eventMode = 'none';
-
-    // ── Body: sealed surface — darker + muted border ─────────────────────────
-    const g = new Graphics();
-    g.roundRect(0, 0, w, h, P_RADIUS.button);
-    g.fill({ color: P_COLORS.bgBase, alpha: 1 });
-    g.stroke({ color: elite ? P_COLORS.accentGoldSoft : P_COLORS.stateLocked, width: 1.5, alpha: elite ? 0.5 : 0.38 });
-    c.addChild(g);
-
-    // ── Inner frame — dimensional depth ─────────────────────────────────────
-    const inner = new Graphics();
-    inner.roundRect(2, 2, w - 4, h - 4, P_RADIUS.button - 2);
-    inner.stroke({ color: elite ? P_COLORS.accentGoldSoft : P_COLORS.stateLocked, width: 1, alpha: 0.12 });
-    c.addChild(inner);
-
-    // ── Diagonal hatch — hazard zone game convention ─────────────────────────
-    const hatch = new Graphics();
-    const stride = 9;
-    for (let k = -h; k < w + h; k += stride) {
-        const x1 = Math.max(0, k);
-        const y1 = k < 0 ? -k : 0;
-        const x2 = Math.min(w, k + h);
-        const y2 = k + h > h ? h : k + h - Math.max(0, k);
-        hatch.moveTo(x1, y1);
-        hatch.lineTo(x2, y2);
-    }
-    hatch.stroke({ color: P_COLORS.stateLocked, width: 1, alpha: 0.07 });
-    c.addChild(hatch);
-
-    // ── Lock icon — icon-first locked signal (text removed for fit/readability) ─────────
-    const lockG = new Graphics();
-    drawIconLock(lockG, w / 2, Math.floor(h * 0.50), 12,
-        { color: elite ? P_COLORS.accentGold : P_COLORS.stateLocked, width: 1.5, alpha: elite ? 0.68 : 0.60 });
-    c.addChild(lockG);
     return c;
 }
 
@@ -1249,34 +1354,38 @@ function buildBottomDockPortrait(
     onHome: () => void,
     navIndexBySlot?: (slot: number) => void,
 ): { root: Container; setActive: (i: number) => void; dockCradles: Graphics[]; slotContainers: Container[] } {
-    const H = 72;
+    const H = 76;
     const root = new Container();
-
-    // ── Dock background — Kenney chrome preferred, vector fallback ────────────
-    const kenDock = kenneyDockBar(cw, H);
-    if (kenDock) {
-        root.addChild(kenDock);
-    } else {
-        const bg = new Graphics();
-        bg.roundRect(0, 0, cw, H, P_RADIUS.dock);
-        bg.fill({ color: P_COLORS.bgPanel, alpha: P_OPACITY.dockBg });
-        bg.stroke({ color: P_COLORS.strokeSubtle, width: 1, alpha: 0.75 });
-        root.addChild(bg);
-    }
-    // Top separator line
-    const sep = new Graphics();
-    sep.rect(12, 0, cw - 24, 1);
-    sep.fill({ color: P_COLORS.accentCyan, alpha: 0.14 });
-    root.addChild(sep);
+    const deck = new Graphics();
+    deck.roundRect(0, 0, cw, H, 14);
+    deck.fill({ color: P_COLORS.dockDeck, alpha: 1 });
+    deck.stroke({ color: P_COLORS.dockDeckRim, width: 1.5, alpha: 0.85 });
+    root.addChild(deck);
+    const deckTop = new Graphics();
+    deckTop.roundRect(2, 2, cw - 4, Math.floor(H * 0.42), 11);
+    deckTop.fill({ color: P_COLORS.dockDeckTop, alpha: 0.35 });
+    root.addChild(deckTop);
+    const bevel = new Graphics();
+    bevel.rect(0, 0, cw, 3);
+    bevel.fill({ color: 0xffffff, alpha: 0.04 });
+    root.addChild(bevel);
+    const rivL = new Graphics();
+    rivL.circle(10, H / 2, 2.5);
+    rivL.fill({ color: P_COLORS.dockBolt, alpha: 0.55 });
+    root.addChild(rivL);
+    const rivR = new Graphics();
+    rivR.circle(cw - 10, H / 2, 2.5);
+    rivR.fill({ color: P_COLORS.dockBolt, alpha: 0.55 });
+    root.addChild(rivR);
 
     const items: {
         label: string;
         onTap: () => void;
         draw: (g: Graphics, cx: number, cy: number, s: number) => void;
     }[] = [
-        { label: 'Home', onTap: () => { navIndexBySlot?.(0); onHome(); }, draw: (g, cx, cy, s) => drawIconHome(g, cx, cy, s) },
+        { label: 'HOME', onTap: () => { navIndexBySlot?.(0); onHome(); }, draw: (g, cx, cy, s) => drawIconHome(g, cx, cy, s) },
         {
-            label: 'Missions',
+            label: 'MISSIONS',
             onTap: () => {
                 navIndexBySlot?.(1);
                 gameFlow().openMissionSelect();
@@ -1284,7 +1393,7 @@ function buildBottomDockPortrait(
             draw: (g, cx, cy, s) => drawIconMap(g, cx, cy, s),
         },
         {
-            label: 'Hangar',
+            label: 'HANGAR',
             onTap: () => {
                 navIndexBySlot?.(2);
                 ui.showScreen('store', true);
@@ -1292,7 +1401,7 @@ function buildBottomDockPortrait(
             draw: (g, cx, cy, s) => drawIconHangar(g, cx, cy, s),
         },
         {
-            label: 'Store',
+            label: 'STORE',
             onTap: () => {
                 navIndexBySlot?.(3);
                 ui.showScreen('store', true);
@@ -1303,6 +1412,7 @@ function buildBottomDockPortrait(
 
     const n = items.length;
     const slotW = cw / n;
+    const margin = 6;
     const dockCradles: Graphics[] = [];
     const slotContainers: Container[] = [];
 
@@ -1313,20 +1423,35 @@ function buildBottomDockPortrait(
         slot.cursor = 'pointer';
 
         const cx = slotW / 2;
+        const cellW = slotW - margin * 2;
+
+        const channel = new Graphics();
+        channel.roundRect(margin, 6, cellW, H - 12, 10);
+        channel.fill({ color: P_COLORS.dockChannel, alpha: 0.9 });
+        channel.stroke({ color: 0x000000, width: 1, alpha: 0.35 });
+        slot.addChild(channel);
+
         const cradle = new Graphics();
-        cradle.roundRect(cx - 39, 7, 78, 58, 14);
-        cradle.fill({ color: P_COLORS.bgBase, alpha: 0.35 });
-        cradle.stroke({ color: P_COLORS.accentCyan, width: 1.5, alpha: 0 });
+        cradle.roundRect(margin + 3, 9, cellW - 6, H - 22, 9);
         dockCradles.push(cradle);
         slot.addChild(cradle);
 
         const vecG = new Graphics();
-        it.draw(vecG, cx, 28, 21);
+        it.draw(vecG, cx, H * 0.38, 20);
         slot.addChild(vecG);
 
-        const t = new Text({ text: it.label, style: ts(P_TYPO.navLabel, P_COLORS.navInactive) });
+        const t = new Text({
+            text: it.label,
+            style: new TextStyle({
+                fontFamily: FONT,
+                fontSize: P_TYPO.dockLabel.fontSize,
+                fontWeight: P_TYPO.dockLabel.fontWeight,
+                fill: 0x5c6b7c,
+                letterSpacing: P_TYPO.dockLabel.letterSpacing,
+            }),
+        });
         t.anchor.set(0.5, 0);
-        t.position.set(cx, 49);
+        t.position.set(cx, H - 22);
         slot.addChild(t);
 
         pressable(slot, it.onTap);
@@ -1335,39 +1460,39 @@ function buildBottomDockPortrait(
     });
 
     function setActive(i: number): void {
-        const slotW = cw / items.length;
+        const slotW2 = cw / items.length;
         dockCradles.forEach((cr, idx) => {
-            const cx = slotW / 2;
+            const cellW = slotW2 - margin * 2;
             cr.clear();
-            if (idx === i) {
-                // Active: filled cradle + glow ring + top pip indicator
-                cr.roundRect(cx - 37, 6, 74, 56, 14);
-                cr.fill({ color: P_COLORS.bgPanelLit, alpha: 0.70 });
-                cr.roundRect(cx - 37, 6, 74, 56, 14);
-                cr.stroke({ color: P_COLORS.accentCyan, width: 1.5, alpha: 0.80 });
-                // Top indicator pip
-                cr.roundRect(cx - 14, 3, 28, 3, 1.5);
-                cr.fill({ color: P_COLORS.navActivePill, alpha: 0.90 });
-                // Ambient glow circle behind icon
-                cr.circle(cx, 29, 22);
-                cr.fill({ color: P_COLORS.accentCyan, alpha: P_OPACITY.activeGlow });
-            } else {
-                cr.roundRect(cx - 37, 6, 74, 56, 14);
-                cr.fill({ color: P_COLORS.bgBase, alpha: 0.22 });
+            const on = idx === i;
+            cr.roundRect(margin + 3, 9, cellW - 6, H - 22, 9);
+            cr.fill({
+                color: on ? P_COLORS.dockCellActive : P_COLORS.dockCellIdle,
+                alpha: on ? 0.95 : 0.55,
+            });
+            cr.stroke({
+                color: on ? P_COLORS.dockCellActiveRim : P_COLORS.dockCellIdleRim,
+                width: on ? 2 : 1,
+                alpha: on ? 0.75 : 0.35,
+            });
+            if (on) {
+                cr.roundRect(margin + 8, 11, cellW - 16, 2, 1);
+                cr.fill({ color: P_COLORS.accentCyan, alpha: 0.45 });
             }
         });
         slotContainers.forEach((ch, idx) => {
-            const label = ch.children[2] as Text | undefined;
-            if (label instanceof Text) {
-                label.style = new TextStyle({
-                    fontFamily: FONT,
-                    fontSize: P_TYPO.navLabel.fontSize,
-                    fontWeight: idx === i ? '800' : '600',
-                    fill: idx === i ? P_COLORS.navActive : P_COLORS.navInactive,
-                    letterSpacing: idx === i ? 0.8 : 0.3,
-                });
-            }
-            ch.position.y = idx === i ? -2 : 0;
+            const on = idx === i;
+            const vecG = ch.children[2] as Graphics;
+            vecG.tint = on ? P_COLORS.accentCyan : 0xa8b4c4;
+            const label = ch.children[3] as Text;
+            label.style = new TextStyle({
+                fontFamily: FONT,
+                fontSize: on ? P_TYPO.dockLabelActive.fontSize : P_TYPO.dockLabel.fontSize,
+                fontWeight: on ? P_TYPO.dockLabelActive.fontWeight : P_TYPO.dockLabel.fontWeight,
+                fill: on ? P_COLORS.accentCyan : 0x4a5666,
+                letterSpacing: on ? P_TYPO.dockLabelActive.letterSpacing : P_TYPO.dockLabel.letterSpacing,
+            });
+            ch.position.y = on ? -1 : 0;
         });
     }
     setActive(0);
@@ -1434,7 +1559,7 @@ export function buildPortraitMissionScreen(p: BuildPortraitMissionScreenParams):
     y += cardH + P_SPACE.s12;
 
     const tabsH = 50;
-    const dockH = 72;
+    const dockH = 76;
     const listH = Math.max(156, sh - y - tabsH - P_SPACE.s10 - dockH - p.safeBottom - P_SPACE.s16);
 
     const list = buildMissionListPortrait(cw, listH, (id) => gameFlow().startLevelWithMicGate?.(id), p.getProgress);

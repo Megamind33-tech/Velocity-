@@ -9,6 +9,25 @@ export const P_COLORS = {
     bgPanel: 0x0b1220,
     bgPanelActive: 0x0f1a28,
     bgPanelLocked: 0x06080f,
+    /** Locked card — withheld face (not “dimmed playable”) */
+    lockedFace: 0x070a12,
+    lockedFaceElite: 0x0c0a10,
+    lockedPlaque: 0x050810,
+    lockedPlaqueElite: 0x100c08,
+    lockedPlaqueRim: 0x2a3d4a,
+    lockedPlaqueRimElite: 0x6a5228,
+    lockedGateWell: 0x04060c,
+    lockedGateWellElite: 0x0a0806,
+    /** Command dock — deck plate (not app bar) */
+    dockDeck: 0x060912,
+    dockDeckTop: 0x0d1522,
+    dockDeckRim: 0x1e2f44,
+    dockChannel: 0x020408,
+    dockCellIdle: 0x080c14,
+    dockCellIdleRim: 0x141c2a,
+    dockCellActive: 0x0e1624,
+    dockCellActiveRim: 0x00c4a8,
+    dockBolt: 0x3d4f62,
     bgPanelLit: 0x131e2e,     // hover/active highlight surface
     strokeSubtle: 0x1a2638,
     strokeActive: 0x00d4b4,
@@ -44,6 +63,11 @@ export const P_TYPO = {
     missionBody: { fontSize: 11, lineHeight: 14, fontWeight: '500' as const, letterSpacing: 0 },
     button: { fontSize: 13, lineHeight: 17, fontWeight: '800' as const, letterSpacing: 0.8 },
     navLabel: { fontSize: 9, lineHeight: 12, fontWeight: '700' as const, letterSpacing: 0.5 },
+    /** Locked plaque primary — must read at a glance */
+    lockedPlaqueState: { fontSize: 11, lineHeight: 13, fontWeight: '800' as const, letterSpacing: 1.4 },
+    lockedPlaqueSub: { fontSize: 8, lineHeight: 10, fontWeight: '600' as const, letterSpacing: 0.6 },
+    dockLabel: { fontSize: 8, lineHeight: 10, fontWeight: '700' as const, letterSpacing: 1.0 },
+    dockLabelActive: { fontSize: 8, lineHeight: 10, fontWeight: '800' as const, letterSpacing: 1.2 },
 } as const;
 
 export const P_SPACE = {
