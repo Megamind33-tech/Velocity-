@@ -11,10 +11,12 @@ import {
     Text,
     TextStyle,
 } from 'pixi.js';
-import { getVelocityUiTexture, type VelocityUiTextureKey } from '../velocityUiArt';
+import { getVelocityCustomTexture, getVelocityUiTexture, type VelocityUiTextureKey } from '../velocityUiArt';
 import { GAME_COLORS, GAME_FONTS } from '../GameUITheme';
 import { createKenneyFramedPanelWithContent, createKenneyHProgressBar } from '../kenneyNineSlice';
 import { VELOCITY_UI_SLICE } from '../velocityUiSlice';
+import { CHIP_BADGE_RESERVE, CHIP_TEXT_X } from '../menuShared/topStatusStripLayout';
+import { drawIconProfile } from '../menuPortrait/missionPortraitIcons';
 
 const PS = VELOCITY_UI_SLICE.panel;
 const BS = VELOCITY_UI_SLICE.button;
@@ -87,7 +89,49 @@ export function kenneyButton(
     return root;
 }
 
-/** Compact stat chip: Kenney secondary chrome + vector icon + accent value color. */
+export function fitStatChipValue(
+    val: string,
+    maxW: number,
+    accentColor: number,
+): Text {
+    let fs = 16;
+    let t: Text | null = null;
+    for (; fs >= 11; fs -= 1) {
+        const t2 = new Text({
+            text: val,
+            style: new TextStyle({
+                fill: accentColor,
+                fontSize: fs,
+                fontWeight: '800',
+                fontFamily: GAME_FONTS.standard,
+                dropShadow: { alpha: 0.45, blur: 2, color: 0x000000, distance: 1 },
+            }),
+        });
+        if (t2.width <= maxW) {
+            t = t2;
+            break;
+        }
+        t2.destroy();
+    }
+    if (!t) {
+        const cut = val.length > 6 ? `${val.slice(0, 5)}…` : val;
+        t = new Text({
+            text: cut,
+            style: new TextStyle({
+                fill: accentColor,
+                fontSize: 11,
+                fontWeight: '800',
+                fontFamily: GAME_FONTS.standard,
+                dropShadow: { alpha: 0.45, blur: 2, color: 0x000000, distance: 1 },
+            }),
+        });
+    }
+    return t;
+}
+
+export type StatChipCornerBadge = 'prestige' | 'elite' | 'none';
+
+/** Compact stat chip: Kenney secondary chrome + fixed lanes (icon | text | badge). */
 export function kenneyStatChip(
     drawIcon: (g: Graphics, cx: number, cy: number, s: number) => void,
     label: string,
@@ -95,6 +139,7 @@ export function kenneyStatChip(
     w: number,
     h: number,
     accentColor = 0xf0f4fa,
+    cornerBadge: StatChipCornerBadge = 'none',
 ): Container | null {
     const spr = kenneyButtonNineSlice('button_secondary', w, h);
     if (!spr) return null;
@@ -103,15 +148,18 @@ export function kenneyStatChip(
     const root = new Container();
     root.addChild(spr);
 
-    // Accent top strip for material depth
     const strip = new Graphics();
     strip.roundRect(8, 0, w - 16, 3, 1);
     strip.fill({ color: accentColor, alpha: 0.55 });
     root.addChild(strip);
 
+    const iconCx = 15;
     const ig = new Graphics();
-    drawIcon(ig, 22, h / 2 + 2, 18);
+    drawIcon(ig, iconCx, h / 2 + 2, Math.min(17, Math.floor(h * 0.28)));
     root.addChild(ig);
+
+    const reserve = cornerBadge !== 'none' ? CHIP_BADGE_RESERVE : 6;
+    const valueMaxW = Math.max(28, w - CHIP_TEXT_X - reserve - 2);
 
     const lb = new Text({
         text: label.toUpperCase(),
@@ -120,24 +168,29 @@ export function kenneyStatChip(
             fontSize: 9,
             fontWeight: '600',
             fontFamily: GAME_FONTS.standard,
-            letterSpacing: 1,
+            letterSpacing: 0.8,
         }),
     });
-    lb.position.set(42, 7);
+    lb.position.set(CHIP_TEXT_X, 7);
     root.addChild(lb);
 
-    const vt = new Text({
-        text: value,
-        style: new TextStyle({
-            fill: accentColor,
-            fontSize: 16,
-            fontWeight: '800',
-            fontFamily: GAME_FONTS.standard,
-            dropShadow: { alpha: 0.45, blur: 2, color: 0x000000, distance: 1 },
-        }),
-    });
-    vt.position.set(42, 19);
+    const vt = fitStatChipValue(value, valueMaxW, accentColor);
+    vt.position.set(CHIP_TEXT_X, 19);
     root.addChild(vt);
+
+    if (cornerBadge !== 'none') {
+        const key = cornerBadge === 'prestige' ? 'rank_prestige' : 'rank_elite';
+        const tex = getVelocityCustomTexture(key);
+        if (tex) {
+            const em = new Sprite(tex);
+            em.anchor.set(1, 0);
+            em.width = 20;
+            em.height = 20;
+            em.position.set(w - 5, 5);
+            em.alpha = 0.9;
+            root.addChild(em);
+        }
+    }
 
     return root;
 }
@@ -154,28 +207,61 @@ export function kenneyChromeHit(w: number, h: number, onClick: () => void): Cont
     return root;
 }
 
-/** Profile / avatar hit — Kenney round gloss + optional tint ring. */
+/** Command identity / profile node — outer ring stack + inner portrait field + pilot glyph. */
 export function kenneyAvatarPlate(size: number, onClick: () => void): Container {
     const root = new Container();
+    const cx = size / 2;
+    const cy = size / 2;
+    const rOut = size / 2 - 1;
+
+    const outer = new Graphics();
+    outer.circle(cx, cy, rOut);
+    outer.stroke({ color: 0x1a2a3c, width: 2, alpha: 0.9 });
+    root.addChild(outer);
+
+    const ringMid = new Graphics();
+    ringMid.circle(cx, cy, rOut - 2);
+    ringMid.stroke({ color: GAME_COLORS.primary, width: 1.5, alpha: 0.65 });
+    root.addChild(ringMid);
+
+    const innerR = rOut - 5;
+    const face = new Graphics();
+    face.circle(cx, cy, innerR);
+    face.fill({ color: 0x060a10, alpha: 1 });
+    face.stroke({ color: 0x2a4058, width: 1, alpha: 0.55 });
+    root.addChild(face);
+
+    const gloss = new Graphics();
+    gloss.ellipse(cx - innerR * 0.15, cy - innerR * 0.35, innerR * 0.55, innerR * 0.28);
+    gloss.fill({ color: 0xffffff, alpha: 0.06 });
+    root.addChild(gloss);
+
     const tex = getVelocityUiTexture('node_unlocked');
     if (tex) {
         const s = new Sprite(tex);
         s.anchor.set(0.5);
-        s.width = size;
-        s.height = size;
-        s.position.set(size / 2, size / 2);
-        s.tint = 0xb8e0ff;
+        const d = innerR * 2 - 4;
+        s.width = d;
+        s.height = d;
+        s.position.set(cx, cy);
+        s.tint = 0x9ec8e8;
+        s.alpha = 0.35;
         root.addChild(s);
-    } else {
-        const g = new Graphics();
-        const cx = size / 2;
-        const cy = size / 2;
-        const r = size / 2 - 2;
-        g.circle(cx, cy, r);
-        g.fill({ color: 0x0c141e, alpha: 1 });
-        g.stroke({ color: GAME_COLORS.primary, width: 2, alpha: 0.55 });
-        root.addChild(g);
     }
+
+    const pilot = new Graphics();
+    drawIconProfile(pilot, cx, cy + 1, Math.min(16, innerR * 0.85), {
+        color: GAME_COLORS.primary,
+        width: 1.75,
+        alpha: 0.88,
+    });
+    root.addChild(pilot);
+
+    const rim = new Graphics();
+    rim.circle(cx, cy, innerR);
+    rim.stroke({ color: GAME_COLORS.primary, width: 1, alpha: 0.35 });
+    root.addChild(rim);
+
     root.eventMode = 'static';
     root.cursor = 'pointer';
     const stop = (e: FederatedPointerEvent) => e.stopPropagation();

@@ -90,12 +90,13 @@ export function buildCommandDock(
 
     const n = items.length;
     const slotW = cw / n;
-    const margin = Math.max(5, Math.min(8, Math.floor(Math.min(cw, H) * 0.012)));
+    const margin = Math.max(4, Math.min(7, Math.floor(Math.min(cw, H) * 0.01)));
     const dockCradles: Graphics[] = [];
     const slotContainers: Container[] = [];
     const labels: Text[] = [];
-    const iconSize = H >= 80 ? 22 : 20;
-    const labelY = H - (H >= 80 ? 24 : 22);
+    const iconSize = H >= 80 ? 24 : 22;
+    const labelY = H - (H >= 80 ? 22 : 20);
+    const labelFs = H >= 80 ? 9 : 8;
     items.forEach((it, i) => {
         const slot = new Container();
         slot.position.set(i * slotW, 0);
@@ -103,30 +104,35 @@ export function buildCommandDock(
         const cellW = slotW - margin * 2;
 
         const channel = new Graphics();
-        const chTop = H >= 80 ? 7 : 6;
+        const chTop = H >= 80 ? 5 : 5;
         channel.roundRect(margin, chTop, cellW, H - chTop * 2, 10);
-        channel.fill({ color: palette.dockChannel, alpha: 0.9 });
-        channel.stroke({ color: 0x000000, width: 1, alpha: 0.35 });
+        channel.fill({ color: palette.dockChannel, alpha: 0.94 });
+        channel.stroke({ color: 0x000000, width: 1, alpha: 0.42 });
         slot.addChild(channel);
 
-        const cradleTop = H >= 80 ? 10 : 9;
+        const channelFace = new Graphics();
+        channelFace.roundRect(margin + 2, chTop + 2, cellW - 4, Math.max(8, Math.floor((H - chTop * 2) * 0.22)), 6);
+        channelFace.fill({ color: 0x0a121c, alpha: 0.55 });
+        slot.addChild(channelFace);
+
+        const cradleTop = H >= 80 ? 8 : 7;
         const cradle = new Graphics();
         cradle.roundRect(margin + 3, cradleTop, cellW - 6, H - cradleTop * 2, 9);
         dockCradles.push(cradle);
         slot.addChild(cradle);
 
         const vecG = new Graphics();
-        it.draw(vecG, cx, H * (H >= 80 ? 0.36 : 0.37), iconSize);
+        it.draw(vecG, cx, H * (H >= 80 ? 0.34 : 0.35), iconSize);
         slot.addChild(vecG);
 
         const t = new Text({
             text: it.label,
             style: new TextStyle({
                 fontFamily,
-                fontSize: 8,
+                fontSize: labelFs,
                 fontWeight: '700',
                 fill: palette.labelIdle,
-                letterSpacing: 1.0,
+                letterSpacing: 1.05,
             }),
         });
         t.anchor.set(0.5, 0);
@@ -144,36 +150,38 @@ export function buildCommandDock(
         dockCradles.forEach((cr, idx) => {
             const cellW = slotW2 - margin * 2;
             const on = idx === i;
-            const cradleTop = H >= 80 ? 10 : 9;
+            const cradleTop = H >= 80 ? 8 : 7;
             cr.clear();
             cr.roundRect(margin + 3, cradleTop, cellW - 6, H - cradleTop * 2, 9);
             cr.fill({
                 color: on ? palette.dockCellActive : palette.dockCellIdle,
-                alpha: on ? 0.95 : 0.55,
+                alpha: on ? 0.97 : 0.62,
             });
             cr.stroke({
                 color: on ? palette.dockCellActiveRim : palette.dockCellIdleRim,
-                width: on ? 2 : 1,
-                alpha: on ? 0.75 : 0.35,
+                width: on ? 2.25 : 1,
+                alpha: on ? 0.82 : 0.4,
             });
             if (on) {
-                cr.roundRect(margin + 8, cradleTop + 2, cellW - 16, 2, 1);
-                cr.fill({ color: palette.accentCyan, alpha: 0.45 });
+                cr.roundRect(margin + 7, cradleTop + 2, cellW - 14, 2, 1);
+                cr.fill({ color: palette.accentCyan, alpha: 0.5 });
+                cr.roundRect(margin + 6, H - cradleTop - 5, cellW - 12, 2, 1);
+                cr.fill({ color: palette.accentCyan, alpha: 0.22 });
             }
         });
         slotContainers.forEach((ch, idx) => {
             const on = idx === i;
-            const vecG = ch.children[2] as Graphics;
+            const vecG = ch.children[3] as Graphics;
             vecG.tint = on ? palette.accentCyan : palette.inactiveIconTint;
-            const label = ch.children[3] as Text;
+            const label = ch.children[4] as Text;
             label.style = new TextStyle({
                 fontFamily,
-                fontSize: 8,
+                fontSize: labelFs,
                 fontWeight: on ? '800' : '700',
                 fill: on ? palette.accentCyan : palette.labelIdle,
-                letterSpacing: on ? 1.15 : 1.0,
+                letterSpacing: on ? 1.2 : 1.05,
             });
-            ch.position.y = on ? -1 : 0;
+            ch.position.y = on ? -2 : 0;
         });
     }
     setActive(0);
