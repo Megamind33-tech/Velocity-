@@ -17,7 +17,7 @@ import { getMainMenuProgress, isLevelUnlocked } from '../../../data/localProgres
 import { LEVEL_DEFINITIONS, type LevelDefinition } from '../../../data/levelDefinitions';
 import { gameFlow } from '../gameFlowBridge';
 import type { GameUIManager } from '../GameUIManager';
-import { getVelocityUiTexture, type VelocityUiTextureKey } from '../velocityUiArt';
+import { getVelocityCustomTexture, getVelocityUiTexture, type VelocityUiTextureKey } from '../velocityUiArt';
 import { VELOCITY_UI_SLICE } from '../velocityUiSlice';
 import {
     kenneyAvatarPlate,
@@ -268,12 +268,32 @@ export function buildTopUtilityBar(
     const c2 =
         kenneyStatChip(icoStarBadge, 'BEST', String(bestScore), chipW, H - 4, GOLD) ??
         vectorStatChip(icoStarBadge, 'BEST', String(bestScore), chipW, H - 4, GOLD);
+    const prestige = getVelocityCustomTexture('rank_prestige');
+    if (prestige) {
+        const em = new Sprite(prestige);
+        em.anchor.set(1, 0);
+        em.width = 20;
+        em.height = 20;
+        em.position.set(chipW - 6, 6);
+        em.alpha = 0.9;
+        c2.addChild(em);
+    }
     c2.position.set(x0 + chipW + gap, 5);
     root.addChild(c2);
 
     const c3 =
         kenneyStatChip(icoGemPremium, 'PREMIUM', `${prog.unlockedCount}`, chipW, H - 4, PURPLE) ??
         vectorStatChip(icoGemPremium, 'PREMIUM', `${prog.unlockedCount}`, chipW, H - 4, PURPLE);
+    const elite = getVelocityCustomTexture('rank_elite');
+    if (elite) {
+        const em = new Sprite(elite);
+        em.anchor.set(1, 0);
+        em.width = 20;
+        em.height = 20;
+        em.position.set(chipW - 6, 6);
+        em.alpha = 0.9;
+        c3.addChild(em);
+    }
     c3.position.set(x0 + (chipW + gap) * 2, 5);
     if (onPremiumTap) {
         c3.eventMode = 'static';
@@ -345,6 +365,20 @@ function vectorStatChip(
     });
     vt.position.set(40, 24);
     root.addChild(vt);
+    const rankTex = label === 'BEST'
+        ? getVelocityCustomTexture('rank_prestige')
+        : label === 'PREMIUM'
+          ? getVelocityCustomTexture('rank_elite')
+          : undefined;
+    if (rankTex) {
+        const rank = new Sprite(rankTex);
+        rank.anchor.set(1, 0);
+        rank.width = 18;
+        rank.height = 18;
+        rank.position.set(w - 6, 5);
+        rank.alpha = 0.88;
+        root.addChild(rank);
+    }
     return root;
 }
 
@@ -832,6 +866,18 @@ function missionRow(
         icGlyph.stroke({ color: lockColor, width: 1.5, alpha: lockAlpha });
     }
     root.addChild(icGlyph);
+    if (isLocked) {
+        const lockBadge = getVelocityCustomTexture('badge_locked');
+        if (lockBadge) {
+            const seal = new Sprite(lockBadge);
+            seal.anchor.set(0.5);
+            seal.width = Math.floor(iconR * 1.2);
+            seal.height = Math.floor(iconR * 1.2);
+            seal.position.set(icX, icY);
+            seal.alpha = primaryState === 'elite_locked' ? 0.9 : 0.72;
+            root.addChild(seal);
+        }
+    }
 
     const title = new Text({
         text: trunc(level.name, Math.max(8, Math.floor(textMax / 7.5))),
@@ -926,6 +972,16 @@ function missionRow(
         alpha: 0.45,
     });
     root.addChild(rewardGem);
+    const rewardBadge = getVelocityCustomTexture('badge_reward');
+    if (rewardBadge) {
+        const rb = new Sprite(rewardBadge);
+        rb.anchor.set(0.5);
+        rb.width = 14;
+        rb.height = 14;
+        rb.position.set(tx + 6, rowH - 18);
+        rb.alpha = 0.85;
+        root.addChild(rb);
+    }
     const reward = new Text({
         text:
             primaryState === 'elite_locked'
@@ -964,6 +1020,17 @@ function missionRow(
     actionDock.roundRect(actionDockX + 8, 11, btnW - 2, 2, 1);
     actionDock.fill({ color: primaryState === 'claimable' ? C.gold : unlocked ? C.cyan : C.muted, alpha: 0.28 });
     root.addChild(actionDock);
+    const frameTex = getVelocityCustomTexture(
+        primaryState === 'claimable' ? 'frame_premium' : isLocked ? 'frame_locked' : 'frame_premium',
+    );
+    if (frameTex) {
+        const frame = new Sprite(frameTex);
+        frame.width = btnW + 18;
+        frame.height = rowH - 10;
+        frame.position.set(actionDockX - 3, 5);
+        frame.alpha = primaryState === 'claimable' ? 0.72 : isLocked ? 0.62 : 0.42;
+        root.addChild(frame);
+    }
 
     if (unlocked) {
         const btn =

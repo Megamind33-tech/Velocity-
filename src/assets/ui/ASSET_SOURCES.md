@@ -5,6 +5,11 @@ Primary UI family uses **Kenney** assets already bundled under `public/kenney-ui
 ## Families wired by code
 - `Kenney UI Pack` (`PNG/Blue|Grey|Yellow|Red|Extra`) via `src/ui/game/velocityUiArt.ts`
 - `Kenney UI Pack` font (`Kenney Future`) via `public/kenney-ui-pack/Font/`
+- Optional external custom packs (runtime fallback-safe slots) via `src/ui/game/velocityUiArt.ts`:
+  - `game-rank-icons-vol-9` → `custom-ui/rank/rank_prestige.png`
+  - `game-rank-icons-vol-3` → `custom-ui/rank/rank_elite.png`
+  - `ui-game-elements-vol-9` → `custom-ui/badges/badge_reward.png`, `custom-ui/badges/badge_locked.png`
+  - `ui-game-frames-vol-8` → `custom-ui/frames/frame_premium.png`, `custom-ui/frames/frame_locked.png`
 
 ## Planned family slots (normalized structure)
 - `src/assets/ui/kenney/buttons/`
@@ -18,3 +23,20 @@ Primary UI family uses **Kenney** assets already bundled under `public/kenney-ui
 ## Current fallback policy
 No non-Kenney icon fallback is active in the main menu. If a missing slot appears later,
 use one family only (Lucide OR Bootstrap Icons OR Font Awesome), then visually normalize.
+
+## Role discipline for optional custom pack assets
+- `rank_prestige` / `rank_elite`:
+  - **Use:** top metric prestige modules (`BEST`, `PREMIUM`) only.
+  - **Do not use:** generic mission rows, tabs, or bottom nav.
+- `badge_locked`:
+  - **Use:** locked/elite-locked mission emblem center only.
+  - **Do not use:** playable/claimable cards.
+- `badge_reward`:
+  - **Use:** reward callout gem in mission cards.
+  - **Do not use:** tab/nav decoration.
+- `frame_premium`:
+  - **Use:** high-authority action dock framing (`CLAIM`/premium action emphasis).
+  - **Do not use:** all buttons globally.
+- `frame_locked`:
+  - **Use:** withheld locked action dock framing.
+  - **Do not use:** unlocked action surfaces.
