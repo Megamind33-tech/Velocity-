@@ -4,41 +4,46 @@
  */
 
 export const P_COLORS = {
-    bgBase: 0x04060c,
-    bgElevated: 0x0a1018,
-    bgPanel: 0x0c141e,
-    bgPanelActive: 0x101a26,
-    bgPanelLocked: 0x080c12,
-    strokeSubtle: 0x1e2a38,
-    strokeActive: 0x00c4a8,
-    textPrimary: 0xf2f6fb,
-    textSecondary: 0xb8c4d4,
-    textMuted: 0x6a7a8c,
-    accentCyan: 0x00e6c4,
-    accentCyanSoft: 0x00a896,
-    accentGold: 0xe8b829,
-    accentGoldSoft: 0x8a7020,
-    stateLive: 0x2ee88a,
-    stateLocked: 0x5c6674,
-    statePressed: 0x001a16,
-    navActive: 0x00e6c4,
-    navInactive: 0x7a8a9c,
+    bgBase: 0x030509,
+    bgElevated: 0x08101a,
+    bgPanel: 0x0b1220,
+    bgPanelActive: 0x0f1a28,
+    bgPanelLocked: 0x06080f,
+    bgPanelLit: 0x131e2e,     // hover/active highlight surface
+    strokeSubtle: 0x1a2638,
+    strokeActive: 0x00d4b4,
+    strokeGold: 0xc8a020,
+    textPrimary: 0xf4f8fd,
+    textSecondary: 0xb0c0d2,
+    textMuted: 0x58687c,
+    accentCyan: 0x00e8c8,
+    accentCyanSoft: 0x009880,
+    accentGold: 0xeaba28,
+    accentGoldSoft: 0x806218,
+    accentPurple: 0xb888ff,   // PREMIUM chip
+    accentPurpleSoft: 0x6840a8,
+    stateLive: 0x28e880,
+    stateLocked: 0x48565e,
+    statePressed: 0x001410,
+    navActive: 0x00e8c8,
+    navActivePill: 0x00b89a,   // active indicator pill fill
+    navInactive: 0x607080,
     shadowDeep: 0x000000,
-    shadowGlowCyan: 0x00e6c4,
-    shadowGlowGold: 0xe8b829,
+    shadowGlowCyan: 0x00e8c8,
+    shadowGlowGold: 0xeaba28,
 } as const;
 
 export const P_TYPO = {
-    heroTitle: { fontSize: 28, lineHeight: 32, fontWeight: '800' as const, letterSpacing: 2 },
-    heroSubtitle: { fontSize: 14, lineHeight: 18, fontWeight: '600' as const, letterSpacing: 0.3 },
+    heroTitle: { fontSize: 30, lineHeight: 34, fontWeight: '800' as const, letterSpacing: 3 },
+    heroSubtitle: { fontSize: 13, lineHeight: 17, fontWeight: '600' as const, letterSpacing: 1.2 },
     label: { fontSize: 11, lineHeight: 14, fontWeight: '600' as const, letterSpacing: 0.8 },
     meta: { fontSize: 12, lineHeight: 15, fontWeight: '500' as const, letterSpacing: 0 },
     chip: { fontSize: 11, lineHeight: 14, fontWeight: '700' as const, letterSpacing: 0.2 },
     tab: { fontSize: 11, lineHeight: 14, fontWeight: '700' as const, letterSpacing: 0.2 },
-    missionTitle: { fontSize: 16, lineHeight: 20, fontWeight: '700' as const, letterSpacing: 0 },
-    missionBody: { fontSize: 12, lineHeight: 15, fontWeight: '500' as const, letterSpacing: 0 },
-    button: { fontSize: 14, lineHeight: 18, fontWeight: '800' as const, letterSpacing: 0.6 },
-    navLabel: { fontSize: 10, lineHeight: 12, fontWeight: '700' as const, letterSpacing: 0.2 },
+    missionTitle: { fontSize: 15, lineHeight: 19, fontWeight: '700' as const, letterSpacing: 0.2 },
+    missionBody: { fontSize: 11, lineHeight: 14, fontWeight: '500' as const, letterSpacing: 0 },
+    button: { fontSize: 13, lineHeight: 17, fontWeight: '800' as const, letterSpacing: 0.8 },
+    navLabel: { fontSize: 9, lineHeight: 12, fontWeight: '700' as const, letterSpacing: 0.5 },
 } as const;
 
 export const P_SPACE = {
@@ -83,10 +88,13 @@ export const P_MOTION = {
 
 export const P_OPACITY = {
     inactive: 0.72,
-    lockedSurface: 0.92,
-    lockedStroke: 0.55,
-    motif: 0.08,
-    dockBg: 0.96,
+    lockedSurface: 0.94,
+    lockedStroke: 0.5,
+    motif: 0.06,
+    motifStreak: 0.10,
+    dockBg: 0.97,
+    chipBevel: 0.07,
+    activeGlow: 0.09,
 } as const;
 
 /** Stacking: background 0, content 100, modals higher (unused here). */

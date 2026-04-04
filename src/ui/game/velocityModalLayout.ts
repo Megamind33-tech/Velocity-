@@ -58,16 +58,35 @@ export function buildVelocityModal(
         panelRoot.addChild(content);
     }
 
+    // ── Panel outer glow edge — makes the modal feel authored, not just placed ─
+    const panelGlow = new Graphics();
+    panelGlow.roundRect(-2, -2, panelW + 4, panelH + 4, 15);
+    panelGlow.stroke({ color: titleFill, width: 2, alpha: 0.14 });
+    panelRoot.addChild(panelGlow);
+    // Subtle corner accent pips
+    const cornerSize = 8;
+    const cpips = new Graphics();
+    // top-left
+    cpips.moveTo(0, cornerSize); cpips.lineTo(0, 0); cpips.lineTo(cornerSize, 0);
+    // top-right
+    cpips.moveTo(panelW - cornerSize, 0); cpips.lineTo(panelW, 0); cpips.lineTo(panelW, cornerSize);
+    // bottom-right
+    cpips.moveTo(panelW, panelH - cornerSize); cpips.lineTo(panelW, panelH); cpips.lineTo(panelW - cornerSize, panelH);
+    // bottom-left
+    cpips.moveTo(cornerSize, panelH); cpips.lineTo(0, panelH); cpips.lineTo(0, panelH - cornerSize);
+    cpips.stroke({ color: titleFill, width: 1.5, alpha: 0.35 });
+    panelRoot.addChild(cpips);
+
     const titleText = new Text({
         text: title,
         style: new TextStyle({
             fill: titleFill,
-            fontSize: GAME_SIZES.font.xxl,      // 24px — up from 20px; modal authority
+            fontSize: GAME_SIZES.font.xxl,      // 24px — modal authority
             fontWeight: 'bold',
             fontFamily: GAME_FONTS.arcade,
-            letterSpacing: 2,
-            stroke: { color: GAME_COLORS.bg_darkest, width: 1.5 },
-            dropShadow: { alpha: 0.65, blur: 3, color: GAME_COLORS.bg_darkest, distance: 2 },
+            letterSpacing: 3,
+            stroke: { color: GAME_COLORS.bg_darkest, width: 2 },
+            dropShadow: { alpha: 0.7, blur: 5, color: titleFill, distance: 0 },
         }),
     });
     titleText.anchor.set(0.5, 0);
