@@ -21,7 +21,14 @@ import { getVelocityCustomTexture, getVelocityUiTexture } from '../velocityUiArt
 import { VELOCITY_UI_SLICE } from '../velocityUiSlice';
 
 const PORTRAIT_TAB_BS = VELOCITY_UI_SLICE.button;
-import { kenneyButton, kenneyDockBar, kenneyMissionCardFace, kenneyProgressBar } from '../menuLandscape/kenneyLandscapeWidgets';
+import {
+    kenneyButton,
+    kenneyDockBar,
+    kenneyHeroPanel,
+    kenneyMissionCardFace,
+    kenneyProgressBar,
+} from '../menuLandscape/kenneyLandscapeWidgets';
+import { mountHeroCommandLayout } from '../menuShared/heroCommandLayout';
 import { buildCommandDock, type CommandDockPalette } from '../menuShared/commandDock';
 import { buildModeFilterStrip } from '../menuShared/modeFilterStrip';
 import {
@@ -30,7 +37,7 @@ import {
     fitOneLineSmall,
     fitTitleText,
 } from '../menuShared/missionCardLayout';
-import { P_COLORS, P_ICON, P_MOTION, P_OPACITY, P_RADIUS, P_SHADOW, P_SPACE, P_TYPO, P_Z } from './missionPortraitTokens';
+import { P_COLORS, P_ICON, P_OPACITY, P_RADIUS, P_SPACE, P_TYPO, P_Z } from './missionPortraitTokens';
 import {
     drawIconHangar,
     drawIconHome,
@@ -101,7 +108,6 @@ export type PortraitAnimHandles = {
     rewardShimmer: Graphics;
     tabGlows: Graphics[];
     dockCradles: Graphics[];
-    cardIdle: { root: Container; phase: number }[];
 };
 
 export type PortraitMissionBundle = {
@@ -451,6 +457,26 @@ type FeaturedProps = {
     onFly: () => void;
 };
 
+function portraitHeroIcoRadar(g: Graphics, cx: number, cy: number, r: number): void {
+    g.circle(cx, cy, r);
+    g.stroke({ color: P_COLORS.accentCyan, width: 2, alpha: 0.85 });
+    g.circle(cx, cy, r * 0.55);
+    g.stroke({ color: P_COLORS.accentCyan, width: 1.2, alpha: 0.4 });
+    g.moveTo(cx, cy);
+    g.lineTo(cx + r * 0.72, cy - r * 0.32);
+    g.stroke({ color: P_COLORS.accentCyan, width: 1.5, alpha: 0.75 });
+}
+
+function portraitHeroGoldEmblem(g: Graphics, cx: number, cy: number, emblemR: number): void {
+    g.circle(cx, cy, emblemR + 4);
+    g.fill({ color: P_COLORS.accentGold, alpha: 0.04 });
+    g.circle(cx, cy, emblemR);
+    g.stroke({ color: P_COLORS.accentGold, width: 1.5, alpha: 0.45 });
+    g.circle(cx, cy, emblemR - 7);
+    g.stroke({ color: P_COLORS.accentGoldSoft, width: 1, alpha: 0.3 });
+    drawIconRouteNode(g, cx, cy, emblemR * 0.45, { color: P_COLORS.accentGold, width: 2, alpha: 0.85 });
+}
+
 function buildFeaturedMissionCard(p: FeaturedProps): {
     root: Container;
     anim: Pick<PortraitAnimHandles, 'heroGlow' | 'heroMotif' | 'rankGlow' | 'routeSweep' | 'rewardShimmer'>;
@@ -459,35 +485,88 @@ function buildFeaturedMissionCard(p: FeaturedProps): {
 } {
     const root = new Container();
     const pad = P_SPACE.s16;
-    const innerW = p.cw - pad * 2;
+    const pair = kenneyHeroPanel(p.cw, p.cardH);
+    if (pair) {
+        root.addChild(pair.root);
+        const contentW = Math.max(260, p.cw - 44);
+        const innerH = Math.max(110, p.cardH - 54);
+        const progLite = { unlockedCount: p.routesDone, totalLevels: p.routesTotal };
+        const cmd = mountHeroCommandLayout(
+            pair.content,
+            contentW,
+            innerH,
+            0,
+            progLite,
+            p.rank,
+            p.onFly,
+            {
+                cyan: P_COLORS.accentCyan,
+                muted: P_COLORS.textMuted,
+                text: P_COLORS.textPrimary,
+                border: P_COLORS.strokeSubtle,
+                gold: P_COLORS.accentGold,
+            },
+            FONT,
+            {
+                trunc,
+                textStyle: (size, weight, fill, letterSpacing = 0) =>
+                    new TextStyle({
+                        fontFamily: FONT,
+                        fontSize: size,
+                        fontWeight: weight,
+                        fill,
+                        letterSpacing,
+                    }),
+                icoRadar: portraitHeroIcoRadar,
+                icoWing: (g, cx, cy, s) => drawIconWing(g, cx, cy, s),
+                drawHeroEmblem: (g, cx, cy, radius) => portraitHeroGoldEmblem(g, cx, cy, radius),
+                kenneyProgressBar,
+                kenneyButton,
+                fallbackPrimaryBtn: (w, h, _label, onClick) => buildFallbackFly(w, h, onClick),
+            },
+        );
+        if (cmd.flyCta) cmd.flyCta.label = 'heroFlyCta';
+        const starLbl = new Text({
+            text: `${p.rewardStars}★ route bonus`,
+            style: ts(P_TYPO.label, P_COLORS.accentGold),
+        });
+        starLbl.position.set(pad, Math.max(4, cmd.bottomRailY - 20));
+        pair.content.addChild(starLbl);
+        return {
+            root,
+            anim: {
+                heroGlow: cmd.heroGlow,
+                heroMotif: cmd.heroMotif,
+                rankGlow: cmd.rankGlow,
+                routeSweep: cmd.routeSweep,
+                rewardShimmer: cmd.rewardShimmer,
+            },
+            flyCta: cmd.flyCta,
+            routeBarW: cmd.routeBarW,
+        };
+    }
 
-    // ── Drop shadow ─────────────────────────────────────────────────────────
+    // Vector fallback (textures missing)
+    const innerW = p.cw - pad * 2;
     const shadow = new Graphics();
     shadow.roundRect(6, 8, p.cw, p.cardH, P_RADIUS.panel);
     shadow.fill({ color: P_COLORS.shadowDeep, alpha: 0.6 });
     root.addChild(shadow);
-
-    // ── Card body — layered surface ──────────────────────────────────────────
     const body = new Graphics();
     body.roundRect(0, 0, p.cw, p.cardH, P_RADIUS.panel);
     body.fill({ color: P_COLORS.bgPanel, alpha: 1 });
     body.stroke({ color: P_COLORS.strokeSubtle, width: 1, alpha: 0.9 });
     root.addChild(body);
-
-    // ── Inner bevel highlight — top edge lift ────────────────────────────────
     const ibevel = new Graphics();
     ibevel.roundRect(2, 2, p.cw - 4, Math.floor(p.cardH * 0.35), P_RADIUS.panel - 2);
     ibevel.fill({ color: 0xffffff, alpha: 0.025 });
     root.addChild(ibevel);
-
-    // ── Atmospheric speed streak motif (upper-right quadrant) ─────────────────
     const heroMotif = new Graphics();
     const mx = p.cw * 0.68;
     const my = p.cardH * 0.22;
-    // Long diagonal streaks — perspective angle, varied opacity
     const streakData = [
-        { dy: 0,  len: 80, a: 0.14 },
-        { dy: 11, len: 60, a: 0.10 },
+        { dy: 0, len: 80, a: 0.14 },
+        { dy: 11, len: 60, a: 0.1 },
         { dy: 20, len: 90, a: 0.12 },
         { dy: 30, len: 45, a: 0.07 },
         { dy: 40, len: 70, a: 0.09 },
@@ -500,28 +579,10 @@ function buildFeaturedMissionCard(p: FeaturedProps): {
         heroMotif.stroke({ color: P_COLORS.accentCyan, width: 1, alpha: a });
     });
     root.addChild(heroMotif);
-
-    // ── Chevron intake motif — fighter-jet identity mark ────────────────────
-    const chevron = new Graphics();
-    const chx = p.cw - 28;
-    const chy = 14;
-    [[0, 0], [8, 6], [0, 12]].forEach(([dx, dy], i) => {
-        const x1 = chx - dx;
-        const y1 = chy + dy;
-        const x2 = chx - dx + 14;
-        const y2 = chy + dy;
-        chevron.moveTo(x1, y1);
-        chevron.lineTo(x2, y2);
-        chevron.stroke({ color: P_COLORS.accentGold, width: 1.5, alpha: 0.12 + i * 0.04 });
-    });
-    root.addChild(chevron);
-
-    // ── Hero glow ring (animated) ────────────────────────────────────────────
     const heroGlow = new Graphics();
     heroGlow.roundRect(1, 1, p.cw - 2, p.cardH - 2, P_RADIUS.panel - 1);
     heroGlow.stroke({ color: P_COLORS.accentCyan, width: 2.5, alpha: 0.18 });
     root.addChild(heroGlow);
-
     const title = new Text({
         text: p.title,
         style: new TextStyle({
@@ -536,7 +597,6 @@ function buildFeaturedMissionCard(p: FeaturedProps): {
     });
     title.position.set(pad, pad);
     root.addChild(title);
-
     const sub = new Text({
         text: p.subtitle,
         style: new TextStyle({
@@ -549,7 +609,6 @@ function buildFeaturedMissionCard(p: FeaturedProps): {
     });
     sub.position.set(pad, pad + 38);
     root.addChild(sub);
-
     const routeY = pad + 62;
     const lbl = new Text({
         text: `Routes  ${p.routesDone} / ${p.routesTotal}`,
@@ -557,14 +616,13 @@ function buildFeaturedMissionCard(p: FeaturedProps): {
     });
     lbl.position.set(pad, routeY);
     root.addChild(lbl);
-
     const barW = Math.min(innerW - 100, p.cw * 0.55);
     const barH = 12;
-    const prog = p.routesTotal > 0 ? p.routesDone / p.routesTotal : 0;
+    const prog01 = p.routesTotal > 0 ? p.routesDone / p.routesTotal : 0;
     const kBar = kenneyProgressBar(barW, barH);
     if (kBar) {
         kBar.position.set(pad, routeY + 18);
-        kBar.setProgress(prog);
+        kBar.setProgress(prog01);
         root.addChild(kBar);
     } else {
         const tr = new Graphics();
@@ -573,40 +631,25 @@ function buildFeaturedMissionCard(p: FeaturedProps): {
         tr.stroke({ color: P_COLORS.strokeSubtle, width: 1, alpha: 0.8 });
         root.addChild(tr);
         const fl = new Graphics();
-        fl.roundRect(pad + 2, routeY + 20, Math.max(6, (barW - 4) * prog), barH - 4, 4);
+        fl.roundRect(pad + 2, routeY + 20, Math.max(6, (barW - 4) * prog01), barH - 4, 4);
         fl.fill({ color: P_COLORS.accentCyan, alpha: 0.9 });
         root.addChild(fl);
     }
-
     const routeSweep = new Graphics();
     routeSweep.position.set(pad, routeY + 18);
     root.addChild(routeSweep);
-
     const emblemR = 28;
     const ex = p.cw - pad - emblemR;
     const ey = pad + 28;
     const eg = new Graphics();
-    // Outer ambient ring
-    eg.circle(ex, ey, emblemR + 4);
-    eg.fill({ color: P_COLORS.accentGold, alpha: 0.04 });
-    // Middle ring
-    eg.circle(ex, ey, emblemR);
-    eg.stroke({ color: P_COLORS.accentGold, width: 1.5, alpha: 0.45 });
-    // Inner ring
-    eg.circle(ex, ey, emblemR - 7);
-    eg.stroke({ color: P_COLORS.accentGoldSoft, width: 1, alpha: 0.30 });
-    // Icon
-    drawIconRouteNode(eg, ex, ey, emblemR * 0.45, { color: P_COLORS.accentGold, width: 2, alpha: 0.85 });
+    portraitHeroGoldEmblem(eg, ex, ey, emblemR);
     root.addChild(eg);
-
     const rewardShimmer = new Graphics();
     rewardShimmer.position.set(ex - emblemR, ey - emblemR);
     root.addChild(rewardShimmer);
-
     const rowY = p.cardH - pad - 48;
     const chipH = 44;
     const rowInner = p.cw - pad * 2;
-    // FLY NOW gets 46% of row — dominant primary action
     let flyW = Math.min(180, Math.max(120, Math.floor(rowInner * 0.46)));
     let rankW = rowInner - flyW - P_SPACE.s8;
     if (rankW < 140) {
@@ -614,30 +657,24 @@ function buildFeaturedMissionCard(p: FeaturedProps): {
         flyW = Math.max(100, rowInner - rankW - P_SPACE.s8);
     }
     rankW = Math.min(rankW, rowInner - flyW - P_SPACE.s8);
-
     const rankRoot = new Container();
-    // Body
     const rb = new Graphics();
     rb.roundRect(0, 0, rankW, chipH, P_RADIUS.chip);
     rb.fill({ color: P_COLORS.bgPanel, alpha: 1 });
-    rb.stroke({ color: P_COLORS.strokeGold, width: 1.5, alpha: 0.50 });
+    rb.stroke({ color: P_COLORS.strokeGold, width: 1.5, alpha: 0.5 });
     rankRoot.addChild(rb);
-    // Inner highlight bevel
     const rbevel = new Graphics();
     rbevel.roundRect(2, 2, rankW - 4, Math.floor(chipH * 0.42), P_RADIUS.chip - 2);
     rbevel.fill({ color: 0xffffff, alpha: P_OPACITY.chipBevel });
     rankRoot.addChild(rbevel);
-    // Gold top accent strip
     const rankStrip = new Graphics();
     rankStrip.roundRect(6, 0, rankW - 12, 3, 1);
     rankStrip.fill({ color: P_COLORS.accentGold, alpha: 0.6 });
     rankRoot.addChild(rankStrip);
-    // Glow overlay (animated)
     const rankGlow = new Graphics();
     rankGlow.roundRect(0, 0, rankW, chipH, P_RADIUS.chip);
     rankGlow.stroke({ color: P_COLORS.accentGold, width: 2, alpha: 0.28 });
     rankRoot.addChild(rankGlow);
-    // Wing icon
     const wingX = 14;
     const textPad = 34;
     const wg = new Graphics();
@@ -661,21 +698,16 @@ function buildFeaturedMissionCard(p: FeaturedProps): {
     }
     rankRoot.position.set(pad, rowY);
     root.addChild(rankRoot);
-
     const starLbl = new Text({
         text: `${p.rewardStars}★ route bonus`,
         style: ts(P_TYPO.label, P_COLORS.accentGold),
     });
     starLbl.position.set(pad, rowY - 20);
     root.addChild(starLbl);
-
-        // Gold accent — structurally unique warm tone in the card composition
-        const fly =
-            kenneyButton('FLY NOW', flyW, 44, 'button_accent', false, p.onFly) ?? buildFallbackFly(flyW, 44, p.onFly);
+    const fly = kenneyButton('FLY NOW', flyW, 44, 'button_accent', false, p.onFly) ?? buildFallbackFly(flyW, 44, p.onFly);
     fly.label = 'heroFlyCta';
     fly.position.set(p.cw - pad - flyW, rowY);
     root.addChild(fly);
-
     return {
         root,
         anim: { heroGlow, heroMotif, rankGlow, routeSweep, rewardShimmer },
@@ -1222,7 +1254,6 @@ function buildMissionListPortrait(
     setScrollY: (y: number) => void;
     getScrollY: () => number;
     maxScroll: () => number;
-    cardIdle: { root: Container; phase: number }[];
 } {
     const root = new Container();
     const maskG = new Graphics();
@@ -1236,7 +1267,6 @@ function buildMissionListPortrait(
     let scrollY = 0;
     const rowH = 104;
     const gap = P_SPACE.s8;
-    const cardIdle: { root: Container; phase: number }[] = [];
 
     function maxScroll(): number {
         const total = scrollLayer.children.length * (rowH + gap) - gap;
@@ -1249,20 +1279,18 @@ function buildMissionListPortrait(
 
     function rebuild(tab: number): void {
         scrollLayer.removeChildren();
-        cardIdle.length = 0;
         const levels = filterLevels(tab);
         const prog = getProgress();
         levels.forEach((lv, i) => {
             const row = buildMissionCardPortrait(lv, cw, rowH, onPlayLevel, prog.maxUnlocked);
             row.position.set(0, i * (rowH + gap));
             scrollLayer.addChild(row);
-            cardIdle.push({ root: row, phase: i * 0.4 });
         });
         setScrollY(0);
     }
 
     rebuild(0);
-    return { root, scrollLayer, rebuild, setScrollY, getScrollY: () => scrollY, maxScroll, cardIdle };
+    return { root, scrollLayer, rebuild, setScrollY, getScrollY: () => scrollY, maxScroll };
 }
 
 function buildBottomDockPortrait(
@@ -1414,7 +1442,6 @@ export function buildPortraitMissionScreen(p: BuildPortraitMissionScreenParams):
         ...feat.anim,
         tabGlows: tabs.tabGlows,
         dockCradles: dock.dockCradles,
-        cardIdle: list.cardIdle,
     };
 
     const routeBarW = feat.routeBarW;
@@ -1433,11 +1460,6 @@ export function buildPortraitMissionScreen(p: BuildPortraitMissionScreenParams):
         const gl = (Math.sin(t * 1.8) * 0.5 + 0.5) * 36;
         anim.rewardShimmer.roundRect(gl, 0, 12, 52, 3);
         anim.rewardShimmer.fill({ color: P_COLORS.accentGold, alpha: 0.1 });
-
-        anim.cardIdle.forEach((c) => {
-            const wobble = Math.sin(t * 0.8 + c.phase) * 0.35;
-            c.root.position.x = wobble;
-        });
     };
 
     return {

@@ -37,6 +37,7 @@ import {
 } from '../menuShared/missionCardLayout';
 import { buildCommandDock, type CommandDockPalette } from '../menuShared/commandDock';
 import { buildModeFilterStrip } from '../menuShared/modeFilterStrip';
+import { mountHeroCommandLayout } from '../menuShared/heroCommandLayout';
 
 const GRID = 8;
 const TAB_BS = VELOCITY_UI_SLICE.button;
@@ -411,189 +412,35 @@ export function buildHeroFlightCard(
     onFlyNow: () => void,
 ): Container {
     const root = new Container();
-    /** Usable width inside framed content (inset 10 + content offset ~12 each side). */
     const contentW = Math.max(260, cw - 44);
-    /** Vertical space inside `content` (frame insets + label offset). */
     const innerH = Math.max(110, cardH - 54);
-    const rightEmblem = 64;
-    const leftTitleMax = Math.max(160, contentW - rightEmblem - GRID * 2);
 
     const pair = kenneyHeroPanel(cw, cardH);
     if (pair) {
         root.addChild(pair.root);
         const content = pair.content;
-        const ox = 0;
-
-        const btnH = 48;   // was 40 — taller CTA has more visual authority
-        /** class chip + gap + FLY NOW — no mic row */
-        const rowBudget = Math.max(160, contentW - GRID * 2);
-        // FLY NOW gets 50% minimum — dominant primary action
-        let flyW = Math.min(220, Math.max(120, Math.floor(rowBudget * 0.50)));
-        let clsW = rowBudget - flyW - GRID;
-        if (clsW < 120) {
-            clsW = 120;
-            flyW = Math.min(200, Math.max(96, rowBudget - clsW - GRID));
-        }
-        clsW = Math.min(Math.floor(rowBudget * 0.62), clsW);
-        flyW = rowBudget - clsW - GRID;
-
-        const bottomPad = 8;
-        let rowY = innerH - btnH - bottomPad;
-        const barH = 14;
-        let barY = rowY - 12 - barH;
-        let progLblY = barY - 14;
-        const subBottom = 36 + 18;
-        const tagY = 58;
-        const showTag = progLblY >= tagY + 20;
-        /** Keep route copy below subtitle — never stack on the title block. */
-        const minProgY = subBottom + (showTag ? 22 : 10);
-        if (progLblY < minProgY) {
-            progLblY = minProgY;
-            barY = progLblY + 14;
-            const minRowY = barY + barH + 8;
-            if (rowY < minRowY) rowY = minRowY;
-        }
-        let useBtnH = btnH;
-        if (rowY + useBtnH + bottomPad > innerH) {
-            useBtnH = Math.max(36, innerH - bottomPad - rowY);
-        }
-        if (rowY + useBtnH + bottomPad > innerH) {
-            rowY = Math.max(0, innerH - useBtnH - bottomPad);
-            barY = Math.min(barY, rowY - 8 - barH);
-            progLblY = barY - 14;
-            if (progLblY < minProgY) {
-                progLblY = minProgY;
-                barY = progLblY + 14;
-                rowY = Math.max(rowY, barY + barH + 6);
-                useBtnH = Math.max(34, innerH - bottomPad - rowY);
-            }
-        }
-
-        // ── Speed streak motif behind title ────────────────────────────────
-        const streakMot = new Graphics();
-        const smy = 16;
-        [[0, 72, 0.13], [10, 55, 0.09], [20, 80, 0.11], [30, 40, 0.06], [40, 62, 0.08]].forEach(([dy, len, a]) => {
-            const sx = contentW * 0.58 + dy * 0.3;
-            streakMot.moveTo(sx, smy + dy);
-            streakMot.lineTo(sx + len, smy + dy - len * 0.05);
-            streakMot.stroke({ color: C.cyan, width: 1, alpha: a });
-        });
-        content.addChild(streakMot);
-        const continuitySeam = new Graphics();
-        continuitySeam.roundRect(0, innerH - 2, contentW - 2, 2, 1);
-        continuitySeam.fill({ color: C.cyan, alpha: 0.22 });
-        content.addChild(continuitySeam);
-        const continuityShadow = new Graphics();
-        continuityShadow.roundRect(0, innerH - 1, contentW - 2, 6, 2);
-        continuityShadow.fill({ color: 0x07101b, alpha: 0.34 });
-        content.addChild(continuityShadow);
-
-        const title = new Text({
-            text: 'VELOCITY',
-            style: new TextStyle({
-                fontFamily: FONT_UI,
-                fontSize: 32,
-                fontWeight: '800',
-                fill: C.text,
-                letterSpacing: 3,
-                dropShadow: { alpha: 0.6, blur: 5, color: C.cyan, distance: 0 },
-                stroke: { color: 0x000000, width: 1 },
-            }),
-        });
-        title.position.set(ox, 0);
-        content.addChild(title);
-
-        const sub = new Text({
-            text: 'VOICE-POWERED FLIGHT',
-            style: style(11, '600', C.muted, 1.5),
-        });
-        sub.position.set(ox, 40);
-        content.addChild(sub);
-
-        if (showTag) {
-            const tag = new Text({
-                text: 'Precision · Pitch · Signal',
-                style: style(12, '500', 0x55bbaa),
-            });
-            tag.position.set(ox, tagY);
-            content.addChild(tag);
-        }
-
-        const emblemX = ox + contentW - rightEmblem / 2;
-        const emblemY = 34;
-        const rg = new Graphics();
-        rg.circle(emblemX, emblemY, 26);
-        rg.stroke({ color: C.cyan, width: 1.5, alpha: 0.35 });
-        icoRadar(rg, emblemX, emblemY, 18);
-        content.addChild(rg);
-
-        const prog01 = prog.totalLevels > 0 ? prog.unlockedCount / prog.totalLevels : 0;
-        const progLbl = new Text({
-            text: `Routes  ${prog.unlockedCount} / ${prog.totalLevels}`,
-            style: style(12, '600', C.muted),
-        });
-        progLbl.position.set(ox, progLblY);
-        content.addChild(progLbl);
-
-        const barW = Math.min(leftTitleMax, contentW - rightEmblem - GRID * 2);
-        const kBar = kenneyProgressBar(barW, barH);
-        if (kBar) {
-            kBar.position.set(ox, barY);
-            kBar.setProgress(prog01);
-            content.addChild(kBar);
-        } else {
-            const bbg = new Graphics();
-            bbg.roundRect(ox, barY, barW, 10, 5);
-            bbg.fill({ color: 0x0a1018, alpha: 1 });
-            bbg.stroke({ color: C.border, width: 1, alpha: 0.6 });
-            content.addChild(bbg);
-            const f = new Graphics();
-            f.roundRect(ox + 2, barY + 2, Math.max(4, (barW - 4) * prog01), 6, 3);
-            f.fill({ color: C.cyan, alpha: 0.9 });
-            content.addChild(f);
-        }
-
-        const cls = new Container();
-        // Body
-        const cb = new Graphics();
-        cb.roundRect(0, 0, clsW, useBtnH, 12);
-        cb.fill({ color: 0x080e16, alpha: 1 });
-        cb.stroke({ color: C.gold, width: 1.5, alpha: 0.50 });
-        cls.addChild(cb);
-        // Inner bevel
-        const cbevel = new Graphics();
-        cbevel.roundRect(2, 2, clsW - 4, Math.floor(useBtnH * 0.42), 10);
-        cbevel.fill({ color: 0xffffff, alpha: 0.04 });
-        cls.addChild(cbevel);
-        // Gold top strip
-        const cstrip = new Graphics();
-        cstrip.roundRect(6, 0, clsW - 12, 3, 1);
-        cstrip.fill({ color: C.gold, alpha: 0.55 });
-        cls.addChild(cstrip);
-        const wingX = 14;
-        const textPad = 34;
-        const wg = new Graphics();
-        icoWing(wg, wingX, useBtnH / 2, 12);
-        cls.addChild(wg);
-        const clab = new Text({
-            text: trunc(`CLASS: ${rank.toUpperCase()}`, Math.max(8, Math.floor((clsW - textPad - 8) / 7))),
-            style: style(12, '700', C.gold),
-        });
-        clab.position.set(textPad, Math.floor((useBtnH - 13) / 2));
-        cls.addChild(clab);
-        cls.position.set(ox, rowY);
-        content.addChild(cls);
-
-        const flyX = ox + clsW + GRID;
-        // Accent (yellow/gold) chrome — structurally unique; all other surfaces are blue/grey.
-        // This makes FLY NOW the only warm-toned shape in the composition: instant focal pull.
-        const fly =
-            kenneyButton('FLY NOW', flyW, useBtnH, 'button_accent', false, onFlyNow) ??
-            fallbackPrimaryBtn(flyW, useBtnH, 'FLY NOW', onFlyNow);
-        fly.label = 'heroFlyCta';
-        fly.position.set(flyX, rowY);
-        content.addChild(fly);
-
+        const cmd = mountHeroCommandLayout(
+            content,
+            contentW,
+            innerH,
+            0,
+            prog,
+            rank,
+            onFlyNow,
+            { cyan: C.cyan, muted: C.muted, text: C.text, border: C.border, gold: C.gold },
+            FONT_UI,
+            {
+                trunc,
+                textStyle: style,
+                icoRadar,
+                icoWing,
+                kenneyProgressBar,
+                kenneyButton,
+                fallbackPrimaryBtn,
+            },
+        );
+        if (cmd.flyCta) cmd.flyCta.label = 'heroFlyCta';
+        (root as Container & { heroCommandAnim?: typeof cmd }).heroCommandAnim = cmd;
         return root;
     }
 
@@ -1143,7 +990,6 @@ export function buildMissionList(
     const maskG = new Graphics();
     maskG.rect(0, 0, cw, listH);
     maskG.fill({ color: 0xffffff, alpha: 1 });
-    maskG.visible = false;
     root.addChild(maskG);
 
     const scrollLayer = new Container();
