@@ -14,6 +14,7 @@ import {
 import { getVelocityUiTexture } from '../velocityUiArt';
 import { VELOCITY_UI_SLICE } from '../velocityUiSlice';
 import { kenneyTabTrack } from '../menuLandscape/kenneyLandscapeWidgets';
+import { fitLabelToWidth } from './fitLabelToWidth';
 
 const TAB_BS = VELOCITY_UI_SLICE.button;
 
@@ -112,8 +113,29 @@ export function buildModeFilterStrip(
     const useK9 =
         innerW >= 116 && !!getVelocityUiTexture('button_primary') && !!getVelocityUiTexture('button_secondary');
 
+    const textMaxW = Math.max(36, innerW - 8);
     const buttons: Container[] = [];
     const tabGlows: Graphics[] = [];
+
+    function makeTabLabel(str: string, on: boolean): Text {
+        const capFs = on ? tabFontSize + 1 : tabFontSize;
+        return fitLabelToWidth(
+            str.toUpperCase(),
+            textMaxW,
+            (fs) =>
+                new TextStyle({
+                    fontFamily,
+                    fontSize: Math.min(fs, capFs),
+                    fontWeight: on ? '800' : '700',
+                    fill: on ? MODE_FILTER_TAB_THEME.tabActive.text : MODE_FILTER_TAB_THEME.tabIdle.text,
+                    letterSpacing: useShort ? 0.5 : 0.6,
+                    align: 'center',
+                    dropShadow: on ? { alpha: 0.5, blur: 2, color: 0x000000, distance: 1 } : undefined,
+                }),
+            capFs,
+            7,
+        );
+    }
 
     for (let i = 0; i < n; i++) {
         const b = new Container();
@@ -162,18 +184,7 @@ export function buildModeFilterStrip(
             bg = gr;
         }
 
-        const labelText = labels[i].toUpperCase();
-        const t = new Text({
-            text: labelText,
-            style: new TextStyle({
-                fontFamily,
-                fontSize: tabFontSize,
-                fontWeight: '700',
-                fill: MODE_FILTER_TAB_THEME.tabIdle.text,
-                letterSpacing: useShort ? 0.5 : 0.6,
-                align: 'center',
-            }),
-        });
+        const t = makeTabLabel(labels[i], false);
         t.anchor.set(0.5);
         t.position.set((tabW - 6) / 2, (H - 18) / 2 + 1);
         b.addChild(t);
@@ -216,17 +227,6 @@ export function buildModeFilterStrip(
                 bg0.bottomHeight = TAB_BS.B;
                 bg0.tint = on ? MODE_FILTER_TAB_THEME.tabActive.tint : MODE_FILTER_TAB_THEME.tabIdle.tint;
                 bg0.alpha = on ? 0.97 : 0.74;
-                tx.style = new TextStyle({
-                    fontFamily,
-                    fontSize: on ? tabFontSize + 1 : tabFontSize,
-                    fontWeight: on ? '800' : '700',
-                    fill: on ? MODE_FILTER_TAB_THEME.tabActive.text : MODE_FILTER_TAB_THEME.tabIdle.text,
-                    letterSpacing: useShort ? 0.5 : 0.6,
-                    align: 'center',
-                    dropShadow: on
-                        ? { alpha: 0.5, blur: 2, color: 0x000000, distance: 1 }
-                        : undefined,
-                });
             } else if (bg0 instanceof Graphics) {
                 bg0.clear();
                 bg0.roundRect(2, 0, tabW - 10, innerH, 10);
@@ -239,17 +239,13 @@ export function buildModeFilterStrip(
                     width: on ? 1.5 : 1,
                     alpha: on ? 0.55 : 0.45,
                 });
-                tx.style = new TextStyle({
-                    fontFamily,
-                    fontSize: on ? tabFontSize + 1 : tabFontSize,
-                    fontWeight: on ? '800' : '700',
-                    fill: on ? MODE_FILTER_TAB_THEME.tabActive.text : MODE_FILTER_TAB_THEME.tabIdle.text,
-                    letterSpacing: useShort ? 0.5 : 0.6,
-                    align: 'center',
-                });
             }
-            tx.anchor.set(0.5);
-            tx.position.set((tabW - 6) / 2, (H - 18) / 2 + 1);
+            const nextLabel = makeTabLabel(labels[i], on);
+            b.removeChild(tx);
+            tx.destroy();
+            nextLabel.anchor.set(0.5);
+            nextLabel.position.set((tabW - 6) / 2, (H - 18) / 2 + 1);
+            b.addChildAt(nextLabel, 4);
         });
     }
 

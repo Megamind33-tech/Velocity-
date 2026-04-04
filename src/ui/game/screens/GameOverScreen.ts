@@ -20,6 +20,7 @@ import {
     type VelocityModalLayout,
 } from '../velocityModalLayout';
 import { createVelocityGameButton } from '../velocityUiButtons';
+import { fitLabelToWidth } from '../menuShared/fitLabelToWidth';
 
 function ts(fill: number, size: number, weight: '400'|'600'|'700'|'800' = '700', spacing = 0): TextStyle {
     return new TextStyle({
@@ -37,6 +38,7 @@ function ts(fill: number, size: number, weight: '400'|'600'|'700'|'800' = '700',
 export class GameOverScreen extends BaseGameScreen {
     private layout!: VelocityModalLayout;
     private scoreValText!: Text;
+    private scoreY = 0;
 
     constructor(app: Application) {
         super(app);
@@ -87,22 +89,27 @@ export class GameOverScreen extends BaseGameScreen {
         body.addChild(crashAtmo);
 
         // Score value — hero number, gold glow even on crash (you know your score)
-        this.scoreValText = new Text({
-            text: '0',
-            style: new TextStyle({
-                fill: GAME_COLORS.accent_gold,
-                fontSize: GAME_SIZES.font.score_hero,
-                fontWeight: '800',
-                fontFamily: GAME_FONTS.arcade,
-                letterSpacing: 2,
-                dropShadow: { alpha: 0.7, blur: 8, color: GAME_COLORS.accent_gold, distance: 0 },
-                stroke: { color: 0x000000, width: 1.5 },
-            }),
-        });
+        this.scoreY = y;
+        this.scoreValText = fitLabelToWidth(
+            '0',
+            innerW - 24,
+            (fs) =>
+                new TextStyle({
+                    fill: GAME_COLORS.accent_gold,
+                    fontSize: fs,
+                    fontWeight: '800',
+                    fontFamily: GAME_FONTS.arcade,
+                    letterSpacing: fs >= 28 ? 2 : 1,
+                    dropShadow: { alpha: 0.7, blur: 8, color: GAME_COLORS.accent_gold, distance: 0 },
+                    stroke: { color: 0x000000, width: 1.5 },
+                }),
+            GAME_SIZES.font.score_hero,
+            16,
+        );
         this.scoreValText.anchor.set(0.5, 0);
         this.scoreValText.position.set(innerW / 2, y);
         body.addChild(this.scoreValText);
-        y += GAME_SIZES.font.score_hero + 18;
+        y += Math.max(GAME_SIZES.font.score_hero, this.scoreValText.height) + 18;
 
         // Action buttons
         const btnW = innerW;
@@ -143,7 +150,32 @@ export class GameOverScreen extends BaseGameScreen {
 
     refreshRunSummary(): void {
         const s = getLastRunSummary();
-        this.scoreValText.text = String(s.score);
+        const str = String(s.score);
+        const innerW = this.layout.innerW;
+        const body = this.layout.body;
+        const nt = fitLabelToWidth(
+            str,
+            innerW - 24,
+            (fs) =>
+                new TextStyle({
+                    fill: GAME_COLORS.accent_gold,
+                    fontSize: fs,
+                    fontWeight: '800',
+                    fontFamily: GAME_FONTS.arcade,
+                    letterSpacing: fs >= 28 ? 2 : 1,
+                    dropShadow: { alpha: 0.7, blur: 8, color: GAME_COLORS.accent_gold, distance: 0 },
+                    stroke: { color: 0x000000, width: 1.5 },
+                }),
+            GAME_SIZES.font.score_hero,
+            16,
+        );
+        nt.anchor.set(0.5, 0);
+        nt.position.set(innerW / 2, this.scoreY);
+        const idx = body.getChildIndex(this.scoreValText);
+        body.removeChild(this.scoreValText);
+        this.scoreValText.destroy();
+        this.scoreValText = nt;
+        body.addChildAt(nt, idx);
     }
 
     show(): void {
