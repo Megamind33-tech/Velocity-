@@ -3,6 +3,7 @@
  */
 
 import { Application, Container, FederatedPointerEvent, Graphics } from 'pixi.js';
+import type { HeroCommandMountResult } from '../menuShared/heroCommandLayout';
 import { BaseGameScreen } from '../GameUIManager';
 import { GAME_SIZES } from '../GameUITheme';
 import { gameFlow } from '../gameFlowBridge';
@@ -54,6 +55,7 @@ export class MainMenuScreen extends BaseGameScreen {
     private _tick = 0;
     private _flyShimmer = 0;
     private _flyBtn: Container | null = null;
+    private _landscapeHeroAnim: Pick<HeroCommandMountResult, 'heroAmbientTick'> | null = null;
 
     private listDrag = false;
     private listDragY = 0;
@@ -94,6 +96,7 @@ export class MainMenuScreen extends BaseGameScreen {
         this.portraitBundle = null;
         this.missionBundle = null;
         this._flyBtn = null;
+        this._landscapeHeroAnim = null;
 
         this.portraitMode = isPortraitAspect(sw, sh);
         const cw = this.contentWidth(sw, this.portraitMode);
@@ -155,6 +158,8 @@ export class MainMenuScreen extends BaseGameScreen {
         hero.position.set(mx, lay.heroY);
         this.content.addChild(hero);
         this._flyBtn = findLabeledDescendant(hero, 'heroFlyCta');
+        const heroAnim = (hero as Container & { heroCommandAnim?: HeroCommandMountResult }).heroCommandAnim;
+        this._landscapeHeroAnim = heroAnim ? { heroAmbientTick: heroAnim.heroAmbientTick } : null;
 
         const bundle = buildMissionList(
             cw,
@@ -228,6 +233,8 @@ export class MainMenuScreen extends BaseGameScreen {
         if (this.portraitBundle) {
             this.portraitBundle.tick(this._tick);
         }
+
+        this._landscapeHeroAnim?.heroAmbientTick(this._tick);
 
         if (this._flyBtn) {
             this._flyShimmer += deltaTime * 0.9;

@@ -31,6 +31,7 @@ import {
 import { mountHeroCommandLayout } from '../menuShared/heroCommandLayout';
 import { mountMissionRewardIcon } from '../menuShared/missionRewardWell';
 import { mountEmblemCircleWell, mountTexturedInsetPlate } from '../menuShared/texturedPlates';
+import { buildHeroAmbientParts, mountClassChipKenneyRim } from '../menuShared/heroAmbientAccents';
 import { buildCommandDock, type CommandDockPalette } from '../menuShared/commandDock';
 import { buildModeFilterStrip } from '../menuShared/modeFilterStrip';
 import {
@@ -101,11 +102,8 @@ function trunc(s: string, max: number): string {
 // DockNavItem: icon + label + selected
 
 export type PortraitAnimHandles = {
-    heroGlow: Graphics;
-    heroMotif: Graphics;
-    rankGlow: Graphics;
-    routeSweep: Graphics;
-    rewardShimmer: Graphics;
+    /** Kenney/sprite hero life (rim pulse, bar glint, class rim, star accent). */
+    heroAmbientTick: (t: number) => void;
     tabGlows: Graphics[];
     dockCradles: (Graphics | NineSliceSprite)[];
 };
@@ -166,7 +164,7 @@ function portraitHeroGoldEmblem(g: Graphics, cx: number, cy: number, emblemR: nu
 
 function buildFeaturedMissionCard(p: FeaturedProps): {
     root: Container;
-    anim: Pick<PortraitAnimHandles, 'heroGlow' | 'heroMotif' | 'rankGlow' | 'routeSweep' | 'rewardShimmer'>;
+    anim: Pick<PortraitAnimHandles, 'heroAmbientTick'>;
     flyCta: Container | null;
     routeBarW: number;
 } {
@@ -219,13 +217,7 @@ function buildFeaturedMissionCard(p: FeaturedProps): {
         if (cmd.flyCta) cmd.flyCta.label = 'heroFlyCta';
         return {
             root,
-            anim: {
-                heroGlow: cmd.heroGlow,
-                heroMotif: cmd.heroMotif,
-                rankGlow: cmd.rankGlow,
-                routeSweep: cmd.routeSweep,
-                rewardShimmer: cmd.rewardShimmer,
-            },
+            anim: { heroAmbientTick: cmd.heroAmbientTick },
             flyCta: cmd.flyCta,
             routeBarW: cmd.routeBarW,
         };
@@ -246,12 +238,6 @@ function buildFeaturedMissionCard(p: FeaturedProps): {
     ibevel.roundRect(2, 2, p.cw - 4, Math.floor(p.cardH * 0.35), P_RADIUS.panel - 2);
     ibevel.fill({ color: 0xffffff, alpha: 0.025 });
     root.addChild(ibevel);
-    const heroMotif = new Graphics();
-    root.addChild(heroMotif);
-    const heroGlow = new Graphics();
-    heroGlow.roundRect(1, 1, p.cw - 2, p.cardH - 2, P_RADIUS.panel - 1);
-    heroGlow.stroke({ color: P_COLORS.accentCyan, width: 2.5, alpha: 0.18 });
-    root.addChild(heroGlow);
     const title = new Text({
         text: p.title,
         style: new TextStyle({
@@ -289,10 +275,12 @@ function buildFeaturedMissionCard(p: FeaturedProps): {
     const barH = 12;
     const prog01 = p.routesTotal > 0 ? p.routesDone / p.routesTotal : 0;
     const kBar = kenneyProgressBar(barW, barH);
+    let barGlintAnchor: Container;
     if (kBar) {
         kBar.position.set(pad, routeY + 18);
         kBar.setProgress(prog01);
         root.addChild(kBar);
+        barGlintAnchor = kBar;
     } else {
         const tr = new Graphics();
         tr.roundRect(pad, routeY + 18, barW, barH, 6);
@@ -303,19 +291,14 @@ function buildFeaturedMissionCard(p: FeaturedProps): {
         fl.roundRect(pad + 2, routeY + 20, Math.max(6, (barW - 4) * prog01), barH - 4, 4);
         fl.fill({ color: P_COLORS.accentCyan, alpha: 0.9 });
         root.addChild(fl);
+        barGlintAnchor = fl;
     }
-    const routeSweep = new Graphics();
-    routeSweep.position.set(pad, routeY + 18);
-    root.addChild(routeSweep);
     const emblemR = 28;
     const ex = p.cw - pad - emblemR;
     const ey = pad + 28;
     const eg = new Graphics();
     portraitHeroGoldEmblem(eg, ex, ey, emblemR);
     root.addChild(eg);
-    const rewardShimmer = new Graphics();
-    rewardShimmer.position.set(ex - emblemR, ey - emblemR);
-    root.addChild(rewardShimmer);
     const rowY = p.cardH - pad - 48;
     const chipH = 44;
     const rowInner = p.cw - pad * 2;
@@ -327,6 +310,7 @@ function buildFeaturedMissionCard(p: FeaturedProps): {
     }
     rankW = Math.min(rankW, rowInner - flyW - P_SPACE.s8);
     const rankRoot = new Container();
+    const rankRim = mountClassChipKenneyRim(rankRoot, rankW, chipH, P_COLORS.accentGold);
     const rb = new Graphics();
     rb.roundRect(0, 0, rankW, chipH, P_RADIUS.chip);
     rb.fill({ color: P_COLORS.bgPanel, alpha: 1 });
@@ -340,10 +324,6 @@ function buildFeaturedMissionCard(p: FeaturedProps): {
     rankStrip.roundRect(6, 0, rankW - 12, 3, 1);
     rankStrip.fill({ color: P_COLORS.accentGold, alpha: 0.6 });
     rankRoot.addChild(rankStrip);
-    const rankGlow = new Graphics();
-    rankGlow.roundRect(0, 0, rankW, chipH, P_RADIUS.chip);
-    rankGlow.stroke({ color: P_COLORS.accentGold, width: 2, alpha: 0.28 });
-    rankRoot.addChild(rankGlow);
     const wingX = 15;
     const textPad = 32;
     const classSpr = spriteIcon('menu_pilot_class_star', 20, P_COLORS.accentGold);
@@ -374,9 +354,31 @@ function buildFeaturedMissionCard(p: FeaturedProps): {
     fly.label = 'heroFlyCta';
     fly.position.set(p.cw - pad - flyW, rowY);
     root.addChild(fly);
+
+    const ambient = buildHeroAmbientParts({
+        contentW: p.cw - 2,
+        innerH: p.cardH - 2,
+        ox: 0,
+        colors: { cyan: P_COLORS.accentCyan, gold: P_COLORS.accentGold },
+        barW,
+        barH,
+        barY: routeY + 18,
+        emblemCx: ex,
+        emblemCy: ey,
+        emblemR,
+        rankRim,
+    });
+    const afterPanel = root.getChildIndex(ibevel);
+    root.addChildAt(ambient.rim, afterPanel + 1);
+    root.addChildAt(ambient.motifRoot, afterPanel + 2);
+    root.addChildAt(ambient.routeRoot, root.getChildIndex(barGlintAnchor) + 1);
+    if (ambient.rewardSpr) {
+        root.addChildAt(ambient.rewardSpr, root.getChildIndex(eg) + 1);
+    }
+
     return {
         root,
-        anim: { heroGlow, heroMotif, rankGlow, routeSweep, rewardShimmer },
+        anim: { heroAmbientTick: ambient.tick },
         flyCta: fly,
         routeBarW: barW,
     };
@@ -1172,21 +1174,8 @@ export function buildPortraitMissionScreen(p: BuildPortraitMissionScreenParams):
         dockCradles: dock.dockCradles,
     };
 
-    const routeBarW = feat.routeBarW;
-
     const tick = (t: number): void => {
-        anim.heroGlow.alpha = 0.2 + Math.sin(t * 0.9) * 0.12;
-        anim.rankGlow.alpha = 0.35 + Math.sin(t * 2.2) * 0.25;
-
-        anim.routeSweep.clear();
-        const sweepX = (Math.sin(t * 1.1) * 0.5 + 0.5) * Math.max(20, routeBarW - 10);
-        anim.routeSweep.rect(sweepX, 0, 6, 12);
-        anim.routeSweep.fill({ color: P_COLORS.accentCyan, alpha: 0.22 });
-
-        anim.rewardShimmer.clear();
-        const gl = (Math.sin(t * 1.8) * 0.5 + 0.5) * 36;
-        anim.rewardShimmer.roundRect(gl, 0, 12, 52, 3);
-        anim.rewardShimmer.fill({ color: P_COLORS.accentGold, alpha: 0.1 });
+        anim.heroAmbientTick(t);
     };
 
     return {

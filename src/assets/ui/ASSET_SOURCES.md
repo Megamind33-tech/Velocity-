@@ -13,6 +13,7 @@ Mirrored subset from OpenGameArt: [UI Pack - Sci-Fi](https://opengameart.org/con
 - **Hero + modals** — `createKenneyFramedPanelWithContent` uses sci-fi glass + notches + screw chrome when textures load (fallback: classic Kenney `panel_fill` / `panel_frame`)
 - **Dock underlay** — `scifi_panel_rectangle_screws` (replaces flat `panel_fill` when loaded)
 - **Missions dock icon** — `crosshair_color_a.png` from the same pack (clear target read at small size)
+- **Corner notches** — `panel_glass_notch_tl.png`, `panel_glass_notch_tr.png` (hero ambient accents)
 
 `License.txt` in that folder is copied from the original zip.
 
