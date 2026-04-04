@@ -1022,7 +1022,7 @@ export function buildMissionList(
     const U = unitFromViewport(cw, listH);
     const rowH =
         rowHOverride ??
-        Math.max(120, Math.floor(U * 13));
+        Math.max(96, Math.floor(U * 11.5));
     const gap = 12;
 
     function maxScroll(): number {
