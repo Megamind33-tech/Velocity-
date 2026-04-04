@@ -90,7 +90,35 @@ const MANIFEST: Record<VelocityUiTextureKey, string> = {
     menu_settings_repeat:      `${BASE}/Extra/Default/icon_repeat_dark.png`,
 };
 
+export type VelocityCustomTextureKey =
+    | 'rank_prestige'
+    | 'rank_elite'
+    | 'frame_premium'
+    | 'frame_locked'
+    | 'badge_locked'
+    | 'badge_reward';
+
+/**
+ * Optional custom art slots (external packs):
+ * - game-rank-icons-vol-9
+ * - game-rank-icons-vol-3
+ * - ui-game-elements-vol-9
+ * - ui-game-frames-vol-8
+ *
+ * These are intentionally optional: if files are absent, UI falls back to Kenney/vector.
+ */
+const CUSTOM_BASE = `${import.meta.env.BASE_URL}custom-ui`;
+const CUSTOM_MANIFEST: Record<VelocityCustomTextureKey, string> = {
+    rank_prestige: `${CUSTOM_BASE}/rank/rank_prestige.png`,
+    rank_elite: `${CUSTOM_BASE}/rank/rank_elite.png`,
+    frame_premium: `${CUSTOM_BASE}/frames/frame_premium.png`,
+    frame_locked: `${CUSTOM_BASE}/frames/frame_locked.png`,
+    badge_locked: `${CUSTOM_BASE}/badges/badge_locked.png`,
+    badge_reward: `${CUSTOM_BASE}/badges/badge_reward.png`,
+};
+
 const cache = new Map<VelocityUiTextureKey, Texture>();
+const customCache = new Map<VelocityCustomTextureKey, Texture>();
 let preloadPromise: Promise<void> | null = null;
 
 export async function preloadVelocityUiTextures(): Promise<void> {
@@ -101,6 +129,17 @@ export async function preloadVelocityUiTextures(): Promise<void> {
             keys.map(async (key) => {
                 const tex = await Assets.load<Texture>(MANIFEST[key]);
                 cache.set(key, tex);
+            }),
+        );
+        const customKeys = Object.keys(CUSTOM_MANIFEST) as VelocityCustomTextureKey[];
+        await Promise.all(
+            customKeys.map(async (key) => {
+                try {
+                    const tex = await Assets.load<Texture>(CUSTOM_MANIFEST[key]);
+                    customCache.set(key, tex);
+                } catch {
+                    // Optional external art: keep fallback path active.
+                }
             }),
         );
     })();
@@ -123,6 +162,14 @@ export function velocityUiCoreReady(): boolean {
         'panel_fill',
     ];
     return core.every((k) => cache.has(k));
+}
+
+export function getVelocityCustomTexture(key: VelocityCustomTextureKey): Texture | undefined {
+    return customCache.get(key);
+}
+
+export function velocityCustomArtReady(): boolean {
+    return customCache.size > 0;
 }
 
 /** Convenience helper: get icon_star texture (yellow filled star). */

@@ -90,3 +90,10 @@ export function drawIconLock(g: Graphics, cx: number, cy: number, s: number, st:
     g.arc(cx, cy - s * 0.16, s * 0.16, Math.PI, 0);
     g.stroke(st);
 }
+
+export function drawIconLockOpen(g: Graphics, cx: number, cy: number, s: number, st: IconStroke = { ...D, color: 0x8fd8c7 }): void {
+    g.roundRect(cx - s * 0.22, cy - s * 0.08, s * 0.44, s * 0.36, 3);
+    g.stroke(st);
+    g.arc(cx - s * 0.06, cy - s * 0.16, s * 0.16, Math.PI * 0.86, Math.PI * 1.78);
+    g.stroke(st);
+}

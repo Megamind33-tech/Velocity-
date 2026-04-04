@@ -256,12 +256,14 @@ export function kenneyTabTrack(cw: number, h: number): Container | null {
         width: cw,
         height: h,
     });
-    spr.tint = 0x121c2a;
-    spr.alpha = 0.9;
+    spr.tint = 0x101a27;
+    spr.alpha = 0.93;
     root.addChild(spr);
     const rim = new Graphics();
-    rim.roundRect(0, 0, cw, h, 10);
-    rim.stroke({ color: 0x334455, width: 1, alpha: 0.7 });
+    rim.roundRect(0.5, 0.5, cw - 1, h - 1, 12);
+    rim.stroke({ color: 0x304663, width: 1.2, alpha: 0.72 });
+    rim.roundRect(10, 3, cw - 20, 2, 1);
+    rim.fill({ color: 0x6fcff1, alpha: 0.16 });
     root.addChild(rim);
     return root;
 }
@@ -279,12 +281,14 @@ export function kenneyDockBar(cw: number, h: number): Container | null {
         width: cw,
         height: h,
     });
-    spr.tint = 0x0c1420;
+    spr.tint = 0x0a121d;
     spr.alpha = 0.96;
     root.addChild(spr);
     const rim = new Graphics();
-    rim.roundRect(0.5, 0.5, cw - 1, h - 1, 14);
-    rim.stroke({ color: GAME_COLORS.primary, width: 1, alpha: 0.28 });
+    rim.roundRect(0.5, 0.5, cw - 1, h - 1, 15);
+    rim.stroke({ color: 0x24435d, width: 1.2, alpha: 0.64 });
+    rim.roundRect(8, 5, cw - 16, 2, 1);
+    rim.fill({ color: 0x73d5ff, alpha: 0.14 });
     root.addChild(rim);
     return root;
 }
