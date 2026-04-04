@@ -1088,6 +1088,7 @@ export function buildBottomNavDock(
                 },
                 draw: icoHome,
                 menuIconKey: 'dock_nav_home',
+                menuIconFullColor: true,
             },
             {
                 label: 'MISSIONS',
@@ -1097,6 +1098,7 @@ export function buildBottomNavDock(
                 },
                 draw: icoMap,
                 menuIconKey: 'dock_nav_missions',
+                menuIconFullColor: true,
             },
             {
                 label: 'HANGAR',
@@ -1106,7 +1108,7 @@ export function buildBottomNavDock(
                 },
                 draw: icoHangar,
                 menuIconKey: 'dock_nav_hangar',
-                menuIconScale: 1.08,
+                menuIconFullColor: true,
             },
             {
                 label: 'STORE',
@@ -1116,6 +1118,7 @@ export function buildBottomNavDock(
                 },
                 draw: icoStore,
                 menuIconKey: 'dock_nav_store',
+                menuIconFullColor: true,
             },
         ],
         kUnder,

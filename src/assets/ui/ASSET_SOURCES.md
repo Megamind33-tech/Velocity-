@@ -2,16 +2,18 @@
 
 Primary UI family uses **Kenney** assets already bundled under `public/kenney-ui-pack/` (CC0).
 
-## Command dock icons (`public/kenney-dock-icons/`, CC0)
+## Command dock icons (`public/oga-dock-icons/`, CC0 — OpenGameArt.org)
 
-Semantic bottom-nav glyphs (white silhouettes — tinted in code like other dock sprites):
+Normalized **128×128** PNGs (cropped + scaled from originals). Dock code uses **light tint** on sprites so full-color art stays readable (see `menuIconPreserveColor` in `commandDock.ts`).
 
-| File | Source |
-|------|--------|
-| `home.png`, `target.png`, `cart.png` | [Kenney Game Icons](https://kenney.nl/assets/game-icons) — `PNG/White/1x/` |
-| `hangar_plane.png` | Cropped `planeBlue1` region from [Kenney Tappy Plane](https://kenney.nl/assets/tappy-plane) `Spritesheet/sheet.png`, resized to 128×128 for UI |
+| File | OpenGameArt | Author | Original |
+|------|-------------|--------|----------|
+| `home.png` | [2D House PNG + SVG](https://opengameart.org/content/2d-house-png-svg) | Belohlavek | `house_big.png` |
+| `missions_target.png` | [Crosshairs and Reticles](https://opengameart.org/content/crosshairs-and-reticles) | hc | `crosshairs.zip` → `crosshair1.png` |
+| `hangar_plane.png` | [Free Plane Sprite](https://opengameart.org/content/free-plane-sprite) | pzUH | `png/Plane/Fly (1).png` |
+| `store.png` | [Store button (Shop button icon)](https://opengameart.org/content/store-button-shop-button-icon) | ElSantoTiago | `store.svg` (rasterized) |
 
-Shipped `LICENSE-*.txt` in that folder are copies from the original zips.
+`LICENSE-crosshairs-hc.txt` is from the crosshairs zip; other entries are CC0 per OGA.
 
 ## Families wired by code
 - `Kenney UI Pack` (`PNG/Blue|Grey|Yellow|Red|Extra`) via `src/ui/game/velocityUiArt.ts`
@@ -34,8 +36,7 @@ Shipped `LICENSE-*.txt` in that folder are copies from the original zips.
 - `src/assets/ui/fallback-icons/` (reserved for single fallback family only)
 
 ## Current fallback policy
-No non-Kenney icon fallback is active in the main menu. If a missing slot appears later,
-use one family only (Lucide OR Bootstrap Icons OR Font Awesome), then visually normalize.
+Primary chrome remains **Kenney UI Pack**. Command-dock **glyphs** are a separate **CC0 OpenGameArt** set (`oga-dock-icons/`) chosen for readable semantics (house, reticle, plane, shop). If a slot is missing at runtime, `commandDock` still falls back to vector `draw` paths.
 
 ## Curated files in-repo (normalized)
 Shipped under `public/custom-ui/` after resize (max side 384 rank/frames, 256 badges):
