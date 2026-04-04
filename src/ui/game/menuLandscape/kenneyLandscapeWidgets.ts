@@ -183,8 +183,8 @@ export function kenneyStatChip(
     const lb = new Text({
         text: labelStr,
         style: new TextStyle({
-            fill: 0x7a8a9c,
-            fontSize: 8,
+            fill: 0xa8b8c8,
+            fontSize: 9,
             fontWeight: '600',
             fontFamily: GAME_FONTS.standard,
             letterSpacing: 0.8,

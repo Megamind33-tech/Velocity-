@@ -2,12 +2,15 @@
  * Shared hero “command header” — explicit vertical bands (no overlap) + zoned class chip.
  */
 
-import { Container, Graphics, Text, TextStyle } from 'pixi.js';
+import { Container, Graphics, Sprite, Text, TextStyle } from 'pixi.js';
+import { getVelocityCustomTexture } from '../velocityUiArt';
 import { spriteIcon } from '../menuLandscape/kenneyLandscapeWidgets';
 
 export type MainMenuProgressLite = {
     unlockedCount: number;
     totalLevels: number;
+    /** Portrait featured card: route star bonus (two-line block above Routes). */
+    rewardStars?: number;
 };
 
 export type HeroCommandLayoutColors = {
@@ -43,8 +46,6 @@ const TAG_H = 14;
 const GAP_STACK = 5;
 const RIGHT_EMBLEM = 68;
 const CLASS_ICON_LANE = 30;
-const BONUS_BAND_H = 14;
-const BONUS_GAP_ABOVE_RAIL = 6;
 
 export type HeroCommandMountResult = {
     flyCta: Container | null;
@@ -187,6 +188,18 @@ export function mountHeroCommandLayout(
     }
     content.addChild(rg);
 
+    const rankTex = getVelocityCustomTexture('rank_prestige');
+    if (rankTex) {
+        const rs = new Sprite(rankTex);
+        rs.anchor.set(0.5, 0.5);
+        const br = Math.min(22, emblemR * 0.78);
+        rs.width = br * 2;
+        rs.height = br * 2;
+        rs.position.set(emblemCx, emblemCy);
+        rs.alpha = 0.9;
+        content.addChild(rs);
+    }
+
     const rewardShimmer = new Graphics();
     rewardShimmer.position.set(emblemCx - emblemR, emblemCy - emblemR);
     content.addChild(rewardShimmer);
@@ -194,6 +207,41 @@ export function mountHeroCommandLayout(
     const motifRight = ox + contentW - RIGHT_EMBLEM - 6;
     const heroMotif = new Graphics();
     content.addChild(heroMotif);
+
+    const contentFloor = (showTag ? tagY + TAG_H : subY + SUB_H) + 4;
+    const bonusStars = prog.rewardStars;
+    let bonusLineY = 0;
+    let bonusSecondLineY = 0;
+    if (bonusStars != null && bonusStars > 0) {
+        const lineH = 13;
+        const gapBetween = 4;
+        const gapAboveRoutes = 3;
+        let line2Y = progLblY - gapAboveRoutes - lineH;
+        let line1Y = line2Y - gapBetween - lineH;
+        if (line1Y < contentFloor) {
+            const shift = contentFloor - line1Y;
+            line1Y += shift;
+            line2Y += shift;
+        }
+        if (line2Y + lineH > progLblY - gapAboveRoutes) {
+            line2Y = progLblY - gapAboveRoutes - lineH;
+            line1Y = line2Y - gapBetween - lineH;
+        }
+        bonusLineY = line1Y;
+        bonusSecondLineY = line2Y;
+        const starT = new Text({
+            text: `${bonusStars}★`,
+            style: helpers.textStyle(11, '700', colors.gold, 0.4),
+        });
+        starT.position.set(ox, bonusLineY);
+        content.addChild(starT);
+        const routeBonusT = new Text({
+            text: 'ROUTE BONUS',
+            style: helpers.textStyle(10, '700', colors.gold, 1.0),
+        });
+        routeBonusT.position.set(ox, bonusSecondLineY);
+        content.addChild(routeBonusT);
+    }
 
     const prog01 = prog.totalLevels > 0 ? prog.unlockedCount / prog.totalLevels : 0;
     const progLbl = new Text({
@@ -287,17 +335,6 @@ export function mountHeroCommandLayout(
     fly.label = 'heroFlyCta';
     fly.position.set(flyX, rowY);
     content.addChild(fly);
-
-    const contentFloor = (showTag ? tagY + TAG_H : subY + SUB_H) + 4;
-    const cap = rowY - BONUS_GAP_ABOVE_RAIL - BONUS_BAND_H;
-    const bonusLineGap = 15;
-    const bonusBlockH = bonusLineGap + 12;
-    let bonusLineY = Math.min(cap, progLblY - 4 - bonusBlockH);
-    if (bonusLineY < contentFloor) bonusLineY = contentFloor;
-    if (bonusLineY + bonusBlockH > progLblY - 2) {
-        bonusLineY = Math.max(contentFloor, progLblY - 4 - bonusBlockH);
-    }
-    const bonusSecondLineY = bonusLineY + bonusLineGap;
 
     return {
         flyCta: fly,
