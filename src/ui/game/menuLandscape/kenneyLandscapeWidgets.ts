@@ -243,6 +243,60 @@ export function kenneyRowPanel(cw: number, rowH: number): Container | null {
     return root;
 }
 
+export type MissionCardFaceRole = 'playable' | 'claimable' | 'locked' | 'elite_locked';
+
+/**
+ * Full-bleed Kenney panel (fill + outline) — reduces “flat vector card” when textures load.
+ * Role-specific tints differentiate material identity without duplicating one grey formula.
+ */
+export function kenneyMissionCardFace(cw: number, rowH: number, role: MissionCardFaceRole): Container | null {
+    const fillTex = getVelocityUiTexture('panel_fill');
+    const frameTex = getVelocityUiTexture('panel_frame');
+    if (!fillTex || !frameTex) return null;
+    const root = new Container();
+    const fill = new NineSliceSprite({
+        texture: fillTex,
+        leftWidth: PS.L,
+        rightWidth: PS.R,
+        topHeight: PS.T,
+        bottomHeight: PS.B,
+        width: cw,
+        height: rowH,
+    });
+    const frame = new NineSliceSprite({
+        texture: frameTex,
+        leftWidth: PS.L,
+        rightWidth: PS.R,
+        topHeight: PS.T,
+        bottomHeight: PS.B,
+        width: cw,
+        height: rowH,
+    });
+    if (role === 'claimable') {
+        fill.tint = 0x1a1410;
+        fill.alpha = 0.94;
+        frame.tint = 0xffcc66;
+        frame.alpha = 0.55;
+    } else if (role === 'locked') {
+        fill.tint = 0x080c14;
+        fill.alpha = 0.96;
+        frame.tint = 0x4a5a6a;
+        frame.alpha = 0.38;
+    } else if (role === 'elite_locked') {
+        fill.tint = 0x100c0a;
+        fill.alpha = 0.96;
+        frame.tint = 0xc9a050;
+        frame.alpha = 0.42;
+    } else {
+        fill.tint = 0x0a1018;
+        fill.alpha = 0.92;
+        frame.tint = GAME_COLORS.primary;
+        frame.alpha = 0.4;
+    }
+    root.addChild(fill, frame);
+    return root;
+}
+
 export function kenneyTabTrack(cw: number, h: number): Container | null {
     const tex = getVelocityUiTexture('panel_fill');
     if (!tex) return null;

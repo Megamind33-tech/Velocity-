@@ -21,7 +21,13 @@ import { getVelocityCustomTexture, getVelocityUiTexture } from '../velocityUiArt
 import { VELOCITY_UI_SLICE } from '../velocityUiSlice';
 
 const PORTRAIT_TAB_BS = VELOCITY_UI_SLICE.button;
-import { kenneyButton, kenneyProgressBar } from '../menuLandscape/kenneyLandscapeWidgets';
+import { kenneyButton, kenneyDockBar, kenneyMissionCardFace, kenneyProgressBar } from '../menuLandscape/kenneyLandscapeWidgets';
+import {
+    computeCardVerticalBands,
+    fitBodyText,
+    fitOneLineSmall,
+    fitTitleText,
+} from '../menuShared/missionCardLayout';
 import { P_COLORS, P_ICON, P_MOTION, P_OPACITY, P_RADIUS, P_SHADOW, P_SPACE, P_TYPO, P_Z } from './missionPortraitTokens';
 import {
     drawIconHangar,
@@ -843,7 +849,7 @@ function buildSegmentTabs(
     return { root, setActive: paint, tabGlows };
 }
 
-/** Locked / elite-locked — gated prestige layout (not a dimmed playable row). */
+/** Locked / elite-locked — Kenney card face + banded typography (no floating Y positions). */
 function buildLockedMissionCardPortrait(
     level: LevelDefinition,
     cw: number,
@@ -860,39 +866,30 @@ function buildLockedMissionCardPortrait(
     const centerW = Math.max(120, cw - zoneAEnd - plaqueW - P_SPACE.s12 - P_SPACE.s10);
     const tx = zoneAEnd;
     const rewardValue = Math.max(primaryState === 'elite_locked' ? 140 : 90, level.gateCount * (primaryState === 'elite_locked' ? 24 : 18));
-
-    const face = new Graphics();
-    face.roundRect(0, 0, cw, rowH, P_RADIUS.panel - 2);
-    face.fill({
-        color: elite ? P_COLORS.lockedFaceElite : P_COLORS.lockedFace,
-        alpha: 1,
-    });
-    face.stroke({
-        color: elite ? P_COLORS.lockedPlaqueRimElite : P_COLORS.lockedPlaqueRim,
-        width: 1.5,
-        alpha: elite ? 0.45 : 0.38,
-    });
-    root.addChild(face);
-
-    const innerFrame = new Graphics();
-    innerFrame.roundRect(3, 3, cw - 6, rowH - 6, P_RADIUS.panel - 4);
-    innerFrame.stroke({ color: 0xffffff, width: 1, alpha: elite ? 0.04 : 0.025 });
-    root.addChild(innerFrame);
+    const faceRole = primaryState === 'elite_locked' ? 'elite_locked' : 'locked';
+    const kFace = kenneyMissionCardFace(cw, rowH, faceRole);
+    if (kFace) {
+        root.addChild(kFace);
+    } else {
+        const face = new Graphics();
+        face.roundRect(0, 0, cw, rowH, P_RADIUS.panel - 2);
+        face.fill({ color: elite ? P_COLORS.lockedFaceElite : P_COLORS.lockedFace, alpha: 1 });
+        face.stroke({
+            color: elite ? P_COLORS.lockedPlaqueRimElite : P_COLORS.lockedPlaqueRim,
+            width: 1.5,
+            alpha: elite ? 0.45 : 0.38,
+        });
+        root.addChild(face);
+    }
 
     const spine = new Graphics();
     spine.roundRect(0, 8, leftRailW, rowH - 16, 2);
-    spine.fill({
-        color: elite ? P_COLORS.accentGoldSoft : P_COLORS.stateLocked,
-        alpha: elite ? 0.55 : 0.4,
-    });
+    spine.fill({ color: elite ? P_COLORS.accentGoldSoft : P_COLORS.stateLocked, alpha: elite ? 0.55 : 0.4 });
     root.addChild(spine);
 
     const well = new Graphics();
     well.roundRect(leftPad, 10, emblemWellW, rowH - 20, 10);
-    well.fill({
-        color: elite ? P_COLORS.lockedGateWellElite : P_COLORS.lockedGateWell,
-        alpha: 1,
-    });
+    well.fill({ color: elite ? P_COLORS.lockedGateWellElite : P_COLORS.lockedGateWell, alpha: 1 });
     well.stroke({
         color: elite ? P_COLORS.accentGoldSoft : P_COLORS.lockedPlaqueRim,
         width: 1,
@@ -922,65 +919,83 @@ function buildLockedMissionCardPortrait(
         root.addChild(ic);
     }
 
+    const bands = computeCardVerticalBands(rowH, tx, centerW, elite);
     const titleColor = elite ? 0xd4c4a8 : P_COLORS.textSecondary;
-    const title = new Text({
-        text: trunc(level.name, Math.max(10, Math.floor(centerW / 7.5))),
-        style: ts(P_TYPO.missionTitle, titleColor),
+    const title = fitTitleText(level.name, centerW, 0, {
+        fontFamily: FONT,
+        fontWeight: '700',
+        fill: titleColor,
+        letterSpacing: 0.2,
     });
-    title.position.set(tx, P_SPACE.s10);
+    title.position.set(tx, bands.titleY);
     root.addChild(title);
 
-    let tierY = P_SPACE.s10 + 22;
     if (elite) {
         const tierPlate = new Graphics();
-        const tierW = 102;
-        tierPlate.roundRect(tx, tierY, tierW, 16, 7);
-        tierPlate.fill({ color: P_COLORS.lockedPlaqueElite, alpha: 0.85 });
-        tierPlate.stroke({ color: P_COLORS.accentGoldSoft, width: 1, alpha: 0.4 });
+        tierPlate.roundRect(tx, bands.tierY, Math.min(108, centerW - 4), bands.tierH, 6);
+        tierPlate.fill({ color: P_COLORS.lockedPlaqueElite, alpha: 0.88 });
+        tierPlate.stroke({ color: P_COLORS.accentGoldSoft, width: 1, alpha: 0.42 });
         root.addChild(tierPlate);
-        const tier = new Text({
-            text: 'ELITE ROUTE',
-            style: new TextStyle({
-                fontFamily: FONT,
-                fontSize: 9,
-                fontWeight: '800',
-                fill: P_COLORS.accentGold,
-                letterSpacing: 1.2,
-            }),
+        const tier = fitOneLineSmall('ELITE ROUTE', centerW - 20, {
+            fontFamily: FONT,
+            fontWeight: '800',
+            fill: P_COLORS.accentGold,
+            letterSpacing: 1.0,
+            fontSize: 9,
         });
-        tier.position.set(tx + 8, tierY + 2);
+        tier.position.set(tx + 8, bands.tierY + Math.max(1, (bands.tierH - tier.height) / 2));
         root.addChild(tier);
-        tierY += 20;
     }
 
     const teaser = level.learningObjectives[0]?.hint ?? `${level.gateCount} voice gates`;
-    const sub = new Text({
-        text: trunc(teaser, Math.max(14, Math.floor(centerW / 6))),
-        style: ts(P_TYPO.missionBody, 0x5a6574),
+    const sub = fitBodyText(teaser, centerW, bands.subMaxH, {
+        fontFamily: FONT,
+        fontWeight: '500',
+        fill: 0x5a6574,
     });
-    sub.position.set(tx, tierY + 4);
+    sub.position.set(tx, bands.subY);
     root.addChild(sub);
+
+    let metaStr = '';
+    let metaFill: number = P_COLORS.accentGold;
+    if (primaryState === 'elite_locked') {
+        metaStr = 'SEALED ROUTE';
+        metaFill = P_COLORS.accentGold;
+    } else {
+        metaStr = 'GATED';
+        metaFill = 0x7a8fa4;
+    }
+    const metaPlate = new Graphics();
+    metaPlate.roundRect(tx, bands.metaY, Math.min(centerW - 4, 120), bands.metaH, 6);
+    metaPlate.fill({ color: primaryState === 'elite_locked' ? 0x1a140c : 0x0a1218, alpha: 0.88 });
+    metaPlate.stroke({ color: elite ? P_COLORS.accentGoldSoft : P_COLORS.lockedPlaqueRim, width: 1, alpha: 0.35 });
+    root.addChild(metaPlate);
+    const meta = fitOneLineSmall(metaStr, centerW - 16, {
+        fontFamily: FONT,
+        fontWeight: '800',
+        fill: metaFill,
+        letterSpacing: 0.9,
+        fontSize: 9,
+    });
+    meta.position.set(tx + 8, bands.metaY + Math.max(1, (bands.metaH - meta.height) / 2));
+    root.addChild(meta);
 
     const reqLine =
         primaryState === 'elite_locked'
             ? `Breach prior route ${Math.max(1, level.id - 1)} to open`
             : `Clear route ${Math.max(1, level.id - 1)} to gain access`;
-    const helper = new Text({
-        text: trunc(reqLine, Math.max(12, Math.floor(centerW / 5.5))),
-        style: new TextStyle({
-            fontFamily: FONT,
-            fontSize: 9,
-            fontWeight: '600',
-            fill: 0x4a5568,
-            letterSpacing: 0.2,
-        }),
-    });
-    helper.position.set(tx, rowH - 52);
+    const helper = fitBodyText(reqLine, centerW, bands.helpH, {
+        fontFamily: FONT,
+        fontWeight: '600',
+        fill: 0x4a5568,
+        letterSpacing: 0.1,
+    }, 9, 8);
+    helper.position.set(tx, bands.helpY);
     root.addChild(helper);
 
     const rewardRail = new Graphics();
-    rewardRail.roundRect(tx - 2, rowH - 24, centerW + 4, 16, 7);
-    rewardRail.fill({ color: elite ? 0x120e0a : 0x060a10, alpha: 0.88 });
+    rewardRail.roundRect(tx - 2, bands.rewardY, centerW + 4, bands.rewardH, 7);
+    rewardRail.fill({ color: elite ? 0x120e0a : 0x060a10, alpha: 0.9 });
     rewardRail.stroke({
         color: elite ? P_COLORS.accentGoldSoft : P_COLORS.lockedPlaqueRim,
         width: 1,
@@ -993,35 +1008,39 @@ function buildLockedMissionCardPortrait(
         rb.anchor.set(0.5);
         rb.width = 14;
         rb.height = 14;
-        rb.position.set(tx + 8, rowH - 16);
+        rb.position.set(tx + 8, bands.rewardY + bands.rewardH / 2);
         rb.alpha = 0.82;
         root.addChild(rb);
     }
-    const rewardText = new Text({
-        text:
-            primaryState === 'elite_locked'
-                ? `WITHHELD CACHE  +${rewardValue} SIGNAL`
-                : `CLEAR BONUS  +${rewardValue} SIGNAL`,
-        style: new TextStyle({
-            fontFamily: FONT,
-            fontSize: 9,
-            fontWeight: '700',
-            fill: elite ? P_COLORS.accentGold : 0x6b7d90,
-            letterSpacing: 0.5,
-        }),
+    const rewardStr =
+        primaryState === 'elite_locked'
+            ? `WITHHELD +${rewardValue} SIGNAL`
+            : `BONUS +${rewardValue} SIGNAL`;
+    const rewardText = fitOneLineSmall(rewardStr, centerW - 28, {
+        fontFamily: FONT,
+        fontWeight: '700',
+        fill: elite ? P_COLORS.accentGold : 0x6b7d90,
+        letterSpacing: 0.4,
+        fontSize: 9,
     });
-    rewardText.position.set(tx + 20, rowH - 21);
+    rewardText.position.set(tx + 20, bands.rewardY + Math.max(2, (bands.rewardH - rewardText.height) / 2));
     root.addChild(rewardText);
 
     const px = cw - plaqueW - P_SPACE.s10;
     const py = 10;
     const ph = rowH - 20;
+    const plaqueTex = getVelocityCustomTexture('frame_locked');
+    if (plaqueTex) {
+        const ps = new Sprite(plaqueTex);
+        ps.width = plaqueW;
+        ps.height = ph;
+        ps.position.set(px, py);
+        ps.alpha = elite ? 0.55 : 0.42;
+        root.addChild(ps);
+    }
     const plaque = new Graphics();
     plaque.roundRect(px, py, plaqueW, ph, 12);
-    plaque.fill({
-        color: elite ? P_COLORS.lockedPlaqueElite : P_COLORS.lockedPlaque,
-        alpha: 0.96,
-    });
+    plaque.fill({ color: elite ? P_COLORS.lockedPlaqueElite : P_COLORS.lockedPlaque, alpha: plaqueTex ? 0.72 : 0.96 });
     plaque.stroke({
         color: elite ? P_COLORS.accentGold : P_COLORS.lockedPlaqueRim,
         width: 2,
@@ -1046,7 +1065,7 @@ function buildLockedMissionCardPortrait(
         }),
     });
     stateMain.anchor.set(0.5, 0);
-    stateMain.position.set(px + plaqueW / 2, py + Math.floor(ph * 0.28));
+    stateMain.position.set(px + plaqueW / 2, py + Math.floor(ph * 0.26));
     root.addChild(stateMain);
 
     const stateSub = new Text({
@@ -1095,22 +1114,22 @@ function buildMissionCardPortrait(
         return buildLockedMissionCardPortrait(level, cw, rowH, primaryState, elite);
     }
 
-    // ── Playable / claimable row (locked uses dedicated gated layout above) ──
-    const g = new Graphics();
-    g.roundRect(0, 0, cw, rowH, P_RADIUS.panel - 2);
-    if (primaryState === 'claimable') {
-        g.fill({ color: 0x17120d, alpha: 1 });
-        g.stroke({ color: P_COLORS.accentGold, width: 1.5, alpha: 0.52 });
+    const faceRole = primaryState === 'claimable' ? 'claimable' : 'playable';
+    const kPlayFace = kenneyMissionCardFace(cw, rowH, faceRole);
+    if (kPlayFace) {
+        root.addChild(kPlayFace);
     } else {
-        g.fill({ color: P_COLORS.bgPanelActive, alpha: 1 });
-        g.stroke({ color: P_COLORS.strokeActive, width: 1.5, alpha: 0.28 });
+        const g = new Graphics();
+        g.roundRect(0, 0, cw, rowH, P_RADIUS.panel - 2);
+        if (primaryState === 'claimable') {
+            g.fill({ color: 0x17120d, alpha: 1 });
+            g.stroke({ color: P_COLORS.accentGold, width: 1.5, alpha: 0.52 });
+        } else {
+            g.fill({ color: P_COLORS.bgPanelActive, alpha: 1 });
+            g.stroke({ color: P_COLORS.strokeActive, width: 1.5, alpha: 0.28 });
+        }
+        root.addChild(g);
     }
-    root.addChild(g);
-
-    const ridge = new Graphics();
-    ridge.roundRect(2, 2, cw - 4, Math.floor(rowH * 0.4), P_RADIUS.panel - 4);
-    ridge.fill({ color: 0xffffff, alpha: 0.02 });
-    root.addChild(ridge);
     if (primaryState === 'claimable') {
         const topGold = new Graphics();
         topGold.roundRect(4, 0, cw - 8, 2, 1);
@@ -1147,75 +1166,102 @@ function buildMissionCardPortrait(
     const btnH = 44;
     const tx = icX + P_ICON.emblem + P_SPACE.s12;
     const tw = Math.max(40, cw - tx - btnW - P_SPACE.s16 - 8);
+    const tagReserve = 56;
+    const bands = computeCardVerticalBands(rowH, tx, tw, elite);
 
-    const title = new Text({
-        text: trunc(level.name, Math.max(10, Math.floor(tw / 7.5))),
-        style: ts(P_TYPO.missionTitle, P_COLORS.textPrimary),
+    const title = fitTitleText(level.name, tw, tagReserve, {
+        fontFamily: FONT,
+        fontWeight: '700',
+        fill: P_COLORS.textPrimary,
+        letterSpacing: 0.2,
     });
-    title.position.set(tx, P_SPACE.s8);
+    title.position.set(tx, bands.titleY);
     root.addChild(title);
 
-    const hint = level.learningObjectives[0]?.hint ?? `${level.gateCount} voice gates`;
-    const sub = new Text({
-        text: trunc(hint, Math.max(14, Math.floor(tw / 6))),
-        style: ts(P_TYPO.missionBody, P_COLORS.textMuted),
+    const tagStr =
+        level.id >= 16 ? 'EVENT' : level.id >= 11 ? 'FLEET' : level.id <= 5 ? 'TRAIN' : 'OPS';
+    const tag = fitOneLineSmall(tagStr, tagReserve - 6, {
+        fontFamily: FONT,
+        fontWeight: '800',
+        fill: P_COLORS.accentCyanSoft,
+        letterSpacing: 0.5,
+        fontSize: 8,
     });
-    sub.position.set(tx, P_SPACE.s8 + 20);
+    tag.anchor.set(1, 0);
+    tag.position.set(tx + tw - 4, bands.titleY + 1);
+    root.addChild(tag);
+
+    const hint = level.learningObjectives[0]?.hint ?? `${level.gateCount} voice gates`;
+    const sub = fitBodyText(hint, tw - 4, bands.subMaxH, {
+        fontFamily: FONT,
+        fontWeight: '500',
+        fill: P_COLORS.textMuted,
+    });
+    sub.position.set(tx, bands.subY);
     root.addChild(sub);
 
-    // ── State metadata badge — one clear non-competing message ───────────────
-    // STATE PRIORITY (subordinate metadata only, locked button handles primary state):
-    //   ELITE > COMPLETED > AVAILABLE/REWARD > (nothing for basic locked)
-    // For locked cards: elite badge IS shown (aspirational value signal), nothing else.
-    // For unlocked cards: show completion or reward status.
     let metaStr = '';
     let metaColor: number = P_COLORS.accentCyanSoft;
     if (primaryState === 'claimable') {
         metaStr = 'READY TO CLAIM';
         metaColor = P_COLORS.accentGold;
     } else if (elite && unlocked && completed) {
-        metaStr = '★ ELITE  ✓';
+        metaStr = 'ELITE ✓';
         metaColor = P_COLORS.accentGold;
     } else if (elite) {
-        metaStr = '★ ELITE';
+        metaStr = 'ELITE';
         metaColor = P_COLORS.accentGold;
     } else if (completed) {
-        metaStr = '✓ CLEARED';
+        metaStr = 'CLEARED';
         metaColor = P_COLORS.stateLive;
     } else if (unlocked && !completed) {
-        // Only show REWARD hint if newly unlocked (not elite, not completed)
-        metaStr = '⬡ REWARD';
+        metaStr = 'REWARD';
         metaColor = P_COLORS.accentCyanSoft;
     }
-    // Locked non-elite: no badge — locked button is the sole state communicator
 
     if (metaStr) {
-        const meta = new Text({
-            text: metaStr,
-            style: new TextStyle({
-                fontFamily: FONT,
-                fontSize: 9,
-                fontWeight: '700',
-                fill: metaColor,
-                letterSpacing: 0.8,
-            }),
+        const metaPlate = new Graphics();
+        metaPlate.roundRect(tx, bands.metaY, Math.min(tw - 4, 130), bands.metaH, 6);
+        metaPlate.fill({ color: primaryState === 'claimable' ? 0x22180d : 0x09131d, alpha: 0.8 });
+        metaPlate.stroke({ color: primaryState === 'claimable' ? P_COLORS.accentGoldSoft : P_COLORS.strokeSubtle, width: 1, alpha: 0.35 });
+        root.addChild(metaPlate);
+        const meta = fitOneLineSmall(metaStr, tw - 20, {
+            fontFamily: FONT,
+            fontWeight: '800',
+            fill: metaColor,
+            letterSpacing: 0.6,
+            fontSize: 9,
         });
-        meta.position.set(tx, P_SPACE.s8 + 21 + 14);
+        meta.position.set(tx + 8, bands.metaY + Math.max(1, (bands.metaH - meta.height) / 2));
         root.addChild(meta);
     }
 
+    const helperStr = completed ? 'Replay for a better score' : 'Available now';
+    const helper = fitBodyText(helperStr, tw, bands.helpH, {
+        fontFamily: FONT,
+        fontWeight: '600',
+        fill: 0x6f8096,
+        letterSpacing: 0.1,
+    }, 9, 8);
+    helper.position.set(tx, bands.helpY);
+    root.addChild(helper);
+
     const rewardRail = new Graphics();
-    rewardRail.roundRect(tx - 4, rowH - 20, Math.max(120, tw - 8), 14, 6);
-    rewardRail.fill({ color: primaryState === 'claimable' ? 0x231b0f : 0x0a121d, alpha: 0.72 });
-    rewardRail.stroke({ color: primaryState === 'claimable' ? P_COLORS.accentGoldSoft : P_COLORS.strokeSubtle, width: 1, alpha: 0.4 });
+    rewardRail.roundRect(tx - 4, bands.rewardY, Math.max(120, tw - 4), bands.rewardH, 6);
+    rewardRail.fill({ color: primaryState === 'claimable' ? 0x231b0f : 0x0a121d, alpha: 0.78 });
+    rewardRail.stroke({
+        color: primaryState === 'claimable' ? P_COLORS.accentGoldSoft : P_COLORS.strokeSubtle,
+        width: 1,
+        alpha: 0.4,
+    });
     root.addChild(rewardRail);
     const rewardGem = new Graphics();
-    rewardGem.circle(tx + 6, rowH - 13, 5);
+    rewardGem.circle(tx + 6, bands.rewardY + bands.rewardH / 2, 5);
     rewardGem.fill({
         color: primaryState === 'claimable' ? P_COLORS.accentGold : P_COLORS.accentCyanSoft,
         alpha: 0.88,
     });
-    rewardGem.circle(tx + 6, rowH - 13, 8);
+    rewardGem.circle(tx + 6, bands.rewardY + bands.rewardH / 2, 8);
     rewardGem.stroke({
         color: primaryState === 'claimable' ? P_COLORS.accentGoldSoft : P_COLORS.strokeSubtle,
         width: 1,
@@ -1228,15 +1274,19 @@ function buildMissionCardPortrait(
         rb.anchor.set(0.5);
         rb.width = 15;
         rb.height = 15;
-        rb.position.set(tx + 6, rowH - 13);
+        rb.position.set(tx + 6, bands.rewardY + bands.rewardH / 2);
         rb.alpha = 0.86;
         root.addChild(rb);
     }
-    const rewardText = new Text({
-        text: `REWARD +${Math.max(90, level.gateCount * 18)} SIGNAL`,
-        style: ts(P_TYPO.navLabel, primaryState === 'claimable' ? P_COLORS.accentGold : P_COLORS.accentCyanSoft),
+    const rewardLine = `REWARD +${Math.max(90, level.gateCount * 18)} SIGNAL`;
+    const rewardText = fitOneLineSmall(rewardLine, tw - 28, {
+        fontFamily: FONT,
+        fontWeight: '700',
+        fill: primaryState === 'claimable' ? P_COLORS.accentGold : P_COLORS.accentCyanSoft,
+        letterSpacing: 0.4,
+        fontSize: 9,
     });
-    rewardText.position.set(tx + 18, rowH - 18);
+    rewardText.position.set(tx + 18, bands.rewardY + Math.max(2, (bands.rewardH - rewardText.height) / 2));
     root.addChild(rewardText);
 
     const bx = cw - btnW - P_SPACE.s10;
@@ -1356,6 +1406,11 @@ function buildBottomDockPortrait(
 ): { root: Container; setActive: (i: number) => void; dockCradles: Graphics[]; slotContainers: Container[] } {
     const H = 76;
     const root = new Container();
+    const kUnder = kenneyDockBar(cw, H);
+    if (kUnder) {
+        kUnder.alpha = 0.52;
+        root.addChild(kUnder);
+    }
     const deck = new Graphics();
     deck.roundRect(0, 0, cw, H, 14);
     deck.fill({ color: P_COLORS.dockDeck, alpha: 1 });

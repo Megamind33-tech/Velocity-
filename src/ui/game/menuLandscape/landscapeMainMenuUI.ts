@@ -22,12 +22,20 @@ import { VELOCITY_UI_SLICE } from '../velocityUiSlice';
 import {
     kenneyAvatarPlate,
     kenneyButton,
+    kenneyDockBar,
     kenneyHeroPanel,
+    kenneyMissionCardFace,
     kenneyProgressBar,
     kenneyRowPanel,
     kenneyStatChip,
     kenneyTabTrack,
 } from './kenneyLandscapeWidgets';
+import {
+    computeCardVerticalBands,
+    fitBodyText,
+    fitOneLineSmall,
+    fitTitleText,
+} from '../menuShared/missionCardLayout';
 
 const GRID = 8;
 const TAB_BS = VELOCITY_UI_SLICE.button;
@@ -730,7 +738,7 @@ function filterLevels(tab: number): LevelDefinition[] {
     return all.filter((l) => l.id >= 16);
 }
 
-/** Gated prestige row — not a greyed playable card + decorative frame. */
+/** Gated row — Kenney face + same vertical band model as portrait. */
 function buildLockedMissionRowLandscape(
     level: LevelDefinition,
     cw: number,
@@ -749,17 +757,16 @@ function buildLockedMissionRowLandscape(
     const centerW = Math.max(160, cw - zoneAEnd - plaqueW - GRID * 3 - 16);
     const tx = zoneAEnd;
     const rewardValue = Math.max(primaryState === 'elite_locked' ? 140 : 90, level.gateCount * (primaryState === 'elite_locked' ? 24 : 18));
-
-    const face = new Graphics();
-    face.roundRect(0, 0, cw, rowH, 14);
-    face.fill({ color: elite ? C.lockedFaceElite : C.lockedFace, alpha: 1 });
-    face.stroke({ color: elite ? C.lockedRimElite : C.lockedRim, width: 1.5, alpha: elite ? 0.45 : 0.38 });
-    root.addChild(face);
-
-    const innerFrame = new Graphics();
-    innerFrame.roundRect(3, 3, cw - 6, rowH - 6, 12);
-    innerFrame.stroke({ color: 0xffffff, width: 1, alpha: elite ? 0.04 : 0.025 });
-    root.addChild(innerFrame);
+    const faceRole = primaryState === 'elite_locked' ? 'elite_locked' : 'locked';
+    const kFace = kenneyMissionCardFace(cw, rowH, faceRole);
+    if (kFace) root.addChild(kFace);
+    else {
+        const face = new Graphics();
+        face.roundRect(0, 0, cw, rowH, 14);
+        face.fill({ color: elite ? C.lockedFaceElite : C.lockedFace, alpha: 1 });
+        face.stroke({ color: elite ? C.lockedRimElite : C.lockedRim, width: 1.5, alpha: elite ? 0.45 : 0.38 });
+        root.addChild(face);
+    }
 
     const spine = new Graphics();
     spine.roundRect(0, 8, leftRailW, rowH - 16, 2);
@@ -796,60 +803,85 @@ function buildLockedMissionRowLandscape(
         root.addChild(ic);
     }
 
-    const title = new Text({
-        text: trunc(level.name, Math.max(10, Math.floor(centerW / 7.5))),
-        style: style(17, '700', elite ? 0xd4c4a8 : C.muted),
-    });
-    title.position.set(tx, 12);
+    const bands = computeCardVerticalBands(rowH, tx, centerW, elite);
+    const title = fitTitleText(level.name, centerW, 0, {
+        fontFamily: FONT_UI,
+        fontWeight: '700',
+        fill: elite ? 0xd4c4a8 : C.muted,
+        letterSpacing: 0.2,
+    }, 17, 12);
+    title.position.set(tx, bands.titleY);
     root.addChild(title);
 
-    const tag = new Text({
-        text: contentTag,
-        style: style(9, '700', 0x6a7a8e, 0.75),
+    const tag = fitOneLineSmall(contentTag, Math.min(100, centerW * 0.42), {
+        fontFamily: FONT_UI,
+        fontWeight: '700',
+        fill: 0x6a7a8e,
+        letterSpacing: 0.4,
+        fontSize: 8,
     });
     tag.anchor.set(1, 0);
-    tag.position.set(tx + centerW - 4, 14);
+    tag.position.set(tx + centerW - 4, bands.titleY + 1);
     root.addChild(tag);
 
-    let tierY = 36;
     if (elite) {
         const tierPlate = new Graphics();
-        const tw = 108;
-        tierPlate.roundRect(tx, tierY, tw, 16, 7);
+        tierPlate.roundRect(tx, bands.tierY, Math.min(112, centerW - 4), bands.tierH, 6);
         tierPlate.fill({ color: C.lockedPlaqueElite, alpha: 0.88 });
         tierPlate.stroke({ color: C.gold, width: 1, alpha: 0.38 });
         root.addChild(tierPlate);
-        const tier = new Text({
-            text: 'ELITE ROUTE',
-            style: style(9, '800', C.gold, 1.2),
+        const tier = fitOneLineSmall('ELITE ROUTE', centerW - 20, {
+            fontFamily: FONT_UI,
+            fontWeight: '800',
+            fill: C.gold,
+            letterSpacing: 1.0,
+            fontSize: 9,
         });
-        tier.position.set(tx + 8, tierY + 2);
+        tier.position.set(tx + 8, bands.tierY + Math.max(1, (bands.tierH - tier.height) / 2));
         root.addChild(tier);
-        tierY += 20;
     }
 
     const subHint = level.learningObjectives[0]?.hint ?? `${level.gateCount} gates`;
-    const sub = new Text({
-        text: trunc(subHint, Math.max(12, Math.floor(centerW / 6))),
-        style: style(13, '500', 0x5a6574),
-    });
-    sub.position.set(tx, tierY + 4);
+    const sub = fitBodyText(subHint, centerW, bands.subMaxH, {
+        fontFamily: FONT_UI,
+        fontWeight: '500',
+        fill: 0x5a6574,
+    }, 13, 9);
+    sub.position.set(tx, bands.subY);
     root.addChild(sub);
+
+    const metaStr = primaryState === 'elite_locked' ? 'SEALED ROUTE' : 'GATED';
+    const metaFill = primaryState === 'elite_locked' ? SURFACE_ROLE.missionEliteLocked.accent : SURFACE_ROLE.missionLocked.accent;
+    const metaPlate = new Graphics();
+    metaPlate.roundRect(tx, bands.metaY, Math.min(centerW - 4, 128), bands.metaH, 6);
+    metaPlate.fill({ color: primaryState === 'elite_locked' ? 0x1a140c : 0x0a1218, alpha: 0.88 });
+    metaPlate.stroke({ color: elite ? C.gold : C.lockedRim, width: 1, alpha: 0.35 });
+    root.addChild(metaPlate);
+    const meta = fitOneLineSmall(metaStr, centerW - 16, {
+        fontFamily: FONT_UI,
+        fontWeight: '800',
+        fill: metaFill,
+        letterSpacing: 0.8,
+        fontSize: 9,
+    });
+    meta.position.set(tx + 8, bands.metaY + Math.max(1, (bands.metaH - meta.height) / 2));
+    root.addChild(meta);
 
     const req =
         primaryState === 'elite_locked'
             ? `Breach Route ${Math.max(1, level.id - 1)} to open seal`
             : `Complete Route ${Math.max(1, level.id - 1)} for access`;
-    const helper = new Text({
-        text: trunc(req, Math.max(14, Math.floor(centerW / 5.5))),
-        style: style(9, '600', 0x4a5568, 0.2),
-    });
-    helper.position.set(tx, rowH - 50);
+    const helper = fitBodyText(req, centerW, bands.helpH, {
+        fontFamily: FONT_UI,
+        fontWeight: '600',
+        fill: 0x4a5568,
+    }, 9, 8);
+    helper.position.set(tx, bands.helpY);
     root.addChild(helper);
 
     const rewardRail = new Graphics();
-    rewardRail.roundRect(tx - 2, rowH - 26, centerW + 4, 18, 7);
-    rewardRail.fill({ color: elite ? 0x120e0a : 0x060a10, alpha: 0.88 });
+    rewardRail.roundRect(tx - 2, bands.rewardY, centerW + 4, bands.rewardH, 7);
+    rewardRail.fill({ color: elite ? 0x120e0a : 0x060a10, alpha: 0.9 });
     rewardRail.stroke({ color: elite ? C.gold : C.lockedRim, width: 1, alpha: 0.32 });
     root.addChild(rewardRail);
     const rewardBadge = getVelocityCustomTexture('badge_reward');
@@ -858,26 +890,39 @@ function buildLockedMissionRowLandscape(
         rb.anchor.set(0.5);
         rb.width = 14;
         rb.height = 14;
-        rb.position.set(tx + 8, rowH - 17);
+        rb.position.set(tx + 8, bands.rewardY + bands.rewardH / 2);
         rb.alpha = 0.82;
         root.addChild(rb);
     }
-    const reward = new Text({
-        text:
-            primaryState === 'elite_locked'
-                ? `WITHHELD  +${rewardValue} SIGNAL`
-                : `BONUS  +${rewardValue} SIGNAL`,
-        style: style(10, '700', elite ? SURFACE_ROLE.missionEliteLocked.accent : SURFACE_ROLE.missionLocked.accent, 0.5),
+    const rewardStr =
+        primaryState === 'elite_locked'
+            ? `WITHHELD +${rewardValue} SIGNAL`
+            : `BONUS +${rewardValue} SIGNAL`;
+    const reward = fitOneLineSmall(rewardStr, centerW - 28, {
+        fontFamily: FONT_UI,
+        fontWeight: '700',
+        fill: elite ? SURFACE_ROLE.missionEliteLocked.accent : SURFACE_ROLE.missionLocked.accent,
+        letterSpacing: 0.45,
+        fontSize: 9,
     });
-    reward.position.set(tx + 20, rowH - 23);
+    reward.position.set(tx + 20, bands.rewardY + Math.max(2, (bands.rewardH - reward.height) / 2));
     root.addChild(reward);
 
     const px = cw - plaqueW - 12;
     const py = 10;
     const ph = rowH - 20;
+    const plaqueTex = getVelocityCustomTexture('frame_locked');
+    if (plaqueTex) {
+        const ps = new Sprite(plaqueTex);
+        ps.width = plaqueW;
+        ps.height = ph;
+        ps.position.set(px, py);
+        ps.alpha = elite ? 0.52 : 0.4;
+        root.addChild(ps);
+    }
     const plaque = new Graphics();
     plaque.roundRect(px, py, plaqueW, ph, 12);
-    plaque.fill({ color: elite ? C.lockedPlaqueElite : C.lockedPlaque, alpha: 0.96 });
+    plaque.fill({ color: elite ? C.lockedPlaqueElite : C.lockedPlaque, alpha: plaqueTex ? 0.7 : 0.96 });
     plaque.stroke({ color: elite ? C.gold : C.lockedRim, width: 2, alpha: elite ? 0.55 : 0.5 });
     root.addChild(plaque);
     const plaqueInner = new Graphics();
@@ -937,8 +982,12 @@ function missionRow(
         return buildLockedMissionRowLandscape(level, cw, rowH, primaryState, elite, contentTag);
     }
 
-    // ── Card plate — claimable / playable only (locked uses dedicated layout) ─
-    if (primaryState === 'claimable') {
+    const playFaceRole = primaryState === 'claimable' ? 'claimable' : 'playable';
+    const kPlayFace = kenneyMissionCardFace(cw, rowH, playFaceRole);
+    if (kPlayFace) {
+        kPlayFace.alpha = primaryState === 'claimable' ? 0.98 : 0.96;
+        root.addChild(kPlayFace);
+    } else if (primaryState === 'claimable') {
         const plate = kenneyRowPanel(cw, rowH);
         if (plate) {
             plate.alpha = 0.96;
@@ -950,10 +999,6 @@ function missionRow(
             bg.stroke({ color: SURFACE_ROLE.missionClaimable.rim, width: 1.6, alpha: 0.64 });
             root.addChild(bg);
         }
-        const crown = new Graphics();
-        crown.roundRect(5, 0, cw - 10, 3, 1);
-        crown.fill({ color: SURFACE_ROLE.missionClaimable.rim, alpha: 0.55 });
-        root.addChild(crown);
     } else {
         const plate = kenneyRowPanel(cw, rowH);
         if (plate) root.addChild(plate);
@@ -964,6 +1009,12 @@ function missionRow(
             bg.stroke({ color: C.border, width: 1, alpha: 0.5 });
             root.addChild(bg);
         }
+    }
+    if (primaryState === 'claimable') {
+        const crown = new Graphics();
+        crown.roundRect(5, 0, cw - 10, 3, 1);
+        crown.fill({ color: SURFACE_ROLE.missionClaimable.rim, alpha: 0.55 });
+        root.addChild(crown);
     }
     const leftSpine = new Graphics();
     leftSpine.roundRect(0, 0, 6, rowH, 3);
@@ -986,24 +1037,6 @@ function missionRow(
     const contentW = Math.max(180, actionDockX - tx - 10);
     const textMax = contentW - 14;
 
-    const contentShell = new Graphics();
-    contentShell.roundRect(tx - 8, 9, contentW + 6, rowH - 18, 11);
-    contentShell.fill({ color: 0x0c1521, alpha: 0.5 });
-    contentShell.stroke({
-        color: primaryState === 'claimable' ? C.gold : C.cyan,
-        width: 1,
-        alpha: primaryState === 'playable' ? 0.28 : 0.2,
-    });
-    root.addChild(contentShell);
-
-    const titleBand = new Graphics();
-    titleBand.roundRect(tx - 4, 12, contentW - 8, 22, 6);
-    titleBand.fill({
-        color: primaryState === 'claimable' ? 0x22180f : 0x101b2a,
-        alpha: 0.72,
-    });
-    root.addChild(titleBand);
-
     const icBg = new Graphics();
     if (primaryState === 'claimable') {
         icBg.circle(icX, icY, iconR);
@@ -1023,64 +1056,89 @@ function missionRow(
     icoRadar(icGlyph, icX, icY, iconR * 0.55);
     root.addChild(icGlyph);
 
-    const title = new Text({
-        text: trunc(level.name, Math.max(8, Math.floor(textMax / 7.5))),
-        style: style(17, '700', C.text),
-    });
-    title.position.set(tx, 12);
+    const tagReserve = Math.min(120, Math.floor(textMax * 0.38));
+    const bands = computeCardVerticalBands(rowH, tx, textMax, elite);
+
+    const title = fitTitleText(level.name, textMax, tagReserve, {
+        fontFamily: FONT_UI,
+        fontWeight: '700',
+        fill: C.text,
+        letterSpacing: 0.2,
+    }, 17, 12);
+    title.position.set(tx, bands.titleY);
     root.addChild(title);
-    const tag = new Text({
-        text: contentTag,
-        style: style(9, '700', 0x9dc1df, 0.8),
+
+    const tag = fitOneLineSmall(contentTag, tagReserve - 6, {
+        fontFamily: FONT_UI,
+        fontWeight: '700',
+        fill: 0x9dc1df,
+        letterSpacing: 0.35,
+        fontSize: 8,
     });
     tag.anchor.set(1, 0);
-    tag.position.set(tx + contentW - 14, 15);
+    tag.position.set(tx + textMax - 4, bands.titleY + 1);
     root.addChild(tag);
 
     const subHint = level.learningObjectives[0]?.hint ?? `${level.gateCount} gates`;
-    const sub = new Text({
-        text: trunc(subHint, Math.max(8, Math.floor(textMax / 6))),
-        style: style(13, '500', primaryState === 'claimable' ? 0xe8d7a7 : C.muted),
-    });
-    sub.position.set(tx, 38);
+    const sub = fitBodyText(subHint, textMax - 4, bands.subMaxH, {
+        fontFamily: FONT_UI,
+        fontWeight: '500',
+        fill: primaryState === 'claimable' ? 0xe8d7a7 : C.muted,
+    }, 13, 9);
+    sub.position.set(tx, bands.subY);
     root.addChild(sub);
 
     let metaStr = '';
-    if (primaryState === 'claimable') metaStr = 'READY TO CLAIM';
-    else if (primaryState === 'playable') metaStr = 'PLAYABLE';
-    if (metaStr) {
-        const meta = new Text({
-            text: metaStr,
-            style: style(
-                10,
-                '700',
-                primaryState === 'claimable'
-                    ? SURFACE_ROLE.missionClaimable.accent
-                    : SURFACE_ROLE.missionPlayable.accent,
-            ),
-        });
-        const metaPlate = new Graphics();
-        const mw = Math.min(textMax - 8, Math.ceil(meta.width + 12));
-        metaPlate.roundRect(tx - 4, 56, mw, 16, 6);
-        metaPlate.fill({
-            color: primaryState === 'claimable' ? 0x22180d : 0x09131d,
-            alpha: 0.74,
-        });
-        root.addChild(metaPlate);
-        meta.anchor.set(0, 0);
-        meta.position.set(tx, 58);
-        root.addChild(meta);
+    let metaFill: number = SURFACE_ROLE.missionPlayable.accent;
+    if (primaryState === 'claimable') {
+        metaStr = 'READY TO CLAIM';
+        metaFill = SURFACE_ROLE.missionClaimable.accent;
+    } else if (elite && completed) {
+        metaStr = 'ELITE ✓';
+        metaFill = C.gold;
+    } else if (elite) {
+        metaStr = 'ELITE';
+        metaFill = C.gold;
+    } else if (completed) {
+        metaStr = 'CLEARED';
+        metaFill = SURFACE_ROLE.missionCompleted.accent;
+    } else {
+        metaStr = 'REWARD';
+        metaFill = SURFACE_ROLE.missionPlayable.accent;
     }
-    const helper = new Text({
-        text: completed ? 'Completed · replay for better score' : 'Available now',
-        style: style(9, '600', 0x6f8096, 0.4),
+    const metaPlate = new Graphics();
+    metaPlate.roundRect(tx, bands.metaY, Math.min(textMax - 4, 140), bands.metaH, 6);
+    metaPlate.fill({ color: primaryState === 'claimable' ? 0x22180d : 0x09131d, alpha: 0.78 });
+    metaPlate.stroke({
+        color: primaryState === 'claimable' ? C.gold : C.border,
+        width: 1,
+        alpha: 0.32,
     });
-    helper.position.set(tx, 76);
+    root.addChild(metaPlate);
+    const meta = fitOneLineSmall(metaStr, textMax - 16, {
+        fontFamily: FONT_UI,
+        fontWeight: '800',
+        fill: metaFill,
+        letterSpacing: 0.55,
+        fontSize: 9,
+    });
+    meta.position.set(tx + 8, bands.metaY + Math.max(1, (bands.metaH - meta.height) / 2));
+    root.addChild(meta);
+
+    const helper = fitBodyText(
+        completed ? 'Replay for a better score' : 'Available now',
+        textMax,
+        bands.helpH,
+        { fontFamily: FONT_UI, fontWeight: '600', fill: 0x6f8096 },
+        9,
+        8,
+    );
+    helper.position.set(tx, bands.helpY);
     root.addChild(helper);
 
     const rewardRail = new Graphics();
-    rewardRail.roundRect(tx - 6, rowH - 27, contentW - 12, 19, 7);
-    rewardRail.fill({ color: primaryState === 'claimable' ? 0x231b0f : 0x081019, alpha: 0.75 });
+    rewardRail.roundRect(tx - 4, bands.rewardY, Math.max(120, textMax + 8), bands.rewardH, 7);
+    rewardRail.fill({ color: primaryState === 'claimable' ? 0x231b0f : 0x081019, alpha: 0.78 });
     rewardRail.stroke({
         color: primaryState === 'claimable' ? C.gold : C.border,
         width: 1,
@@ -1088,12 +1146,12 @@ function missionRow(
     });
     root.addChild(rewardRail);
     const rewardGem = new Graphics();
-    rewardGem.circle(tx + 6, rowH - 18, 5);
+    rewardGem.circle(tx + 6, bands.rewardY + bands.rewardH / 2, 5);
     rewardGem.fill({
         color: primaryState === 'claimable' ? C.gold : SURFACE_ROLE.missionPlayable.accent,
         alpha: 0.9,
     });
-    rewardGem.circle(tx + 6, rowH - 18, 8);
+    rewardGem.circle(tx + 6, bands.rewardY + bands.rewardH / 2, 8);
     rewardGem.stroke({
         color: primaryState === 'claimable' ? C.gold : SURFACE_ROLE.missionPlayable.rim,
         width: 1,
@@ -1106,24 +1164,25 @@ function missionRow(
         rb.anchor.set(0.5);
         rb.width = 14;
         rb.height = 14;
-        rb.position.set(tx + 6, rowH - 18);
+        rb.position.set(tx + 6, bands.rewardY + bands.rewardH / 2);
         rb.alpha = 0.85;
         root.addChild(rb);
     }
-    const reward = new Text({
-        text: `MISSION REWARD +${rewardValue} SIGNAL`,
-        style: style(
-            10,
-            '700',
-            primaryState === 'claimable'
-                ? SURFACE_ROLE.missionClaimable.accent
-                : completed
-                  ? SURFACE_ROLE.missionCompleted.accent
-                  : SURFACE_ROLE.missionPlayable.accent,
-            0.8,
-        ),
+    const rewardLine = `MISSION REWARD +${rewardValue} SIGNAL`;
+    const rewardFill =
+        primaryState === 'claimable'
+            ? SURFACE_ROLE.missionClaimable.accent
+            : completed
+              ? SURFACE_ROLE.missionCompleted.accent
+              : SURFACE_ROLE.missionPlayable.accent;
+    const reward = fitOneLineSmall(rewardLine, textMax - 28, {
+        fontFamily: FONT_UI,
+        fontWeight: '700',
+        fill: rewardFill,
+        letterSpacing: 0.45,
+        fontSize: 9,
     });
-    reward.position.set(tx + 16, rowH - 22);
+    reward.position.set(tx + 18, bands.rewardY + Math.max(2, (bands.rewardH - reward.height) / 2));
     root.addChild(reward);
 
     const bx = cw - btnW - 12;
@@ -1231,6 +1290,12 @@ export function buildBottomNavDock(
 ): { root: Container; setActive: (i: number) => void; labels: Text[] } {
     const H = 84;
     const root = new Container();
+
+    const kUnder = kenneyDockBar(cw, H);
+    if (kUnder) {
+        kUnder.alpha = 0.55;
+        root.addChild(kUnder);
+    }
 
     const deck = new Graphics();
     deck.roundRect(0, 0, cw, H, 16);
