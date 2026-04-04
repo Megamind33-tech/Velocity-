@@ -667,7 +667,7 @@ function buildSegmentTabs(
     cw: number,
     onSelect: (i: number) => void,
 ): { root: Container; setActive: (i: number) => void; tabGlows: Graphics[] } {
-    const H = 44;
+    const H = 50;
     const root = new Container();
 
     // Track background — vector only (panel fill would also corrupt at this width)
@@ -681,7 +681,7 @@ function buildSegmentTabs(
     const pad = P_SPACE.s6;
     const tabW = Math.floor((cw - pad * 2) / n);
     const innerW = tabW - 4;
-    const innerH = H - 10;
+    const innerH = H - 12;
 
     // Kenney nine-slice safe ONLY when innerW ≥ 116 (56+56 corner budget)
     const useK9 = innerW >= 116 &&
@@ -699,7 +699,7 @@ function buildSegmentTabs(
 
     for (let i = 0; i < n; i++) {
         const b = new Container();
-        b.position.set(pad + i * tabW, 5);
+        b.position.set(pad + i * tabW, 6);
 
         // Glow stroke (inactive = transparent, active = visible)
         const glow = new Graphics();
@@ -821,12 +821,18 @@ function buildMissionCardPortrait(
     const root = new Container();
     const unlocked = isLevelUnlocked(level.id);
     const completed = unlocked && level.id < maxUnlocked;
+    const claimable = unlocked && level.id === maxUnlocked;
     const elite = level.id >= 18;
+    const primaryState: 'claimable' | 'playable' | 'locked' | 'elite_locked' =
+        claimable ? 'claimable' : unlocked ? 'playable' : elite ? 'elite_locked' : 'locked';
 
     // ── Card surface — state-differentiated, not a uniform formula ──────────
     const g = new Graphics();
     g.roundRect(0, 0, cw, rowH, P_RADIUS.panel - 2);
-    if (unlocked) {
+    if (primaryState === 'claimable') {
+        g.fill({ color: 0x17120d, alpha: 1 });
+        g.stroke({ color: P_COLORS.accentGold, width: 1.5, alpha: 0.52 });
+    } else if (unlocked) {
         g.fill({ color: P_COLORS.bgPanelActive, alpha: 1 });
         g.stroke({ color: P_COLORS.strokeActive, width: 1.5, alpha: 0.28 });
     } else if (elite) {
@@ -846,6 +852,12 @@ function buildMissionCardPortrait(
     ridge.roundRect(2, 2, cw - 4, Math.floor(rowH * 0.4), P_RADIUS.panel - 4);
     ridge.fill({ color: 0xffffff, alpha: unlocked ? 0.02 : 0.01 });
     root.addChild(ridge);
+    if (primaryState === 'claimable') {
+        const topGold = new Graphics();
+        topGold.roundRect(4, 0, cw - 8, 2, 1);
+        topGold.fill({ color: P_COLORS.accentGold, alpha: 0.4 });
+        root.addChild(topGold);
+    }
 
     // ELITE LOCKED: faint gold ambient strip at top — premium designation
     if (!unlocked && elite) {
@@ -920,8 +932,8 @@ function buildMissionCardPortrait(
     }
     root.addChild(ic);
 
-    const btnW = 96;
-    const btnH = 38;
+    const btnW = 104;
+    const btnH = 44;
     const tx = icX + P_ICON.emblem + P_SPACE.s12;
     // Removed the unexplained 56px surplus — title now gets full available width
     const tw = Math.max(40, cw - tx - btnW - P_SPACE.s16 - 8);
@@ -957,7 +969,10 @@ function buildMissionCardPortrait(
     // For unlocked cards: show completion or reward status.
     let metaStr = '';
     let metaColor = P_COLORS.accentCyanSoft;
-    if (elite && unlocked && completed) {
+    if (primaryState === 'claimable') {
+        metaStr = 'READY TO CLAIM';
+        metaColor = P_COLORS.accentGold;
+    } else if (elite && unlocked && completed) {
         metaStr = '★ ELITE  ✓';
         metaColor = P_COLORS.accentGold;
     } else if (elite) {
@@ -988,16 +1003,40 @@ function buildMissionCardPortrait(
         root.addChild(meta);
     }
 
+    const rewardRail = new Graphics();
+    rewardRail.roundRect(tx - 4, rowH - 20, Math.max(120, tw - 8), 14, 6);
+    rewardRail.fill({ color: primaryState === 'claimable' ? 0x231b0f : 0x0a121d, alpha: 0.72 });
+    rewardRail.stroke({ color: primaryState === 'claimable' ? P_COLORS.accentGoldSoft : P_COLORS.strokeSubtle, width: 1, alpha: 0.4 });
+    root.addChild(rewardRail);
+    const rewardText = new Text({
+        text: primaryState === 'elite_locked'
+            ? `SEALED CACHE +${Math.max(140, level.gateCount * 24)}`
+            : `REWARD +${Math.max(90, level.gateCount * 18)} SIGNAL`,
+        style: ts(P_TYPO.navLabel, primaryState === 'claimable' ? P_COLORS.accentGold : P_COLORS.accentCyanSoft),
+    });
+    rewardText.position.set(tx + 6, rowH - 18);
+    root.addChild(rewardText);
+
     const bx = cw - btnW - P_SPACE.s10;
     const by = (rowH - btnH) / 2;
+    const actionDock = new Graphics();
+    actionDock.roundRect(bx - 8, 8, btnW + 14, rowH - 16, 10);
+    actionDock.fill({ color: unlocked ? 0x0a121d : 0x090f17, alpha: unlocked ? 0.45 : 0.6 });
+    actionDock.stroke({
+        color: primaryState === 'claimable' ? P_COLORS.accentGold : unlocked ? P_COLORS.accentCyan : P_COLORS.stateLocked,
+        width: 1,
+        alpha: 0.34,
+    });
+    root.addChild(actionDock);
 
     if (unlocked) {
         const btn =
-            kenneyButton('PLAY', btnW, btnH, 'button_accent', true, () => onPlay(level.id)) ?? buildPlayFallback(btnW, btnH, () => onPlay(level.id));
+            kenneyButton(primaryState === 'claimable' ? 'CLAIM' : 'PLAY', btnW, btnH, 'button_accent', true, () => onPlay(level.id)) ??
+            buildPlayFallback(btnW, btnH, primaryState === 'claimable' ? 'CLAIM' : 'PLAY', () => onPlay(level.id));
         btn.position.set(bx, by);
         root.addChild(btn);
     } else {
-        const lock = buildLockedButton(btnW, btnH);
+        const lock = buildLockedButton(btnW, btnH, elite);
         lock.position.set(bx, by);
         root.addChild(lock);
     }
@@ -1005,14 +1044,14 @@ function buildMissionCardPortrait(
     return root;
 }
 
-function buildPlayFallback(w: number, h: number, onPlay: () => void): Container {
+function buildPlayFallback(w: number, h: number, label: 'PLAY' | 'CLAIM', onPlay: () => void): Container {
     const c = new Container();
     const g = new Graphics();
     g.roundRect(0, 0, w, h, P_RADIUS.button);
     g.fill({ color: P_COLORS.accentGold, alpha: 1 });
     g.stroke({ color: 0x1a1408, width: 1, alpha: 0.35 });
     c.addChild(g);
-    const t = new Text({ text: 'PLAY', style: ts(P_TYPO.button, 0x1a1204) });
+    const t = new Text({ text: label, style: ts(P_TYPO.button, 0x1a1204) });
     t.anchor.set(0.5);
     t.position.set(w / 2, h / 2);
     c.addChild(t);
@@ -1020,7 +1059,7 @@ function buildPlayFallback(w: number, h: number, onPlay: () => void): Container 
     return c;
 }
 
-function buildLockedButton(w: number, h: number): Container {
+function buildLockedButton(w: number, h: number, elite: boolean): Container {
     const c = new Container();
     c.eventMode = 'none';
 
@@ -1028,13 +1067,13 @@ function buildLockedButton(w: number, h: number): Container {
     const g = new Graphics();
     g.roundRect(0, 0, w, h, P_RADIUS.button);
     g.fill({ color: P_COLORS.bgBase, alpha: 1 });
-    g.stroke({ color: P_COLORS.stateLocked, width: 1.5, alpha: 0.38 });
+    g.stroke({ color: elite ? P_COLORS.accentGoldSoft : P_COLORS.stateLocked, width: 1.5, alpha: elite ? 0.5 : 0.38 });
     c.addChild(g);
 
     // ── Inner frame — dimensional depth ─────────────────────────────────────
     const inner = new Graphics();
     inner.roundRect(2, 2, w - 4, h - 4, P_RADIUS.button - 2);
-    inner.stroke({ color: P_COLORS.stateLocked, width: 1, alpha: 0.12 });
+    inner.stroke({ color: elite ? P_COLORS.accentGoldSoft : P_COLORS.stateLocked, width: 1, alpha: 0.12 });
     c.addChild(inner);
 
     // ── Diagonal hatch — hazard zone game convention ─────────────────────────
@@ -1054,25 +1093,38 @@ function buildLockedButton(w: number, h: number): Container {
     // ── Lock icon — CENTERED at top 38% of button height ─────────────────────
     // Vertical stack: icon top / label bottom — NO side-by-side layout that overflows
     const lockG = new Graphics();
-    drawIconLock(lockG, w / 2, Math.floor(h * 0.38), 10,
-        { color: P_COLORS.stateLocked, width: 1.5, alpha: 0.60 });
+    drawIconLock(lockG, w / 2, Math.floor(h * 0.36), 10,
+        { color: elite ? P_COLORS.accentGold : P_COLORS.stateLocked, width: 1.5, alpha: elite ? 0.68 : 0.60 });
     c.addChild(lockG);
 
     // ── "LOCKED" — SINGLE dominant state, anchor(0.5, 0.5) at bottom of button
     // Centered horizontally: no truncation possible at any button width ≥ 60px
     const t = new Text({
-        text: 'LOCKED',
+        text: elite ? 'SEALED' : 'LOCKED',
         style: new TextStyle({
             fontFamily: FONT,
             fontSize: 9,
             fontWeight: '700',
-            fill: P_COLORS.stateLocked,
+            fill: elite ? P_COLORS.accentGoldSoft : P_COLORS.stateLocked,
             letterSpacing: 2.0,
         }),
     });
     t.anchor.set(0.5, 0.5);
-    t.position.set(w / 2, Math.floor(h * 0.73));
+    t.position.set(w / 2, Math.floor(h * 0.70));
     c.addChild(t);
+    const sub = new Text({
+        text: elite ? 'PREMIUM ROUTE' : 'COMPLETE PREV',
+        style: new TextStyle({
+            fontFamily: FONT,
+            fontSize: 7,
+            fontWeight: '600',
+            fill: elite ? 0x7d6440 : 0x596675,
+            letterSpacing: 0.6,
+        }),
+    });
+    sub.anchor.set(0.5, 0.5);
+    sub.position.set(w / 2, Math.floor(h * 0.86));
+    c.addChild(sub);
 
     // ── NO helper text inside the button ─────────────────────────────────────
     // "COMPLETE PREV." caused state collision and truncation.
@@ -1104,7 +1156,7 @@ function buildMissionListPortrait(
     root.addChild(scrollLayer);
 
     let scrollY = 0;
-    const rowH = 88;
+    const rowH = 104;
     const gap = P_SPACE.s8;
     const cardIdle: { root: Container; phase: number }[] = [];
 
@@ -1141,7 +1193,7 @@ function buildBottomDockPortrait(
     onHome: () => void,
     navIndexBySlot?: (slot: number) => void,
 ): { root: Container; setActive: (i: number) => void; dockCradles: Graphics[]; slotContainers: Container[] } {
-    const H = 64;
+    const H = 72;
     const root = new Container();
 
     // ── Dock background — Kenney chrome preferred, vector fallback ────────────
@@ -1206,19 +1258,19 @@ function buildBottomDockPortrait(
 
         const cx = slotW / 2;
         const cradle = new Graphics();
-        cradle.roundRect(cx - 36, 6, 72, 52, 14);
+        cradle.roundRect(cx - 39, 7, 78, 58, 14);
         cradle.fill({ color: P_COLORS.bgBase, alpha: 0.35 });
         cradle.stroke({ color: P_COLORS.accentCyan, width: 1.5, alpha: 0 });
         dockCradles.push(cradle);
         slot.addChild(cradle);
 
         const vecG = new Graphics();
-        it.draw(vecG, cx, 26, 20);
+        it.draw(vecG, cx, 28, 21);
         slot.addChild(vecG);
 
         const t = new Text({ text: it.label, style: ts(P_TYPO.navLabel, P_COLORS.navInactive) });
         t.anchor.set(0.5, 0);
-        t.position.set(cx, 44);
+        t.position.set(cx, 49);
         slot.addChild(t);
 
         pressable(slot, it.onTap);
@@ -1233,18 +1285,18 @@ function buildBottomDockPortrait(
             cr.clear();
             if (idx === i) {
                 // Active: filled cradle + glow ring + top pip indicator
-                cr.roundRect(cx - 34, 5, 68, 50, 14);
+                cr.roundRect(cx - 37, 6, 74, 56, 14);
                 cr.fill({ color: P_COLORS.bgPanelLit, alpha: 0.70 });
-                cr.roundRect(cx - 34, 5, 68, 50, 14);
+                cr.roundRect(cx - 37, 6, 74, 56, 14);
                 cr.stroke({ color: P_COLORS.accentCyan, width: 1.5, alpha: 0.80 });
                 // Top indicator pip
                 cr.roundRect(cx - 14, 3, 28, 3, 1.5);
                 cr.fill({ color: P_COLORS.navActivePill, alpha: 0.90 });
                 // Ambient glow circle behind icon
-                cr.circle(cx, 27, 22);
+                cr.circle(cx, 29, 22);
                 cr.fill({ color: P_COLORS.accentCyan, alpha: P_OPACITY.activeGlow });
             } else {
-                cr.roundRect(cx - 34, 5, 68, 50, 14);
+                cr.roundRect(cx - 37, 6, 74, 56, 14);
                 cr.fill({ color: P_COLORS.bgBase, alpha: 0.22 });
             }
         });
@@ -1307,7 +1359,7 @@ export function buildPortraitMissionScreen(p: BuildPortraitMissionScreenParams):
     });
     strip.root.position.set(0, y);
     root.addChild(strip.root);
-    y += 56 + P_SPACE.s12;
+    y += 60 + P_SPACE.s12;
 
     const cardH = Math.min(200, Math.max(168, Math.floor(sh * 0.26)));
     const feat = buildFeaturedMissionCard({
@@ -1325,8 +1377,9 @@ export function buildPortraitMissionScreen(p: BuildPortraitMissionScreenParams):
     root.addChild(feat.root);
     y += cardH + P_SPACE.s12;
 
-    const dockH = 64;
-    const listH = Math.max(140, sh - y - 44 - P_SPACE.s10 - dockH - p.safeBottom - P_SPACE.s16);
+    const tabsH = 50;
+    const dockH = 72;
+    const listH = Math.max(156, sh - y - tabsH - P_SPACE.s10 - dockH - p.safeBottom - P_SPACE.s16);
 
     const list = buildMissionListPortrait(cw, listH, (id) => gameFlow().startLevelWithMicGate?.(id), p.getProgress);
 
@@ -1335,7 +1388,7 @@ export function buildPortraitMissionScreen(p: BuildPortraitMissionScreenParams):
     });
     tabs.root.position.set(0, y);
     root.addChild(tabs.root);
-    y += 44 + P_SPACE.s10;
+    y += tabsH + P_SPACE.s10;
 
     list.root.position.set(0, y);
     root.addChild(list.root);
