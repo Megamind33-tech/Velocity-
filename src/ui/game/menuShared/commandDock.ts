@@ -47,6 +47,11 @@ export type CommandDockItem = {
     menuIconKey?: VelocityUiTextureKey;
     /** Multiplier on dock `iconSize` when using a sprite (e.g. wide silhouettes). */
     menuIconScale?: number;
+    /**
+     * Full-color raster icons (e.g. OpenGameArt): skip heavy cyan/gray tint so art reads clearly.
+     * Uses white tint + alpha for idle/active hierarchy instead.
+     */
+    menuIconFullColor?: boolean;
 };
 
 export function buildCommandDock(
@@ -137,7 +142,12 @@ export function buildCommandDock(
             sp.width = iconSize * scale;
             sp.height = iconSize * scale;
             sp.position.set(cx, iconCy);
-            sp.alpha = 0.95;
+            if (it.menuIconFullColor) {
+                sp.tint = 0xffffff;
+                sp.alpha = 0.82;
+            } else {
+                sp.alpha = 0.95;
+            }
             iconLayer.addChild(sp);
         } else {
             const vecG = new Graphics();
@@ -194,8 +204,16 @@ export function buildCommandDock(
             const on = idx === i;
             const iconLayer = ch.children[3] as Container;
             const firstIcon = iconLayer.children[0];
+            const item = items[idx];
+            const fullColor = item?.menuIconFullColor === true;
             if (firstIcon instanceof Sprite) {
-                firstIcon.tint = on ? palette.accentCyan : palette.inactiveIconTint;
+                if (fullColor) {
+                    firstIcon.tint = 0xffffff;
+                    firstIcon.alpha = on ? 1 : 0.78;
+                } else {
+                    firstIcon.alpha = 0.95;
+                    firstIcon.tint = on ? palette.accentCyan : palette.inactiveIconTint;
+                }
             } else if (firstIcon instanceof Graphics) {
                 firstIcon.tint = on ? palette.accentCyan : palette.inactiveIconTint;
             }

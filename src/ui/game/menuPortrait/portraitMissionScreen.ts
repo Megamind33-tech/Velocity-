@@ -982,6 +982,7 @@ function buildBottomDockPortrait(
                 },
                 draw: drawIconHome,
                 menuIconKey: 'dock_nav_home',
+                menuIconFullColor: true,
             },
             {
                 label: 'MISSIONS',
@@ -991,6 +992,7 @@ function buildBottomDockPortrait(
                 },
                 draw: drawIconMap,
                 menuIconKey: 'dock_nav_missions',
+                menuIconFullColor: true,
             },
             {
                 label: 'HANGAR',
@@ -1000,7 +1002,7 @@ function buildBottomDockPortrait(
                 },
                 draw: drawIconHangar,
                 menuIconKey: 'dock_nav_hangar',
-                menuIconScale: 1.08,
+                menuIconFullColor: true,
             },
             {
                 label: 'STORE',
@@ -1010,6 +1012,7 @@ function buildBottomDockPortrait(
                 },
                 draw: drawIconStore,
                 menuIconKey: 'dock_nav_store',
+                menuIconFullColor: true,
             },
         ],
         kUnder,
