@@ -11,13 +11,13 @@ export type TopStripLayout = {
     endPad: number;
 };
 
-const GAP = 8;
-const END_PAD = 8;
+const GAP = 6;
+const END_PAD = 6;
 /** Preferred chip width target; we shrink below this before overlapping parent. */
-const TARGET_CHIP = 72;
-const AVATAR_PREFERRED = 56;
-const AVATAR_COMPACT = 50;
-const AVATAR_MIN = 46;
+const TARGET_CHIP = 68;
+const AVATAR_PREFERRED = 52;
+const AVATAR_COMPACT = 48;
+const AVATAR_MIN = 44;
 
 function rawChipW(cw: number, avatar: number): number {
     return Math.floor((cw - avatar - GAP * 3 - END_PAD) / 3);

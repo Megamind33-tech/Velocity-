@@ -2,8 +2,7 @@
  * Shared hero “command header” — explicit vertical bands (no overlap) + zoned class chip.
  */
 
-import { Container, Graphics, Sprite, Text, TextStyle } from 'pixi.js';
-import { getVelocityCustomTexture } from '../velocityUiArt';
+import { Container, Graphics, Text, TextStyle } from 'pixi.js';
 import { spriteIcon } from '../menuLandscape/kenneyLandscapeWidgets';
 
 export type MainMenuProgressLite = {
@@ -186,18 +185,6 @@ export function mountHeroCommandLayout(
     }
     content.addChild(rg);
 
-    const rankPrestige = getVelocityCustomTexture('rank_prestige');
-    if (rankPrestige) {
-        const rs = new Sprite(rankPrestige);
-        rs.anchor.set(0.5, 0.5);
-        const badgeR = 14;
-        rs.width = badgeR * 2;
-        rs.height = badgeR * 2;
-        rs.position.set(emblemCx + emblemR * 0.52, emblemCy - emblemR * 0.52);
-        rs.alpha = 0.92;
-        content.addChild(rs);
-    }
-
     const rewardShimmer = new Graphics();
     rewardShimmer.position.set(emblemCx - emblemR, emblemCy - emblemR);
     content.addChild(rewardShimmer);
@@ -299,8 +286,11 @@ export function mountHeroCommandLayout(
     fly.position.set(flyX, rowY);
     content.addChild(fly);
 
-    const bonusTop = rowY - BONUS_GAP_ABOVE_RAIL - BONUS_BAND_H;
-    const bonusLineY = Math.max(0, Math.min(bonusTop, progLblY - 4 - BONUS_BAND_H));
+    const contentFloor = (showTag ? tagY + TAG_H : subY + SUB_H) + 4;
+    const cap = rowY - BONUS_GAP_ABOVE_RAIL - BONUS_BAND_H;
+    let bonusLineY = Math.min(cap, progLblY - 14);
+    if (bonusLineY < contentFloor) bonusLineY = contentFloor;
+    if (bonusLineY >= progLblY - 1) bonusLineY = Math.max(0, progLblY - 16);
 
     return {
         flyCta: fly,

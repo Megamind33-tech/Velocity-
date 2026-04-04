@@ -215,7 +215,7 @@ function buildFeaturedMissionCard(p: FeaturedProps): {
             text: `${p.rewardStars}★ route bonus`,
             style: ts(P_TYPO.label, P_COLORS.accentGold),
         });
-        starLbl.position.set(pad, Math.max(4, cmd.bonusLineY));
+        starLbl.position.set(P_SPACE.s8, Math.max(2, cmd.bonusLineY));
         pair.content.addChild(starLbl);
         return {
             root,
@@ -516,7 +516,7 @@ function buildLockedMissionCardPortrait(
     const sub = fitBodyText(teaser, centerW, bands.subMaxH, {
         fontFamily: FONT,
         fontWeight: '500',
-        fill: 0x5a6574,
+        fill: 0x9aacbe,
     });
     sub.position.set(tx, bands.subY);
     root.addChild(sub);
@@ -552,7 +552,7 @@ function buildLockedMissionCardPortrait(
     const helper = fitBodyText(reqLine, centerW, bands.helpH, {
         fontFamily: FONT,
         fontWeight: '600',
-        fill: 0x4a5568,
+        fill: 0x7d8fa4,
         letterSpacing: 0.1,
     }, 9, 8);
     helper.position.set(tx, bands.helpY);
@@ -966,7 +966,8 @@ function buildBottomDockPortrait(
         dockCellActiveRim: P_COLORS.dockCellActiveRim,
         accentCyan: P_COLORS.accentCyan,
         inactiveIconTint: 0xa8b4c4,
-        labelIdle: 0x4a5666,
+        labelIdle: 0xb4c2d4,
+        labelActive: P_COLORS.accentCyan,
     };
     const kUnder = kenneyDockBar(cw, H);
     return buildCommandDock(
@@ -982,7 +983,7 @@ function buildBottomDockPortrait(
                     onHome();
                 },
                 draw: drawIconHome,
-                menuIconKey: 'menu_icon_square_grey',
+                menuIconKey: 'dock_nav_home',
             },
             {
                 label: 'MISSIONS',
@@ -991,7 +992,7 @@ function buildBottomDockPortrait(
                     gameFlow().openMissionSelect();
                 },
                 draw: drawIconMap,
-                menuIconKey: 'menu_sector_circle',
+                menuIconKey: 'dock_nav_missions',
             },
             {
                 label: 'HANGAR',
@@ -1000,7 +1001,7 @@ function buildBottomDockPortrait(
                     ui.showScreen('store', true);
                 },
                 draw: drawIconHangar,
-                menuIconKey: 'menu_rewards_star_outline',
+                menuIconKey: 'dock_nav_hangar',
             },
             {
                 label: 'STORE',
@@ -1009,7 +1010,7 @@ function buildBottomDockPortrait(
                     ui.showScreen('store', true);
                 },
                 draw: drawIconStore,
-                menuIconKey: 'menu_store_icon',
+                menuIconKey: 'dock_nav_store',
             },
         ],
         kUnder,

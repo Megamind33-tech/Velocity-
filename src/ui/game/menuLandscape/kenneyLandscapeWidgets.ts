@@ -70,10 +70,11 @@ export function kenneyButton(
     const root = new Container();
     root.addChild(spr);
 
+    const accentLabelFill = 0x1a1206;
     const t = new Text({
         text: label,
         style: new TextStyle({
-            fill: textLight ? 0xf8fbff : 0x1a1a22,
+            fill: textLight ? 0xf8fbff : key === 'button_accent' ? accentLabelFill : 0x1a1a22,
             fontSize: Math.min(14, Math.floor(h * 0.34)),
             fontWeight: '700',
             fontFamily: GAME_FONTS.standard,
