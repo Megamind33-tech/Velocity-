@@ -25,6 +25,7 @@ import {
     kenneyButton,
     kenneyDockBar,
     kenneyHeroPanel,
+    kenneyListBay,
     kenneyMissionCardFace,
     kenneyProgressBar,
     kenneyRowPanel,
@@ -45,6 +46,7 @@ import {
 import { buildCommandDock, type CommandDockPalette } from '../menuShared/commandDock';
 import { buildModeFilterStrip } from '../menuShared/modeFilterStrip';
 import { mountHeroCommandLayout } from '../menuShared/heroCommandLayout';
+import { mountMissionRewardIcon } from '../menuShared/missionRewardWell';
 
 const GRID = 8;
 const TAB_BS = VELOCITY_UI_SLICE.button;
@@ -480,8 +482,14 @@ export function buildHeroFlightCard(
     const bg = new Graphics();
     bg.roundRect(0, 0, cw, cardH, 20);
     bg.fill({ color: 0x050a12, alpha: 1 });
-    bg.stroke({ color: C.cyan, width: 1.5, alpha: 0.45 });
+    bg.stroke({ color: 0x1a2838, width: 2, alpha: 0.85 });
     fb.addChild(bg);
+    const inner = new Graphics();
+    inner.roundRect(4, 4, cw - 8, cardH - 8, 16);
+    inner.stroke({ color: C.cyan, width: 1, alpha: 0.35 });
+    inner.roundRect(10, 8, cw - 20, 3, 1);
+    inner.fill({ color: C.cyan, alpha: 0.1 });
+    fb.addChild(inner);
     const t0 = new Text({
         text: 'VELOCITY',
         style: new TextStyle({ fontFamily: FONT_UI, fontSize: 30, fontWeight: '800', fill: C.text }),
@@ -661,28 +669,22 @@ function buildLockedMissionRowLandscape(
     rewardRail.fill({ color: elite ? 0x120e0a : 0x060a10, alpha: 0.9 });
     rewardRail.stroke({ color: elite ? C.gold : C.lockedRim, width: 1, alpha: 0.32 });
     root.addChild(rewardRail);
-    const rewardBadge = getVelocityCustomTexture('badge_reward');
-    if (rewardBadge) {
-        const rb = new Sprite(rewardBadge);
-        rb.anchor.set(0.5);
-        rb.width = 14;
-        rb.height = 14;
-        rb.position.set(tx + 8, bands.rewardY + bands.rewardH / 2);
-        rb.alpha = 0.82;
-        root.addChild(rb);
-    }
+    const ryc = bands.rewardY + bands.rewardH / 2;
+    const rac = elite ? C.gold : SURFACE_ROLE.missionLocked.accent;
+    const rrim = elite ? C.gold : C.lockedRim;
+    mountMissionRewardIcon(root, tx + 10, ryc, rac, rrim);
     const rewardStr =
         primaryState === 'elite_locked'
             ? `WITHHELD +${rewardValue} SIGNAL`
             : `BONUS +${rewardValue} SIGNAL`;
-    const reward = fitOneLineSmall(rewardStr, centerW - 28, {
+    const reward = fitOneLineSmall(rewardStr, centerW - 34, {
         fontFamily: FONT_UI,
         fontWeight: '700',
         fill: elite ? SURFACE_ROLE.missionEliteLocked.accent : SURFACE_ROLE.missionLocked.accent,
         letterSpacing: 0.45,
         fontSize: 9,
     });
-    reward.position.set(tx + 20, bands.rewardY + Math.max(2, (bands.rewardH - reward.height) / 2));
+    reward.position.set(tx + 24, bands.rewardY + Math.max(2, (bands.rewardH - reward.height) / 2));
     root.addChild(reward);
 
     const px = cw - plaqueW - 12;
@@ -922,29 +924,12 @@ function missionRow(
         alpha: 0.36,
     });
     root.addChild(rewardRail);
-    const rewardGem = new Graphics();
-    rewardGem.circle(tx + 6, bands.rewardY + bands.rewardH / 2, 5);
-    rewardGem.fill({
-        color: primaryState === 'claimable' ? C.gold : SURFACE_ROLE.missionPlayable.accent,
-        alpha: 0.9,
-    });
-    rewardGem.circle(tx + 6, bands.rewardY + bands.rewardH / 2, 8);
-    rewardGem.stroke({
-        color: primaryState === 'claimable' ? C.gold : SURFACE_ROLE.missionPlayable.rim,
-        width: 1,
-        alpha: 0.45,
-    });
-    root.addChild(rewardGem);
-    const rewardBadge = getVelocityCustomTexture('badge_reward');
-    if (rewardBadge) {
-        const rb = new Sprite(rewardBadge);
-        rb.anchor.set(0.5);
-        rb.width = 14;
-        rb.height = 14;
-        rb.position.set(tx + 6, bands.rewardY + bands.rewardH / 2);
-        rb.alpha = 0.85;
-        root.addChild(rb);
-    }
+    const ryc2 = bands.rewardY + bands.rewardH / 2;
+    const rac2 =
+        primaryState === 'claimable' ? C.gold : SURFACE_ROLE.missionPlayable.accent;
+    const rrim2 =
+        primaryState === 'claimable' ? C.gold : SURFACE_ROLE.missionPlayable.rim;
+    mountMissionRewardIcon(root, tx + 10, ryc2, rac2, rrim2);
     const rewardLine = `MISSION REWARD +${rewardValue} SIGNAL`;
     const rewardFill =
         primaryState === 'claimable'
@@ -952,14 +937,14 @@ function missionRow(
             : completed
               ? SURFACE_ROLE.missionCompleted.accent
               : SURFACE_ROLE.missionPlayable.accent;
-    const reward = fitOneLineSmall(rewardLine, textMax - 28, {
+    const reward = fitOneLineSmall(rewardLine, textMax - 34, {
         fontFamily: FONT_UI,
         fontWeight: '700',
         fill: rewardFill,
         letterSpacing: 0.45,
         fontSize: 9,
     });
-    reward.position.set(tx + 18, bands.rewardY + Math.max(2, (bands.rewardH - reward.height) / 2));
+    reward.position.set(tx + 24, bands.rewardY + Math.max(2, (bands.rewardH - reward.height) / 2));
     root.addChild(reward);
 
     const bx = cw - btnW - 12;
@@ -1011,13 +996,18 @@ export function buildMissionList(
     rowHOverride?: number,
 ): MissionListBundle {
     const root = new Container();
-    const listFrame = new Graphics();
-    listFrame.roundRect(0, 0, cw, listH, 14);
-    listFrame.fill({ color: 0x08131f, alpha: 0.28 });
-    listFrame.stroke({ color: 0x2e435f, width: 1, alpha: 0.26 });
-    listFrame.roundRect(8, 2, cw - 16, 2, 1);
-    listFrame.fill({ color: C.cyan, alpha: 0.14 });
-    root.addChild(listFrame);
+    const bay = kenneyListBay(cw, listH);
+    if (bay) {
+        root.addChild(bay);
+    } else {
+        const listFrame = new Graphics();
+        listFrame.roundRect(0, 0, cw, listH, 14);
+        listFrame.fill({ color: 0x08131f, alpha: 0.28 });
+        listFrame.stroke({ color: 0x2e435f, width: 1, alpha: 0.26 });
+        listFrame.roundRect(8, 2, cw - 16, 2, 1);
+        listFrame.fill({ color: C.cyan, alpha: 0.14 });
+        root.addChild(listFrame);
+    }
 
     const maskG = new Graphics();
     maskG.rect(0, 0, cw, listH);
@@ -1089,7 +1079,15 @@ export function buildBottomNavDock(
         palette,
         FONT_UI,
         [
-            { label: 'HOME', onTap: () => { navIndexBySlot?.(0); onHome(); }, draw: icoHome },
+            {
+                label: 'HOME',
+                onTap: () => {
+                    navIndexBySlot?.(0);
+                    onHome();
+                },
+                draw: icoHome,
+                menuIconKey: 'menu_icon_square_grey',
+            },
             {
                 label: 'MISSIONS',
                 onTap: () => {
@@ -1097,16 +1095,25 @@ export function buildBottomNavDock(
                     gameFlow().openMissionSelect();
                 },
                 draw: icoMap,
+                menuIconKey: 'menu_sector_circle',
             },
             {
                 label: 'HANGAR',
-                onTap: () => { navIndexBySlot?.(2); ui.showScreen('store', true); },
+                onTap: () => {
+                    navIndexBySlot?.(2);
+                    ui.showScreen('store', true);
+                },
                 draw: icoHangar,
+                menuIconKey: 'menu_rewards_star_outline',
             },
             {
                 label: 'STORE',
-                onTap: () => { navIndexBySlot?.(3); ui.showScreen('store', true); },
+                onTap: () => {
+                    navIndexBySlot?.(3);
+                    ui.showScreen('store', true);
+                },
                 draw: icoStore,
+                menuIconKey: 'menu_store_icon',
             },
         ],
         kUnder,
