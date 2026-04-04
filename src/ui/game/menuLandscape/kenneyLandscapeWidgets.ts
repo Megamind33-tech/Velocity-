@@ -87,47 +87,56 @@ export function kenneyButton(
     return root;
 }
 
-/** Compact stat chip: Kenney secondary chrome + vector icon. */
+/** Compact stat chip: Kenney secondary chrome + vector icon + accent value color. */
 export function kenneyStatChip(
     drawIcon: (g: Graphics, cx: number, cy: number, s: number) => void,
     label: string,
     value: string,
     w: number,
     h: number,
+    accentColor = 0xf0f4fa,
 ): Container | null {
     const spr = kenneyButtonNineSlice('button_secondary', w, h);
     if (!spr) return null;
     spr.alpha = 0.88;
-    spr.tint = 0xe8eef5;
+    spr.tint = 0xe4edf5;
     const root = new Container();
     root.addChild(spr);
 
+    // Accent top strip for material depth
+    const strip = new Graphics();
+    strip.roundRect(8, 0, w - 16, 3, 1);
+    strip.fill({ color: accentColor, alpha: 0.55 });
+    root.addChild(strip);
+
     const ig = new Graphics();
-    drawIcon(ig, 22, h / 2, 18);
+    drawIcon(ig, 22, h / 2 + 2, 18);
     root.addChild(ig);
 
     const lb = new Text({
-        text: label,
+        text: label.toUpperCase(),
         style: new TextStyle({
-            fill: 0x8899aa,
-            fontSize: 11,
+            fill: 0x7a8a9c,
+            fontSize: 9,
             fontWeight: '600',
             fontFamily: GAME_FONTS.standard,
+            letterSpacing: 1,
         }),
     });
-    lb.position.set(42, 6);
+    lb.position.set(42, 7);
     root.addChild(lb);
 
     const vt = new Text({
         text: value,
         style: new TextStyle({
-            fill: 0xf0f4fa,
-            fontSize: 13,
-            fontWeight: '700',
+            fill: accentColor,
+            fontSize: 16,
+            fontWeight: '800',
             fontFamily: GAME_FONTS.standard,
+            dropShadow: { alpha: 0.45, blur: 2, color: 0x000000, distance: 1 },
         }),
     });
-    vt.position.set(42, 20);
+    vt.position.set(42, 19);
     root.addChild(vt);
 
     return root;

@@ -20,7 +20,7 @@ import { getVelocityUiTexture } from '../velocityUiArt';
 import { VELOCITY_UI_SLICE } from '../velocityUiSlice';
 
 const PORTRAIT_TAB_BS = VELOCITY_UI_SLICE.button;
-import { kenneyButton, kenneyProgressBar } from '../menuLandscape/kenneyLandscapeWidgets';
+import { kenneyButton, kenneyDockBar, kenneyProgressBar } from '../menuLandscape/kenneyLandscapeWidgets';
 import { P_COLORS, P_ICON, P_MOTION, P_OPACITY, P_RADIUS, P_SHADOW, P_SPACE, P_TYPO, P_Z } from './missionPortraitTokens';
 import {
     drawIconHangar,
@@ -121,43 +121,91 @@ function buildAmbientBackground(w: number, h: number): { root: Container; tick: 
     root.zIndex = P_Z.ambient;
     root.sortableChildren = true;
 
+    // ── Base fill — very dark, space-like ───────────────────────────────────
     const base = new Graphics();
     base.rect(0, 0, w, h);
     base.fill({ color: P_COLORS.bgBase, alpha: 1 });
     root.addChild(base);
 
+    // ── Deep horizon glow — world integration anchor ────────────────────────
+    const horizonY = h * 0.52;
+    const hglow = new Graphics();
+    hglow.rect(0, horizonY - 1, w, 1);
+    hglow.fill({ color: P_COLORS.accentCyan, alpha: 0.07 });
+    hglow.ellipse(w * 0.5, horizonY, w * 0.7, 18);
+    hglow.fill({ color: P_COLORS.accentCyan, alpha: 0.05 });
+    root.addChild(hglow);
+
+    // ── Perspective grid — angled lines converging to horizon (suggests depth/speed) ──
     const grid = new Graphics();
-    const step = 28;
-    for (let x = 0; x <= w; x += step) {
-        grid.moveTo(x, 0);
-        grid.lineTo(x, h);
+    const horizon = { x: w * 0.5, y: h * 0.4 };
+    const numLines = 10;
+    const spread = w * 1.4;
+    for (let i = 0; i <= numLines; i++) {
+        const bx = (i / numLines) * spread - spread * 0.2;
+        grid.moveTo(horizon.x + (bx - horizon.x) * 0.01, horizon.y);
+        grid.lineTo(bx, h + 20);
+        grid.stroke({ color: P_COLORS.accentCyan, width: 1, alpha: 0.05 });
     }
-    for (let y = 0; y <= h; y += step) {
-        grid.moveTo(0, y);
-        grid.lineTo(w, y);
+    // Horizontal cross-lines (near/far perspective)
+    for (let j = 0; j < 6; j++) {
+        const t2 = 0.12 + j * 0.15;
+        const y2 = horizon.y + (h + 20 - horizon.y) * t2;
+        grid.moveTo(0, y2);
+        grid.lineTo(w, y2);
+        grid.stroke({ color: P_COLORS.accentCyan, width: 1, alpha: 0.03 + j * 0.008 });
     }
-    grid.stroke({ color: P_COLORS.accentCyan, width: 1, alpha: P_OPACITY.motif });
     root.addChild(grid);
 
+    // ── Velocity streaks — horizontal speed blur lines ───────────────────────
+    const streaks = new Graphics();
+    let seed2 = 0xab1234cd;
+    const rnd2 = () => {
+        seed2 = (seed2 * 1664525 + 1013904223) >>> 0;
+        return seed2 / 0xffffffff;
+    };
+    for (let i = 0; i < 18; i++) {
+        const sy = rnd2() * h;
+        const sx = rnd2() * w * 0.6;
+        const len = 18 + rnd2() * 55;
+        const a = 0.04 + rnd2() * 0.08;
+        streaks.moveTo(sx, sy);
+        streaks.lineTo(sx + len, sy);
+        streaks.stroke({ color: P_COLORS.accentCyan, width: rnd2() > 0.7 ? 1.5 : 1, alpha: a });
+    }
+    root.addChild(streaks);
+
+    // ── Stars — varied size + brightness ─────────────────────────────────────
     const stars = new Graphics();
     let seed = 0x9e3779b9;
     const rnd = () => {
         seed = (seed * 1664525 + 1013904223) >>> 0;
         return seed / 0xffffffff;
     };
-    for (let i = 0; i < 64; i++) {
+    for (let i = 0; i < 90; i++) {
         const x = rnd() * w;
         const y = rnd() * h;
-        const a = 0.12 + rnd() * 0.35;
-        stars.circle(x, y, rnd() > 0.9 ? 1.5 : 1);
-        stars.fill({ color: 0xaaccff, alpha: a });
+        const bright = rnd() > 0.9;
+        const big = rnd() > 0.94;
+        const a = bright ? 0.35 + rnd() * 0.4 : 0.08 + rnd() * 0.22;
+        const r = big ? 2 : rnd() > 0.75 ? 1.5 : 1;
+        stars.circle(x, y, r);
+        stars.fill({ color: bright ? 0xe8f4ff : 0xaaccff, alpha: a });
     }
     root.addChild(stars);
 
+    // ── Upper vignette ────────────────────────────────────────────────────────
+    const vign = new Graphics();
+    vign.rect(0, 0, w, h * 0.08);
+    vign.fill({ color: 0x000000, alpha: 0.22 });
+    root.addChild(vign);
+
     const tick = (t: number): void => {
-        const drift = Math.sin(t * 0.08) * 6;
-        grid.alpha = P_OPACITY.motif + Math.sin(t * 0.35) * 0.03;
-        grid.position.set(drift * 0.3, drift * 0.15);
+        const drift = Math.sin(t * 0.06) * 5;
+        grid.alpha = 0.85 + Math.sin(t * 0.28) * 0.15;
+        grid.position.set(drift * 0.18, drift * 0.08);
+        streaks.alpha = 0.85 + Math.sin(t * 0.45 + 1.2) * 0.15;
+        hglow.alpha = 0.75 + Math.sin(t * 0.6) * 0.25;
     };
 
     return { root, tick };
@@ -168,14 +216,26 @@ function buildStatusChip(
     value: string,
     w: number,
     h: number,
-    accent: 'cyan' | 'gold',
+    accent: 'cyan' | 'gold' | 'purple',
+    drawIcon?: (g: Graphics, cx: number, cy: number, s: number) => void,
 ): Container {
     const root = new Container();
 
-    // ── Background: Kenney nine-slice if available at this width, else vector ──
+    const accentColor = accent === 'gold'
+        ? P_COLORS.accentGold
+        : accent === 'purple'
+        ? P_COLORS.accentPurple
+        : P_COLORS.accentCyan;
+    const accentSoft = accent === 'gold'
+        ? P_COLORS.accentGoldSoft
+        : accent === 'purple'
+        ? P_COLORS.accentPurpleSoft
+        : P_COLORS.accentCyanSoft;
+
+    // ── Background: Kenney nine-slice if available at this width, else layered vector ──
     const chipTex = getVelocityUiTexture('button_secondary');
     const BS = PORTRAIT_TAB_BS;
-    const canNineSlice = !!chipTex && w >= 116; // 56+56 corners need ≥ 116px safe
+    const canNineSlice = !!chipTex && w >= 116;
 
     if (canNineSlice) {
         const spr = new NineSliceSprite({
@@ -184,30 +244,47 @@ function buildStatusChip(
             topHeight: BS.T, bottomHeight: BS.B,
             width: w, height: h,
         });
-        // Tint towards accent family for cohesion
-        spr.tint = accent === 'gold' ? 0xf0ead0 : 0xd0e8f0;
-        spr.alpha = 0.92;
+        spr.tint = accent === 'gold' ? 0xede6cc : accent === 'purple' ? 0xdccff0 : 0xcce4f0;
+        spr.alpha = 0.90;
         root.addChild(spr);
     } else {
+        // Outer body
         const g = new Graphics();
         g.roundRect(0, 0, w, h, P_RADIUS.chip);
-        g.fill({ color: P_COLORS.bgElevated, alpha: 1 });
-        const strokeC = accent === 'gold' ? P_COLORS.accentGoldSoft : P_COLORS.accentCyanSoft;
-        g.stroke({ color: strokeC, width: 1.5, alpha: 0.65 });
+        g.fill({ color: P_COLORS.bgPanel, alpha: 1 });
+        g.stroke({ color: accentSoft, width: 1.5, alpha: 0.55 });
         root.addChild(g);
-        // Inner bevel line for depth
+        // Inner highlight bevel — gives the chip physical lift
         const bevel = new Graphics();
-        bevel.roundRect(1, 1, w - 2, h / 2, P_RADIUS.chip - 1);
-        bevel.fill({ color: 0xffffff, alpha: 0.04 });
+        bevel.roundRect(2, 2, w - 4, Math.floor(h * 0.45), P_RADIUS.chip - 2);
+        bevel.fill({ color: 0xffffff, alpha: P_OPACITY.chipBevel });
         root.addChild(bevel);
+        // Bottom shadow strip
+        const shadow = new Graphics();
+        shadow.roundRect(2, h - 5, w - 4, 3, P_RADIUS.chip - 2);
+        shadow.fill({ color: 0x000000, alpha: 0.18 });
+        root.addChild(shadow);
     }
 
-    // ── Accent indicator strip (top edge) ─────────────────────────────────────
+    // ── Accent indicator strip (top edge — 3px, with subtle glow) ─────────────
     const strip = new Graphics();
-    const stripC = accent === 'gold' ? P_COLORS.accentGold : P_COLORS.accentCyan;
-    strip.roundRect(8, 0, w - 16, 2, 1);
-    strip.fill({ color: stripC, alpha: 0.7 });
+    strip.roundRect(6, 0, w - 12, 3, 1);
+    strip.fill({ color: accentColor, alpha: 0.75 });
     root.addChild(strip);
+    // Glow bloom under strip
+    const stripGlow = new Graphics();
+    stripGlow.roundRect(6, 0, w - 12, 6, 3);
+    stripGlow.fill({ color: accentColor, alpha: 0.12 });
+    root.addChild(stripGlow);
+
+    // ── Icon — left of label (adds identity, breaks generic look) ─────────────
+    const iconPad = 8;
+    if (drawIcon) {
+        const ig = new Graphics();
+        drawIcon(ig, iconPad + 8, h / 2 + 4, 9);
+        root.addChild(ig);
+    }
+    const textX = drawIcon ? iconPad + 20 : 10;
 
     // ── Label — 9px muted, clearly subordinate ─────────────────────────────────
     const lb = new Text({
@@ -220,25 +297,62 @@ function buildStatusChip(
             letterSpacing: 1.2,
         }),
     });
-    lb.position.set(10, 6);
+    lb.position.set(textX, 6);
     root.addChild(lb);
 
-    // ── Value — 16px bold in accent color — dominant visual target ─────────────
-    const valColor = accent === 'gold' ? P_COLORS.accentGold : P_COLORS.accentCyan;
+    // ── Value — 17px bold in accent color — dominant visual target ─────────────
     const vt = new Text({
         text: value,
         style: new TextStyle({
             fontFamily: FONT,
-            fontSize: 16,
+            fontSize: 17,
             fontWeight: '800',
-            fill: valColor,
-            dropShadow: { alpha: 0.45, blur: 2, color: 0x000000, distance: 1 },
+            fill: accentColor,
+            dropShadow: { alpha: 0.55, blur: 3, color: 0x000000, distance: 1 },
         }),
     });
-    vt.position.set(10, h / 2 - 2);
+    vt.position.set(textX, h / 2 - 1);
     root.addChild(vt);
 
     return root;
+}
+
+// ── Chip icon draw helpers ─────────────────────────────────────────────────────
+
+function drawChipSignal(g: Graphics, cx: number, cy: number, s: number): void {
+    const ws = s * 0.18;
+    const xs = [cx - s * 0.28, cx, cx + s * 0.28];
+    const hs = [s * 0.30, s * 0.48, s * 0.60];
+    xs.forEach((x, i) => {
+        const hh = hs[i];
+        g.roundRect(x - ws / 2, cy - hh / 2, ws, hh, 1);
+        g.fill({ color: P_COLORS.accentCyan, alpha: 0.75 + i * 0.05 });
+    });
+}
+
+function drawChipStar(g: Graphics, cx: number, cy: number, s: number): void {
+    const n = 5;
+    const ro = s * 0.48;
+    const ri = s * 0.20;
+    for (let i = 0; i < n * 2; i++) {
+        const a = (i * Math.PI) / n - Math.PI / 2;
+        const r = i % 2 === 0 ? ro : ri;
+        const px = cx + Math.cos(a) * r;
+        const py = cy + Math.sin(a) * r;
+        if (i === 0) g.moveTo(px, py); else g.lineTo(px, py);
+    }
+    g.closePath();
+    g.fill({ color: P_COLORS.accentGold, alpha: 0.85 });
+}
+
+function drawChipGem(g: Graphics, cx: number, cy: number, s: number): void {
+    g.moveTo(cx, cy - s * 0.48);
+    g.lineTo(cx + s * 0.36, cy - s * 0.08);
+    g.lineTo(cx + s * 0.26, cy + s * 0.40);
+    g.lineTo(cx - s * 0.26, cy + s * 0.40);
+    g.lineTo(cx - s * 0.36, cy - s * 0.08);
+    g.closePath();
+    g.fill({ color: P_COLORS.accentPurple, alpha: 0.80 });
 }
 
 export type StatusStripProps = {
@@ -272,13 +386,13 @@ function buildStatusStrip(p: StatusStripProps): { root: Container; signal: Text;
     root.addChild(av);
 
     const x0 = side + gap;
-    const c1 = buildStatusChip('SIGNAL', p.signalVal, wChip, H - 4, 'cyan');
+    const c1 = buildStatusChip('SIGNAL', p.signalVal, wChip, H - 4, 'cyan', drawChipSignal);
     c1.position.set(x0, 2);
     root.addChild(c1);
-    const c2 = buildStatusChip('BEST', p.bestVal, wChip, H - 4, 'gold');
+    const c2 = buildStatusChip('BEST', p.bestVal, wChip, H - 4, 'gold', drawChipStar);
     c2.position.set(x0 + wChip + gap, 2);
     root.addChild(c2);
-    const c3 = buildStatusChip('PREMIUM', p.premiumVal, wChip, H - 4, 'gold');
+    const c3 = buildStatusChip('PREMIUM', p.premiumVal, wChip, H - 4, 'purple', drawChipGem);
     c3.position.set(x0 + (wChip + gap) * 2, 2);
     if (p.onPremiumTap) {
         c3.eventMode = 'static';
@@ -317,39 +431,93 @@ function buildFeaturedMissionCard(p: FeaturedProps): {
     const pad = P_SPACE.s16;
     const innerW = p.cw - pad * 2;
 
+    // ── Drop shadow ─────────────────────────────────────────────────────────
     const shadow = new Graphics();
-    shadow.roundRect(4, 6, p.cw, p.cardH, P_RADIUS.panel);
-    shadow.fill({ color: P_COLORS.shadowDeep, alpha: P_SHADOW.panel.alpha * 0.5 });
+    shadow.roundRect(6, 8, p.cw, p.cardH, P_RADIUS.panel);
+    shadow.fill({ color: P_COLORS.shadowDeep, alpha: 0.6 });
     root.addChild(shadow);
 
+    // ── Card body — layered surface ──────────────────────────────────────────
     const body = new Graphics();
     body.roundRect(0, 0, p.cw, p.cardH, P_RADIUS.panel);
     body.fill({ color: P_COLORS.bgPanel, alpha: 1 });
-    body.stroke({ color: P_COLORS.strokeSubtle, width: 1, alpha: 0.85 });
+    body.stroke({ color: P_COLORS.strokeSubtle, width: 1, alpha: 0.9 });
     root.addChild(body);
 
-    const heroGlow = new Graphics();
-    heroGlow.roundRect(2, 2, p.cw - 4, p.cardH - 4, P_RADIUS.panel - 2);
-    heroGlow.stroke({ color: P_COLORS.accentCyan, width: 2, alpha: 0.2 });
-    root.addChild(heroGlow);
+    // ── Inner bevel highlight — top edge lift ────────────────────────────────
+    const ibevel = new Graphics();
+    ibevel.roundRect(2, 2, p.cw - 4, Math.floor(p.cardH * 0.35), P_RADIUS.panel - 2);
+    ibevel.fill({ color: 0xffffff, alpha: 0.025 });
+    root.addChild(ibevel);
 
+    // ── Atmospheric speed streak motif (upper-right quadrant) ─────────────────
     const heroMotif = new Graphics();
-    const mx = p.cw * 0.72;
-    const my = p.cardH * 0.38;
-    for (let i = 0; i < 5; i++) {
-        const yy = my + i * 14;
-        heroMotif.moveTo(mx - 40, yy);
-        heroMotif.lineTo(mx + 60, yy - 6);
-        heroMotif.stroke({ color: P_COLORS.accentCyan, width: 1, alpha: 0.06 });
-    }
+    const mx = p.cw * 0.68;
+    const my = p.cardH * 0.22;
+    // Long diagonal streaks — perspective angle, varied opacity
+    const streakData = [
+        { dy: 0,  len: 80, a: 0.14 },
+        { dy: 11, len: 60, a: 0.10 },
+        { dy: 20, len: 90, a: 0.12 },
+        { dy: 30, len: 45, a: 0.07 },
+        { dy: 40, len: 70, a: 0.09 },
+        { dy: 52, len: 35, a: 0.05 },
+        { dy: 62, len: 55, a: 0.08 },
+    ];
+    streakData.forEach(({ dy, len, a }) => {
+        heroMotif.moveTo(mx, my + dy);
+        heroMotif.lineTo(mx + len, my + dy - len * 0.06);
+        heroMotif.stroke({ color: P_COLORS.accentCyan, width: 1, alpha: a });
+    });
     root.addChild(heroMotif);
 
-    const title = new Text({ text: p.title, style: ts(P_TYPO.heroTitle, P_COLORS.textPrimary) });
+    // ── Chevron intake motif — fighter-jet identity mark ────────────────────
+    const chevron = new Graphics();
+    const chx = p.cw - 28;
+    const chy = 14;
+    [[0, 0], [8, 6], [0, 12]].forEach(([dx, dy], i) => {
+        const x1 = chx - dx;
+        const y1 = chy + dy;
+        const x2 = chx - dx + 14;
+        const y2 = chy + dy;
+        chevron.moveTo(x1, y1);
+        chevron.lineTo(x2, y2);
+        chevron.stroke({ color: P_COLORS.accentGold, width: 1.5, alpha: 0.12 + i * 0.04 });
+    });
+    root.addChild(chevron);
+
+    // ── Hero glow ring (animated) ────────────────────────────────────────────
+    const heroGlow = new Graphics();
+    heroGlow.roundRect(1, 1, p.cw - 2, p.cardH - 2, P_RADIUS.panel - 1);
+    heroGlow.stroke({ color: P_COLORS.accentCyan, width: 2.5, alpha: 0.18 });
+    root.addChild(heroGlow);
+
+    const title = new Text({
+        text: p.title,
+        style: new TextStyle({
+            fontFamily: FONT,
+            fontSize: P_TYPO.heroTitle.fontSize,
+            fontWeight: P_TYPO.heroTitle.fontWeight,
+            fill: P_COLORS.textPrimary,
+            letterSpacing: P_TYPO.heroTitle.letterSpacing,
+            dropShadow: { alpha: 0.7, blur: 6, color: P_COLORS.accentCyan, distance: 0 },
+            stroke: { color: 0x000000, width: 1 },
+        }),
+    });
     title.position.set(pad, pad);
     root.addChild(title);
 
-    const sub = new Text({ text: p.subtitle, style: ts(P_TYPO.heroSubtitle, P_COLORS.accentCyanSoft) });
-    sub.position.set(pad, pad + 34);
+    const sub = new Text({
+        text: p.subtitle,
+        style: new TextStyle({
+            fontFamily: FONT,
+            fontSize: P_TYPO.heroSubtitle.fontSize,
+            fontWeight: P_TYPO.heroSubtitle.fontWeight,
+            fill: P_COLORS.accentCyanSoft,
+            letterSpacing: P_TYPO.heroSubtitle.letterSpacing,
+        }),
+    });
+    sub.position.set(pad, pad + 38);
     root.addChild(sub);
 
     const routeY = pad + 62;
@@ -386,11 +554,19 @@ function buildFeaturedMissionCard(p: FeaturedProps): {
 
     const emblemR = 28;
     const ex = p.cw - pad - emblemR;
-    const ey = pad + 24;
+    const ey = pad + 28;
     const eg = new Graphics();
-    eg.circle(ex, ey, 22);
-    eg.stroke({ color: P_COLORS.accentGold, width: 1.2, alpha: 0.4 });
-    drawIconRouteNode(eg, ex, ey, emblemR * 0.5, { color: P_COLORS.accentGold, width: 2, alpha: 0.9 });
+    // Outer ambient ring
+    eg.circle(ex, ey, emblemR + 4);
+    eg.fill({ color: P_COLORS.accentGold, alpha: 0.04 });
+    // Middle ring
+    eg.circle(ex, ey, emblemR);
+    eg.stroke({ color: P_COLORS.accentGold, width: 1.5, alpha: 0.45 });
+    // Inner ring
+    eg.circle(ex, ey, emblemR - 7);
+    eg.stroke({ color: P_COLORS.accentGoldSoft, width: 1, alpha: 0.30 });
+    // Icon
+    drawIconRouteNode(eg, ex, ey, emblemR * 0.45, { color: P_COLORS.accentGold, width: 2, alpha: 0.85 });
     root.addChild(eg);
 
     const rewardShimmer = new Graphics();
@@ -410,25 +586,38 @@ function buildFeaturedMissionCard(p: FeaturedProps): {
     rankW = Math.min(rankW, rowInner - flyW - P_SPACE.s8);
 
     const rankRoot = new Container();
+    // Body
     const rb = new Graphics();
     rb.roundRect(0, 0, rankW, chipH, P_RADIUS.chip);
-    rb.fill({ color: P_COLORS.bgElevated, alpha: 1 });
-    rb.stroke({ color: P_COLORS.accentGoldSoft, width: 1.5, alpha: 0.55 });
+    rb.fill({ color: P_COLORS.bgPanel, alpha: 1 });
+    rb.stroke({ color: P_COLORS.strokeGold, width: 1.5, alpha: 0.50 });
     rankRoot.addChild(rb);
+    // Inner highlight bevel
+    const rbevel = new Graphics();
+    rbevel.roundRect(2, 2, rankW - 4, Math.floor(chipH * 0.42), P_RADIUS.chip - 2);
+    rbevel.fill({ color: 0xffffff, alpha: P_OPACITY.chipBevel });
+    rankRoot.addChild(rbevel);
+    // Gold top accent strip
+    const rankStrip = new Graphics();
+    rankStrip.roundRect(6, 0, rankW - 12, 3, 1);
+    rankStrip.fill({ color: P_COLORS.accentGold, alpha: 0.6 });
+    rankRoot.addChild(rankStrip);
+    // Glow overlay (animated)
     const rankGlow = new Graphics();
     rankGlow.roundRect(0, 0, rankW, chipH, P_RADIUS.chip);
-    rankGlow.stroke({ color: P_COLORS.accentGold, width: 2, alpha: 0.35 });
+    rankGlow.stroke({ color: P_COLORS.accentGold, width: 2, alpha: 0.28 });
     rankRoot.addChild(rankGlow);
+    // Wing icon
     const wingX = 14;
-    const textPad = 36;
+    const textPad = 34;
     const wg = new Graphics();
-    drawIconWing(wg, wingX, chipH / 2, 13);
+    drawIconWing(wg, wingX, chipH / 2, 12);
     rankRoot.addChild(wg);
     const rt = new Text({
-        text: trunc(`Class: ${p.rank}`, Math.max(10, Math.floor((rankW - textPad - 8) / 7))),
-        style: ts(P_TYPO.chip, P_COLORS.textPrimary),
+        text: trunc(`CLASS: ${p.rank.toUpperCase()}`, Math.max(10, Math.floor((rankW - textPad - 8) / 7))),
+        style: ts(P_TYPO.chip, P_COLORS.accentGold),
     });
-    rt.position.set(textPad, Math.floor((chipH - 14) / 2));
+    rt.position.set(textPad, Math.floor((chipH - 13) / 2));
     rankRoot.addChild(rt);
     rankRoot.position.set(pad, rowY);
     root.addChild(rankRoot);
@@ -634,32 +823,57 @@ function buildMissionCardPortrait(
     const completed = unlocked && level.id < maxUnlocked;
     const elite = level.id >= 18;
 
+    // ── Card surface ─────────────────────────────────────────────────────────
     const g = new Graphics();
     g.roundRect(0, 0, cw, rowH, P_RADIUS.panel - 2);
     if (unlocked) {
         g.fill({ color: P_COLORS.bgPanelActive, alpha: 1 });
-        g.stroke({ color: P_COLORS.strokeActive, width: 1.5, alpha: 0.35 });
+        g.stroke({ color: P_COLORS.strokeActive, width: 1.5, alpha: 0.28 });
     } else {
         g.fill({ color: P_COLORS.bgPanelLocked, alpha: P_OPACITY.lockedSurface });
         g.stroke({ color: P_COLORS.stateLocked, width: 1, alpha: P_OPACITY.lockedStroke });
     }
     root.addChild(g);
 
+    // Inner bevel highlight
     const ridge = new Graphics();
-    ridge.roundRect(2, 2, cw - 4, rowH - 4, P_RADIUS.panel - 4);
-    ridge.stroke({ color: P_COLORS.strokeSubtle, width: 1, alpha: unlocked ? 0.25 : 0.5 });
+    ridge.roundRect(2, 2, cw - 4, Math.floor(rowH * 0.4), P_RADIUS.panel - 4);
+    ridge.fill({ color: 0xffffff, alpha: unlocked ? 0.02 : 0.01 });
     root.addChild(ridge);
 
+    // ── Left accent strip — state indicator bar ───────────────────────────────
+    const leftStrip = new Graphics();
+    leftStrip.roundRect(0, 6, 3, rowH - 12, 1.5);
+    if (unlocked) {
+        const stripColor = elite ? P_COLORS.accentGold : completed ? P_COLORS.stateLive : P_COLORS.accentCyan;
+        leftStrip.fill({ color: stripColor, alpha: 0.75 });
+    } else {
+        leftStrip.fill({ color: P_COLORS.stateLocked, alpha: 0.35 });
+    }
+    root.addChild(leftStrip);
+
     const badge = new Graphics();
-    const icX = 16 + P_ICON.emblem;
+    const icX = 18 + P_ICON.emblem;
     const icY = rowH / 2;
-    badge.circle(icX, icY, P_ICON.emblem);
-    badge.fill({ color: unlocked ? P_COLORS.bgElevated : P_COLORS.bgBase, alpha: 1 });
-    badge.stroke({
-        color: unlocked ? P_COLORS.accentCyanSoft : P_COLORS.stateLocked,
-        width: unlocked ? 2 : 1,
-        alpha: unlocked ? 0.5 : 0.65,
-    });
+    if (unlocked) {
+        // Outer ambient glow ring
+        badge.circle(icX, icY, P_ICON.emblem + 4);
+        const glowColor = elite ? P_COLORS.accentGold : P_COLORS.accentCyan;
+        badge.fill({ color: glowColor, alpha: 0.05 });
+        // Inner fill
+        badge.circle(icX, icY, P_ICON.emblem);
+        badge.fill({ color: P_COLORS.bgElevated, alpha: 1 });
+        // Outer ring
+        badge.circle(icX, icY, P_ICON.emblem);
+        badge.stroke({ color: elite ? P_COLORS.accentGold : P_COLORS.accentCyanSoft, width: 2, alpha: 0.55 });
+        // Inner ring
+        badge.circle(icX, icY, P_ICON.emblem - 5);
+        badge.stroke({ color: elite ? P_COLORS.accentGoldSoft : P_COLORS.accentCyanSoft, width: 1, alpha: 0.25 });
+    } else {
+        badge.circle(icX, icY, P_ICON.emblem);
+        badge.fill({ color: P_COLORS.bgBase, alpha: 1 });
+        badge.stroke({ color: P_COLORS.stateLocked, width: 1, alpha: 0.50 });
+    }
     root.addChild(badge);
 
     const ic = new Graphics();
@@ -752,51 +966,70 @@ function buildLockedButton(w: number, h: number): Container {
     const c = new Container();
     c.eventMode = 'none';
 
-    // Outer body — darker than card background: communicates "unavailable"
+    // ── Outer body — clearly darker and more restrained than active card ────
     const g = new Graphics();
     g.roundRect(0, 0, w, h, P_RADIUS.button);
     g.fill({ color: P_COLORS.bgBase, alpha: 1 });
-    g.stroke({ color: P_COLORS.stateLocked, width: 1.5, alpha: 0.55 });
+    g.stroke({ color: P_COLORS.stateLocked, width: 1.5, alpha: 0.45 });
     c.addChild(g);
 
-    // Cross-hatch texture: two diagonal lines — game-native "locked zone" indicator
+    // ── Inner frame depth — creates dimensional locked-panel feel ────────────
+    const inner = new Graphics();
+    inner.roundRect(2, 2, w - 4, h - 4, P_RADIUS.button - 2);
+    inner.stroke({ color: P_COLORS.stateLocked, width: 1, alpha: 0.15 });
+    c.addChild(inner);
+
+    // ── Diagonal hatch fill — game-native "hazard zone" visual ──────────────
     const hatch = new Graphics();
-    const stride = 10;
+    const stride = 9;
     for (let k = -h; k < w + h; k += stride) {
-        hatch.moveTo(Math.max(0, k), 0);
-        hatch.lineTo(Math.min(w, k + h), Math.min(h, h - Math.max(0, k)));
-        hatch.moveTo(Math.min(w, k + h), Math.min(h, h - Math.max(0, k)));
-        // skip drawing — just fill stroke
+        const x1 = Math.max(0, k);
+        const y1 = k < 0 ? -k : 0;
+        const x2 = Math.min(w, k + h);
+        const y2 = k + h > h ? h : k + h - Math.max(0, k);
+        hatch.moveTo(x1, y1);
+        hatch.lineTo(x2, y2);
+        hatch.stroke({ color: P_COLORS.stateLocked, width: 1, alpha: 0.08 });
     }
-    // simpler: two corner-to-corner stripes
-    hatch.moveTo(0, h * 0.35);
-    hatch.lineTo(w * 0.35, 0);
-    hatch.moveTo(w * 0.65, h);
-    hatch.lineTo(w, h * 0.65);
-    hatch.stroke({ color: P_COLORS.stateLocked, width: 1, alpha: 0.12 });
     c.addChild(hatch);
 
-    // Lock icon — centered left of label
+    // ── Lock icon — centered, prominent but not aggressive ───────────────────
     const lockG = new Graphics();
-    const iconCx = w / 2 - 18;
+    const iconCx = Math.floor(w / 2) - 16;
     const iconCy = h / 2;
-    drawIconLock(lockG, iconCx, iconCy, 14, { color: P_COLORS.stateLocked, width: 1.5, alpha: 0.75 });
+    drawIconLock(lockG, iconCx, iconCy, 13, { color: P_COLORS.stateLocked, width: 1.5, alpha: 0.70 });
     c.addChild(lockG);
 
-    // "LOCKED" label — small, 10px, clearly reads as state not action
+    // ── "LOCKED" label — authoritative state text, not action ────────────────
     const t = new Text({
         text: 'LOCKED',
         style: new TextStyle({
             fontFamily: FONT,
             fontSize: 10,
             fontWeight: '700',
-            fill: P_COLORS.textMuted,
-            letterSpacing: 1,
+            fill: P_COLORS.stateLocked,
+            letterSpacing: 1.5,
         }),
     });
     t.anchor.set(0, 0.5);
-    t.position.set(iconCx + 16, h / 2);
+    t.position.set(iconCx + 17, h / 2 - 1);
     c.addChild(t);
+
+    // ── "COMPLETE PREVIOUS" micro-hint — unlock requirement, aspiration ──────
+    const hint = new Text({
+        text: 'COMPLETE PREV.',
+        style: new TextStyle({
+            fontFamily: FONT,
+            fontSize: 7,
+            fontWeight: '600',
+            fill: P_COLORS.textMuted,
+            letterSpacing: 0.8,
+            alpha: 0.6,
+        }),
+    });
+    hint.anchor.set(0, 0);
+    hint.position.set(iconCx + 17, h / 2 + 9);
+    c.addChild(hint);
 
     return c;
 }
@@ -864,11 +1097,23 @@ function buildBottomDockPortrait(
 ): { root: Container; setActive: (i: number) => void; dockCradles: Graphics[]; slotContainers: Container[] } {
     const H = 64;
     const root = new Container();
-    const bg = new Graphics();
-    bg.roundRect(0, 0, cw, H, P_RADIUS.dock);
-    bg.fill({ color: P_COLORS.bgPanel, alpha: P_OPACITY.dockBg });
-    bg.stroke({ color: P_COLORS.strokeSubtle, width: 1, alpha: 0.75 });
-    root.addChild(bg);
+
+    // ── Dock background — Kenney chrome preferred, vector fallback ────────────
+    const kenDock = kenneyDockBar(cw, H);
+    if (kenDock) {
+        root.addChild(kenDock);
+    } else {
+        const bg = new Graphics();
+        bg.roundRect(0, 0, cw, H, P_RADIUS.dock);
+        bg.fill({ color: P_COLORS.bgPanel, alpha: P_OPACITY.dockBg });
+        bg.stroke({ color: P_COLORS.strokeSubtle, width: 1, alpha: 0.75 });
+        root.addChild(bg);
+    }
+    // Top separator line
+    const sep = new Graphics();
+    sep.rect(12, 0, cw - 24, 1);
+    sep.fill({ color: P_COLORS.accentCyan, alpha: 0.14 });
+    root.addChild(sep);
 
     const items: {
         label: string;
@@ -936,22 +1181,37 @@ function buildBottomDockPortrait(
     });
 
     function setActive(i: number): void {
+        const slotW = cw / items.length;
         dockCradles.forEach((cr, idx) => {
             const cx = slotW / 2;
             cr.clear();
-            cr.roundRect(cx - 36, 6, 72, 52, 14);
-            cr.fill({ color: P_COLORS.bgBase, alpha: idx === i ? 0.55 : 0.28 });
-            cr.stroke({
-                color: P_COLORS.accentCyan,
-                width: 1.5,
-                alpha: idx === i ? 0.65 : 0,
-            });
+            if (idx === i) {
+                // Active: filled cradle + glow ring + top pip indicator
+                cr.roundRect(cx - 34, 5, 68, 50, 14);
+                cr.fill({ color: P_COLORS.bgPanelLit, alpha: 0.70 });
+                cr.roundRect(cx - 34, 5, 68, 50, 14);
+                cr.stroke({ color: P_COLORS.accentCyan, width: 1.5, alpha: 0.80 });
+                // Top indicator pip
+                cr.roundRect(cx - 14, 3, 28, 3, 1.5);
+                cr.fill({ color: P_COLORS.navActivePill, alpha: 0.90 });
+                // Ambient glow circle behind icon
+                cr.circle(cx, 27, 22);
+                cr.fill({ color: P_COLORS.accentCyan, alpha: P_OPACITY.activeGlow });
+            } else {
+                cr.roundRect(cx - 34, 5, 68, 50, 14);
+                cr.fill({ color: P_COLORS.bgBase, alpha: 0.22 });
+            }
         });
         slotContainers.forEach((ch, idx) => {
             const label = ch.children[2] as Text | undefined;
             if (label instanceof Text) {
-                label.style = ts(P_TYPO.navLabel, idx === i ? P_COLORS.navActive : P_COLORS.navInactive);
-                (label.style as TextStyle).fontWeight = idx === i ? '800' : '700';
+                label.style = new TextStyle({
+                    fontFamily: FONT,
+                    fontSize: P_TYPO.navLabel.fontSize,
+                    fontWeight: idx === i ? '800' : '600',
+                    fill: idx === i ? P_COLORS.navActive : P_COLORS.navInactive,
+                    letterSpacing: idx === i ? 0.8 : 0.3,
+                });
             }
             ch.position.y = idx === i ? -2 : 0;
         });

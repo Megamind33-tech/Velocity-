@@ -172,6 +172,23 @@ function buildRewardCard(
     unitLabel.position.set(innerW - 14, cardH / 2 + valSize * 0.52);
     root.addChild(unitLabel);
 
+    // ── Active card shimmer strip — top highlight for "claim me" pull ───────
+    if (isActive) {
+        const shimmer = new Graphics();
+        shimmer.roundRect(8, 2, innerW - 16, 3, 1);
+        shimmer.fill({ color: 0xffee88, alpha: 0.55 });
+        root.addChild(shimmer);
+        // Corner accent pips for premium feel
+        const pips = new Graphics();
+        const cs = 6;
+        pips.moveTo(0, cs); pips.lineTo(0, 0); pips.lineTo(cs, 0);
+        pips.moveTo(innerW - cs, 0); pips.lineTo(innerW, 0); pips.lineTo(innerW, cs);
+        pips.moveTo(innerW, cardH - cs); pips.lineTo(innerW, cardH); pips.lineTo(innerW - cs, cardH);
+        pips.moveTo(cs, cardH); pips.lineTo(0, cardH); pips.lineTo(0, cardH - cs);
+        pips.stroke({ color: GAME_COLORS.accent_gold, width: 1.5, alpha: 0.55 });
+        root.addChild(pips);
+    }
+
     // ── Claimed badge (top-right corner) ────────────────────────────────────
     if (claimed) {
         const chkTex = getVelocityUiTexture('icon_checkmark');
@@ -187,7 +204,7 @@ function buildRewardCard(
     }
 
     // Dim entire card if claimed (past) and not active
-    if (claimed && !isActive) root.alpha = 0.72;
+    if (claimed && !isActive) root.alpha = 0.68;
 
     return root;
 }

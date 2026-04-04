@@ -44,7 +44,7 @@ function labelStyle(fill: number): TextStyle {
         fontSize: SZ_LABEL,
         fontFamily: GAME_FONTS.narrow,
         fontWeight: 'bold',
-        letterSpacing: 1.5,
+        letterSpacing: 2,
     });
 }
 
@@ -112,6 +112,7 @@ export class InGameHUDScreen extends BaseGameScreen {
     private vocalBar!: Container & { setProgress: (p01: number) => void };
     private vocalLabel!: Text;
 
+    private _metricSep!: Graphics;
     private lastStatsKey = '';
     private lastVocalW   = -1;
 
@@ -130,16 +131,25 @@ export class InGameHUDScreen extends BaseGameScreen {
         }
         const root = new Container() as Container & { setProgress: (p01: number) => void };
         const bg   = new Graphics();
-        bg.roundRect(0, 0, w, VOCAL_H, 4);
-        bg.fill({ color: GAME_COLORS.hud_bg, alpha: 0.9 });
-        bg.stroke({ color: GAME_COLORS.primary, width: 1, alpha: 0.45 });
+        bg.roundRect(0, 0, w, VOCAL_H, 5);
+        bg.fill({ color: GAME_COLORS.hud_bg, alpha: 0.92 });
+        bg.stroke({ color: GAME_COLORS.primary, width: 1.5, alpha: 0.40 });
+        // Inner track detail
+        const track = new Graphics();
+        track.roundRect(1, VOCAL_H - 4, w - 2, 2, 1);
+        track.fill({ color: GAME_COLORS.primary, alpha: 0.08 });
         const fill = new Graphics();
-        root.addChild(bg, fill);
+        root.addChild(bg, track, fill);
         root.setProgress = (p01: number) => {
             fill.clear();
             const p = Math.max(0, Math.min(1, p01));
-            fill.roundRect(0, 0, w * p, VOCAL_H, 4);
-            fill.fill({ color: GAME_COLORS.primary, alpha: 0.88 });
+            if (p > 0) {
+                fill.roundRect(1, 1, (w - 2) * p, VOCAL_H - 2, 4);
+                fill.fill({ color: GAME_COLORS.primary, alpha: p > 0.85 ? 1.0 : 0.82 });
+                // Bright leading edge
+                fill.rect((w - 2) * p - 2, 1, 2, VOCAL_H - 2);
+                fill.fill({ color: 0xffffff, alpha: 0.4 * p });
+            }
         };
         return root;
     }
@@ -218,6 +228,10 @@ export class InGameHUDScreen extends BaseGameScreen {
 
         this.container.addChild(this.scoreLbl, this.scoreVal, this.levelLbl, this.levelVal, this.altText, this.spdText);
 
+        // Vertical separator between SCORE group and LV group
+        this._metricSep = new Graphics();
+        this.container.addChild(this._metricSep);
+
         // Pause button (top-right)
         this.pauseBtn = this.makePauseButton();
         this.container.addChild(this.pauseBtn);
@@ -290,6 +304,12 @@ export class InGameHUDScreen extends BaseGameScreen {
         const rightEdge = pad + statsW - inset;
         this.levelLbl.position.set(rightEdge, topY + 6);
         this.levelVal.position.set(rightEdge, topY + 16);
+
+        // ── Metric separator — thin vertical line between SCORE and LV ─────
+        const sepX = pad + Math.floor(statsW * 0.55);
+        this._metricSep.clear();
+        this._metricSep.rect(sepX, topY + 10, 1, statsH - 20);
+        this._metricSep.fill({ color: GAME_COLORS.primary, alpha: 0.12 });
 
         // ── Detail row — row 2 (below major values) ─────────────────────────
         const detailY = topY + 16 + SZ_MAJOR + 4;

@@ -135,17 +135,31 @@ export class LevelCompleteScreen extends BaseGameScreen {
         // ── Score label — small, subordinate ────────────────────────────────
         const scoreLabel = new Text({
             text: 'RUN SCORE',
-            style: ts(GAME_COLORS.text_muted, 11, '700', 2),
+            style: ts(GAME_COLORS.text_muted, 10, '700', 2.5),
         });
         scoreLabel.anchor.set(0.5, 0);
         scoreLabel.position.set(innerW / 2, y);
         body.addChild(scoreLabel);
         y += 16;
 
+        // ── Score ambient glow — circle behind the number ───────────────────
+        const scoreGlow = new Graphics();
+        scoreGlow.circle(innerW / 2, y + GAME_SIZES.font.score_hero / 2, 36);
+        scoreGlow.fill({ color: GAME_COLORS.accent_gold, alpha: 0.07 });
+        body.addChild(scoreGlow);
+
         // ── Score value — hero number, gold, dominant ────────────────────────
         this.scoreValText = new Text({
             text: '0',
-            style: ts(GAME_COLORS.accent_gold, GAME_SIZES.font.score_hero, '800'),
+            style: new TextStyle({
+                fill: GAME_COLORS.accent_gold,
+                fontSize: GAME_SIZES.font.score_hero,
+                fontWeight: '800',
+                fontFamily: GAME_FONTS.arcade,
+                letterSpacing: 2,
+                dropShadow: { alpha: 0.8, blur: 8, color: GAME_COLORS.accent_gold, distance: 0 },
+                stroke: { color: 0x000000, width: 1.5 },
+            }),
         });
         this.scoreValText.anchor.set(0.5, 0);
         this.scoreValText.position.set(innerW / 2, y);
@@ -154,13 +168,25 @@ export class LevelCompleteScreen extends BaseGameScreen {
 
         // ── Divider ──────────────────────────────────────────────────────────
         const div = new Graphics();
-        div.rect(innerW * 0.1, y, innerW * 0.8, 1);
-        div.fill({ color: GAME_COLORS.accent_green, alpha: 0.3 });
+        div.rect(innerW * 0.15, y, innerW * 0.7, 1);
+        div.fill({ color: GAME_COLORS.accent_green, alpha: 0.35 });
         body.addChild(div);
-        y += 12;
+        y += 14;
+
+        // ── Celebration rings — radiating behind stars ───────────────────────
+        const STAR_SIZE = 44;
+        const starY = y;
+        const ringCx = innerW / 2;
+        const ringCy = starY + STAR_SIZE / 2;
+        const celebRings = new Graphics();
+        for (let i = 0; i < 5; i++) {
+            const r = 28 + i * 16;
+            celebRings.circle(ringCx, ringCy, r);
+            celebRings.stroke({ color: GAME_COLORS.accent_green, width: 1, alpha: 0.10 - i * 0.016 });
+        }
+        body.addChild(celebRings);
 
         // ── Stars row — Kenney star sprites ──────────────────────────────────
-        const STAR_SIZE = 44;
         this.starRow = buildStarRow(innerW, 0, STAR_SIZE);
         this.starRow.position.set(0, y);
         body.addChild(this.starRow);
@@ -213,8 +239,8 @@ export class LevelCompleteScreen extends BaseGameScreen {
         const STAR_SIZE = 44;
         this.starRow = buildStarRow(innerW, this.starCount, STAR_SIZE);
 
-        // Re-position: below score value (label 16 + scoreFontSize + 12 + divider 13)
-        const scoreY = 4 + 16 + GAME_SIZES.font.score_hero + 12 + 13;
+        // Re-position: label(16) + score(score_hero) + gap(12) + divider(14)
+        const scoreY = 4 + 16 + GAME_SIZES.font.score_hero + 12 + 14;
         this.starRow.position.set(0, scoreY);
         body.addChild(this.starRow);
     }

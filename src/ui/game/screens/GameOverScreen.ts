@@ -8,7 +8,7 @@
  *   - Mission Select / Main Menu: secondary — present but don't compete
  */
 
-import { Application, Text, TextStyle } from 'pixi.js';
+import { Application, Graphics, Text, TextStyle } from 'pixi.js';
 import { BaseGameScreen } from '../GameUIManager';
 import { GAME_COLORS, GAME_FONTS, GAME_SIZES } from '../GameUITheme';
 import { gameFlow, getLastRunSummary, runEndActions } from '../gameFlowBridge';
@@ -64,17 +64,40 @@ export class GameOverScreen extends BaseGameScreen {
         // Score label — small, subordinate
         const scoreLabel = new Text({
             text: 'RUN SCORE',
-            style: ts(GAME_COLORS.text_muted, 11, '700', 2),
+            style: ts(GAME_COLORS.text_muted, 10, '700', 2.5),
         });
         scoreLabel.anchor.set(0.5, 0);
         scoreLabel.position.set(innerW / 2, y);
         body.addChild(scoreLabel);
         y += 16;
 
-        // Score value — hero number, gold
+        // ── Red atmospheric ring — crash feel ────────────────────────────────
+        const crashAtmo = new Graphics();
+        const acx = innerW / 2;
+        const acy = y + GAME_SIZES.font.score_hero / 2;
+        // Concentric warning rings
+        for (let i = 0; i < 4; i++) {
+            const r = 24 + i * 14;
+            crashAtmo.circle(acx, acy, r);
+            crashAtmo.stroke({ color: GAME_COLORS.accent_red, width: 1, alpha: 0.14 - i * 0.03 });
+        }
+        // Inner red fill
+        crashAtmo.circle(acx, acy, 26);
+        crashAtmo.fill({ color: GAME_COLORS.accent_red, alpha: 0.06 });
+        body.addChild(crashAtmo);
+
+        // Score value — hero number, gold glow even on crash (you know your score)
         this.scoreValText = new Text({
             text: '0',
-            style: ts(GAME_COLORS.accent_gold, GAME_SIZES.font.score_hero, '800'),
+            style: new TextStyle({
+                fill: GAME_COLORS.accent_gold,
+                fontSize: GAME_SIZES.font.score_hero,
+                fontWeight: '800',
+                fontFamily: GAME_FONTS.arcade,
+                letterSpacing: 2,
+                dropShadow: { alpha: 0.7, blur: 8, color: GAME_COLORS.accent_gold, distance: 0 },
+                stroke: { color: 0x000000, width: 1.5 },
+            }),
         });
         this.scoreValText.anchor.set(0.5, 0);
         this.scoreValText.position.set(innerW / 2, y);

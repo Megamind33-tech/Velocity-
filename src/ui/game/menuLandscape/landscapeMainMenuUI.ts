@@ -232,21 +232,25 @@ export function buildTopUtilityBar(
     root.addChild(av);
 
     const x0 = 60 + gap;
+    const CYAN   = GAME_COLORS.primary;          // 0x00ffcc
+    const GOLD   = GAME_COLORS.accent_gold;      // 0xffcc00
+    const PURPLE = 0xbb88ff;
+
     const c1 =
-        kenneyStatChip(icoBarsSignal, 'SIGNAL', `${prog.maxUnlocked}`, chipW, H - 4) ??
-        vectorStatChip(icoBarsSignal, 'SIGNAL', `${prog.maxUnlocked}`, chipW, H - 4);
+        kenneyStatChip(icoBarsSignal, 'SIGNAL', `${prog.maxUnlocked}`, chipW, H - 4, CYAN) ??
+        vectorStatChip(icoBarsSignal, 'SIGNAL', `${prog.maxUnlocked}`, chipW, H - 4, CYAN);
     c1.position.set(x0, 2);
     root.addChild(c1);
 
     const c2 =
-        kenneyStatChip(icoStarBadge, 'BEST', String(bestScore), chipW, H - 4) ??
-        vectorStatChip(icoStarBadge, 'BEST', String(bestScore), chipW, H - 4);
+        kenneyStatChip(icoStarBadge, 'BEST', String(bestScore), chipW, H - 4, GOLD) ??
+        vectorStatChip(icoStarBadge, 'BEST', String(bestScore), chipW, H - 4, GOLD);
     c2.position.set(x0 + chipW + gap, 2);
     root.addChild(c2);
 
     const c3 =
-        kenneyStatChip(icoGemPremium, 'PREMIUM', `${prog.unlockedCount}`, chipW, H - 4) ??
-        vectorStatChip(icoGemPremium, 'PREMIUM', `${prog.unlockedCount}`, chipW, H - 4);
+        kenneyStatChip(icoGemPremium, 'PREMIUM', `${prog.unlockedCount}`, chipW, H - 4, PURPLE) ??
+        vectorStatChip(icoGemPremium, 'PREMIUM', `${prog.unlockedCount}`, chipW, H - 4, PURPLE);
     c3.position.set(x0 + (chipW + gap) * 2, 2);
     if (onPremiumTap) {
         c3.eventMode = 'static';
@@ -271,21 +275,48 @@ function vectorStatChip(
     val: string,
     w: number,
     h: number,
+    accentColor = C.text,
 ): Container {
     const root = new Container();
+    // Body — layered surface
     const bg = new Graphics();
     bg.roundRect(0, 0, w, h, R_CHIP);
     bg.fill({ color: C.surface2, alpha: 1 });
-    bg.stroke({ color: C.border, width: 1, alpha: 0.5 });
+    bg.stroke({ color: C.border, width: 1.5, alpha: 0.55 });
     root.addChild(bg);
+    // Inner bevel highlight
+    const bevel = new Graphics();
+    bevel.roundRect(2, 2, w - 4, Math.floor(h * 0.42), R_CHIP - 2);
+    bevel.fill({ color: 0xffffff, alpha: 0.04 });
+    root.addChild(bevel);
+    // Accent top strip
+    const strip = new Graphics();
+    strip.roundRect(6, 0, w - 12, 3, 1);
+    strip.fill({ color: accentColor, alpha: 0.50 });
+    root.addChild(strip);
+    // Icon
     const ig = new Graphics();
-    draw(ig, 18, h / 2, 16);
+    draw(ig, 20, h / 2 + 2, 16);
     root.addChild(ig);
-    const lb = new Text({ text: label, style: style(11, '600', C.muted) });
-    lb.position.set(40, 6);
+    // Label — muted, subordinate
+    const lb = new Text({
+        text: label.toUpperCase(),
+        style: style(9, '600', C.muted, 1),
+    });
+    lb.position.set(40, 7);
     root.addChild(lb);
-    const vt = new Text({ text: val, style: style(13, '700', C.text) });
-    vt.position.set(40, 22);
+    // Value — accent color, dominant
+    const vt = new Text({
+        text: val,
+        style: new TextStyle({
+            fontFamily: GAME_FONTS.standard,
+            fontSize: 16,
+            fontWeight: '800',
+            fill: accentColor,
+            dropShadow: { alpha: 0.45, blur: 2, color: 0x000000, distance: 1 },
+        }),
+    });
+    vt.position.set(40, 19);
     root.addChild(vt);
     return root;
 }
@@ -356,24 +387,37 @@ export function buildHeroFlightCard(
             }
         }
 
+        // ── Speed streak motif behind title ────────────────────────────────
+        const streakMot = new Graphics();
+        const smy = 16;
+        [[0, 72, 0.13], [10, 55, 0.09], [20, 80, 0.11], [30, 40, 0.06], [40, 62, 0.08]].forEach(([dy, len, a]) => {
+            const sx = contentW * 0.58 + dy * 0.3;
+            streakMot.moveTo(sx, smy + dy);
+            streakMot.lineTo(sx + len, smy + dy - len * 0.05);
+            streakMot.stroke({ color: C.cyan, width: 1, alpha: a });
+        });
+        content.addChild(streakMot);
+
         const title = new Text({
             text: 'VELOCITY',
             style: new TextStyle({
                 fontFamily: FONT_UI,
-                fontSize: 30,
+                fontSize: 32,
                 fontWeight: '800',
                 fill: C.text,
-                letterSpacing: 2,
+                letterSpacing: 3,
+                dropShadow: { alpha: 0.6, blur: 5, color: C.cyan, distance: 0 },
+                stroke: { color: 0x000000, width: 1 },
             }),
         });
         title.position.set(ox, 0);
         content.addChild(title);
 
         const sub = new Text({
-            text: 'Voice-Powered Flight',
-            style: style(14, '600', C.muted),
+            text: 'VOICE-POWERED FLIGHT',
+            style: style(11, '600', C.muted, 1.5),
         });
-        sub.position.set(ox, 36);
+        sub.position.set(ox, 40);
         content.addChild(sub);
 
         if (showTag) {
@@ -420,21 +464,32 @@ export function buildHeroFlightCard(
         }
 
         const cls = new Container();
+        // Body
         const cb = new Graphics();
         cb.roundRect(0, 0, clsW, useBtnH, 12);
         cb.fill({ color: 0x080e16, alpha: 1 });
-        cb.stroke({ color: C.gold, width: 1.5, alpha: 0.55 });
+        cb.stroke({ color: C.gold, width: 1.5, alpha: 0.50 });
         cls.addChild(cb);
+        // Inner bevel
+        const cbevel = new Graphics();
+        cbevel.roundRect(2, 2, clsW - 4, Math.floor(useBtnH * 0.42), 10);
+        cbevel.fill({ color: 0xffffff, alpha: 0.04 });
+        cls.addChild(cbevel);
+        // Gold top strip
+        const cstrip = new Graphics();
+        cstrip.roundRect(6, 0, clsW - 12, 3, 1);
+        cstrip.fill({ color: C.gold, alpha: 0.55 });
+        cls.addChild(cstrip);
         const wingX = 14;
-        const textPad = 36;
+        const textPad = 34;
         const wg = new Graphics();
-        icoWing(wg, wingX, useBtnH / 2, 13);
+        icoWing(wg, wingX, useBtnH / 2, 12);
         cls.addChild(wg);
         const clab = new Text({
-            text: trunc(`Class: ${rank}`, Math.max(8, Math.floor((clsW - textPad - 8) / 7))),
-            style: style(12, '700', C.text),
+            text: trunc(`CLASS: ${rank.toUpperCase()}`, Math.max(8, Math.floor((clsW - textPad - 8) / 7))),
+            style: style(12, '700', C.gold),
         });
-        clab.position.set(textPad, Math.floor((useBtnH - 14) / 2));
+        clab.position.set(textPad, Math.floor((useBtnH - 13) / 2));
         cls.addChild(clab);
         cls.position.set(ox, rowY);
         content.addChild(cls);
