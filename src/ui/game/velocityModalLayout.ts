@@ -5,6 +5,7 @@
 import { Application, Container, Graphics, Text, TextStyle } from 'pixi.js';
 import { GAME_COLORS, GAME_FONTS, GAME_SIZES } from './GameUITheme';
 import { createKenneyFramedPanelWithContent } from './kenneyNineSlice';
+import { fitLabelToWidth } from './menuShared/fitLabelToWidth';
 import { mountVelocityShell, resizeVelocityShell, type VelocityShellParts } from './velocityScreenShell';
 
 /** Matches kenneyNineSlice framed panel inner margin (inset 10 + padding 12). */
@@ -77,18 +78,23 @@ export function buildVelocityModal(
     cpips.stroke({ color: titleFill, width: 1.5, alpha: 0.35 });
     panelRoot.addChild(cpips);
 
-    const titleText = new Text({
-        text: title,
-        style: new TextStyle({
-            fill: titleFill,
-            fontSize: GAME_SIZES.font.xxl,      // 24px — modal authority
-            fontWeight: 'bold',
-            fontFamily: GAME_FONTS.arcade,
-            letterSpacing: 3,
-            stroke: { color: GAME_COLORS.bg_darkest, width: 2 },
-            dropShadow: { alpha: 0.7, blur: 5, color: titleFill, distance: 0 },
-        }),
-    });
+    const titleMaxW = innerW - 16;
+    const titleText = fitLabelToWidth(
+        title.toUpperCase(),
+        titleMaxW,
+        (fontSize) =>
+            new TextStyle({
+                fill: titleFill,
+                fontSize,
+                fontWeight: 'bold',
+                fontFamily: GAME_FONTS.arcade,
+                letterSpacing: fontSize >= 22 ? 3 : 2,
+                stroke: { color: GAME_COLORS.bg_darkest, width: 2 },
+                dropShadow: { alpha: 0.7, blur: 5, color: titleFill, distance: 0 },
+            }),
+        GAME_SIZES.font.xxl,
+        14,
+    );
     titleText.anchor.set(0.5, 0);
     titleText.position.set(innerW / 2, 8);
     content.addChild(titleText);

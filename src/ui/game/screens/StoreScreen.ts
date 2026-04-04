@@ -1,7 +1,7 @@
-import { Application } from 'pixi.js';
+import { Application, TextStyle } from 'pixi.js';
 import { BaseGameScreen } from '../GameUIManager';
-import { createGameLabel } from '../GameUIComponents';
-import { GAME_COLORS, GAME_SIZES } from '../GameUITheme';
+import { GAME_COLORS, GAME_FONTS, GAME_SIZES } from '../GameUITheme';
+import { fitLabelToWidth } from '../menuShared/fitLabelToWidth';
 import {
     buildVelocityModal,
     repositionVelocityModal,
@@ -28,10 +28,22 @@ export class StoreScreen extends BaseGameScreen {
         this.layout = buildVelocityModal(this.container, this.app, 'STORE', panelW, panelH);
         const { body, innerW } = this.layout;
 
-        const balanceLabel = createGameLabel('BALANCE: 1000 TOKENS', GAME_SIZES.font.base, GAME_COLORS.accent_gold, true);
-        balanceLabel.anchor.set(0.5, 0);
-        balanceLabel.position.set(innerW / 2, 0);
-        body.addChild(balanceLabel);
+        const balFit = fitLabelToWidth(
+            'BALANCE: 1000 TOKENS',
+            innerW - 16,
+            (fs) =>
+                new TextStyle({
+                    fontFamily: GAME_FONTS.arcade,
+                    fontSize: fs,
+                    fontWeight: 'bold',
+                    fill: GAME_COLORS.accent_gold,
+                }),
+            GAME_SIZES.font.base,
+            11,
+        );
+        balFit.anchor.set(0.5, 0);
+        balFit.position.set(innerW / 2, 0);
+        body.addChild(balFit);
 
         const btnW = Math.min(280, innerW);
         const btnH = 46;
@@ -45,10 +57,26 @@ export class StoreScreen extends BaseGameScreen {
         ];
 
         items.forEach((item) => {
+            const full = `${item.name} (${item.price})`;
+            const fitT = fitLabelToWidth(
+                full,
+                btnW - 28,
+                (fs) =>
+                    new TextStyle({
+                        fontFamily: GAME_FONTS.arcade,
+                        fontSize: fs,
+                        fontWeight: 'bold',
+                        fill: 0xffffff,
+                    }),
+                15,
+                10,
+            );
+            const line = fitT.text;
+            fitT.destroy();
             const itemBtn = createVelocityGameButton(
-                `${item.name} (${item.price})`,
+                line,
                 'accent',
-                () => console.log(`Purchased: ${item.name}`),
+                () => {},
                 { width: btnW, height: btnH }
             );
             itemBtn.position.set((innerW - btnW) / 2, y);
