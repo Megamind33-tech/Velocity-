@@ -24,6 +24,15 @@ Primary UI family uses **Kenney** assets already bundled under `public/kenney-ui
 No non-Kenney icon fallback is active in the main menu. If a missing slot appears later,
 use one family only (Lucide OR Bootstrap Icons OR Font Awesome), then visually normalize.
 
+## Curated files in-repo (normalized)
+Shipped under `public/custom-ui/` after resize (max side 384 rank/frames, 256 badges):
+- `rank/rank_prestige.png` ← `game-rank-icons-vol-9` / `PNG/ri_5_14.png`
+- `rank/rank_elite.png` ← `game-rank-icons-vol-3` / `png/ri_3_19.png`
+- `badges/badge_reward.png` ← `ui-game-elements-vol-9` / `PNG/uge_280124_4_42.png`
+- `badges/badge_locked.png` ← `ui-game-elements-vol-9` / `PNG/uge_280124_4_14.png`
+- `frames/frame_premium.png` ← `ui-game-frames-vol-8` / `png/ugf_8_13.png` (low-sat, bright — CTA emphasis)
+- `frames/frame_locked.png` ← `ui-game-frames-vol-8` / `png/ugf_8_28.png` (high-sat ornate — withheld)
+
 ## Role discipline for optional custom pack assets
 - `rank_prestige` / `rank_elite`:
   - **Use:** top metric prestige modules (`BEST`, `PREMIUM`) only.
