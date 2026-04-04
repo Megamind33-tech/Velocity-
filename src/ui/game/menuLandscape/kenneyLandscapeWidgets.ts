@@ -15,7 +15,7 @@ import { getVelocityCustomTexture, getVelocityUiTexture, type VelocityUiTextureK
 import { GAME_COLORS, GAME_FONTS } from '../GameUITheme';
 import { createKenneyFramedPanelWithContent, createKenneyHProgressBar } from '../kenneyNineSlice';
 import { VELOCITY_UI_SLICE } from '../velocityUiSlice';
-import { CHIP_BADGE_RESERVE, CHIP_TEXT_X } from '../menuShared/topStatusStripLayout';
+import { CHIP_TEXT_X, chipLabelMaxW, chipValueMaxW } from '../menuShared/topStatusStripLayout';
 import { drawIconProfile } from '../menuPortrait/missionPortraitIcons';
 
 const PS = VELOCITY_UI_SLICE.panel;
@@ -158,11 +158,13 @@ export function kenneyStatChip(
     drawIcon(ig, iconCx, h / 2 + 2, Math.min(17, Math.floor(h * 0.28)));
     root.addChild(ig);
 
-    const reserve = cornerBadge !== 'none' ? CHIP_BADGE_RESERVE : 6;
-    const valueMaxW = Math.max(28, w - CHIP_TEXT_X - reserve - 2);
+    const hasB = cornerBadge !== 'none';
+    const labelMaxW = chipLabelMaxW(w, hasB);
+    const valueMaxW = chipValueMaxW(w, hasB);
 
+    let labelStr = label.toUpperCase();
     const lb = new Text({
-        text: label.toUpperCase(),
+        text: labelStr,
         style: new TextStyle({
             fill: 0x7a8a9c,
             fontSize: 9,
@@ -171,6 +173,12 @@ export function kenneyStatChip(
             letterSpacing: 0.8,
         }),
     });
+    if (lb.width > labelMaxW) {
+        while (labelStr.length > 3 && lb.width > labelMaxW) {
+            labelStr = `${labelStr.slice(0, -2)}…`;
+            lb.text = labelStr;
+        }
+    }
     lb.position.set(CHIP_TEXT_X, 7);
     root.addChild(lb);
 
@@ -183,10 +191,10 @@ export function kenneyStatChip(
         const tex = getVelocityCustomTexture(key);
         if (tex) {
             const em = new Sprite(tex);
-            em.anchor.set(1, 0);
-            em.width = 20;
-            em.height = 20;
-            em.position.set(w - 5, 5);
+            em.anchor.set(0.5, 0.5);
+            em.width = 18;
+            em.height = 18;
+            em.position.set(w - 13, h * 0.5 - 2);
             em.alpha = 0.9;
             root.addChild(em);
         }

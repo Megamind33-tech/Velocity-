@@ -1081,7 +1081,7 @@ export function buildPortraitMissionScreen(p: BuildPortraitMissionScreenParams):
     root.addChild(topBar.root);
     y += TOP_BAR_H + P_SPACE.s12;
 
-    const cardH = Math.min(200, Math.max(168, Math.floor(sh * 0.26)));
+    const cardH = Math.min(212, Math.max(184, Math.floor(sh * 0.27)));
     const feat = buildFeaturedMissionCard({
         cw,
         cardH,

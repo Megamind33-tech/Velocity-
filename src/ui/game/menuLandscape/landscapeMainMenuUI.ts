@@ -30,7 +30,12 @@ import {
     kenneyRowPanel,
     kenneyStatChip,
 } from './kenneyLandscapeWidgets';
-import { CHIP_BADGE_RESERVE, CHIP_TEXT_X, computeTopStripLayout } from '../menuShared/topStatusStripLayout';
+import {
+    CHIP_TEXT_X,
+    chipLabelMaxW,
+    chipValueMaxW,
+    computeTopStripLayout,
+} from '../menuShared/topStatusStripLayout';
 import {
     computeCardVerticalBands,
     fitBodyText,
@@ -274,15 +279,16 @@ export function buildTopUtilityBar(
     const lay = computeTopStripLayout(cw);
     const chipW = lay.chipW;
     const gap = lay.gap;
+    const chipH = H - 4;
 
     const av = kenneyAvatarPlate(lay.avatarW, onProfile);
+    av.position.set(0, 5 + Math.max(0, (chipH - lay.avatarW) / 2));
     root.addChild(av);
 
     const x0 = lay.chip0X;
     const CYAN = GAME_COLORS.primary;
     const GOLD = GAME_COLORS.accent_gold;
     const PURPLE = 0xbb88ff;
-    const chipH = H - 4;
 
     const c1 =
         kenneyStatChip(icoBarsSignal, 'SIGNAL', `${prog.maxUnlocked}`, chipW, chipH, CYAN, 'none') ??
@@ -367,13 +373,21 @@ function vectorStatChip(
     draw(ig, iconCx, h / 2 + 2, Math.min(16, Math.floor(h * 0.28)));
     root.addChild(ig);
 
-    const reserve = cornerBadge !== 'none' ? CHIP_BADGE_RESERVE : 6;
-    const valueMaxW = Math.max(28, w - CHIP_TEXT_X - reserve - 2);
+    const hasB = cornerBadge !== 'none';
+    const labelMaxW = chipLabelMaxW(w, hasB);
+    const valueMaxW = chipValueMaxW(w, hasB);
 
+    let labelStr = label.toUpperCase();
     const lb = new Text({
-        text: label.toUpperCase(),
+        text: labelStr,
         style: style(9, '600', C.muted, 0.8),
     });
+    if (lb.width > labelMaxW) {
+        while (labelStr.length > 3 && lb.width > labelMaxW) {
+            labelStr = `${labelStr.slice(0, -2)}…`;
+            lb.text = labelStr;
+        }
+    }
     lb.position.set(CHIP_TEXT_X, 8);
     root.addChild(lb);
 
@@ -385,10 +399,10 @@ function vectorStatChip(
         const rankTex = getVelocityCustomTexture('rank_prestige');
         if (rankTex) {
             const rank = new Sprite(rankTex);
-            rank.anchor.set(1, 0);
-            rank.width = 20;
-            rank.height = 20;
-            rank.position.set(w - 5, 5);
+            rank.anchor.set(0.5, 0.5);
+            rank.width = 18;
+            rank.height = 18;
+            rank.position.set(w - 13, h * 0.5 - 2);
             rank.alpha = 0.9;
             root.addChild(rank);
         }
@@ -396,10 +410,10 @@ function vectorStatChip(
         const rankTex = getVelocityCustomTexture('rank_elite');
         if (rankTex) {
             const rank = new Sprite(rankTex);
-            rank.anchor.set(1, 0);
-            rank.width = 20;
-            rank.height = 20;
-            rank.position.set(w - 5, 5);
+            rank.anchor.set(0.5, 0.5);
+            rank.width = 18;
+            rank.height = 18;
+            rank.position.set(w - 13, h * 0.5 - 2);
             rank.alpha = 0.9;
             root.addChild(rank);
         }
