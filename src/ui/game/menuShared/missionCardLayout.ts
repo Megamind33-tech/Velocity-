@@ -39,38 +39,55 @@ export function computeCardVerticalBands(
     hasEliteTier: boolean,
 ): CardVerticalBands {
     const padT = Math.max(6, Math.floor(rowH * 0.07));
-    const titleH = Math.max(17, Math.floor(rowH * 0.19));
-    const tierH = hasEliteTier ? Math.max(14, Math.floor(rowH * 0.14)) : 0;
     const gapSm = Math.max(3, Math.floor(rowH * 0.03));
-    const metaH = Math.max(14, Math.floor(rowH * 0.14));
-    const helpH = Math.max(12, Math.floor(rowH * 0.11));
-    const rewardH = Math.max(15, Math.floor(rowH * 0.16));
-    const rewardY = rowH - rewardH - Math.max(4, Math.floor(rowH * 0.04));
-    const helpY = rewardY - helpH - gapSm;
-    const metaY = helpY - metaH - gapSm;
-    const titleY = padT;
-    const tierY = titleY + titleH + gapSm;
-    const subY = (hasEliteTier ? tierY + tierH : titleY + titleH) + gapSm;
-    const subMaxH = Math.max(14, metaY - subY - gapSm);
+    const bottomPad = Math.max(4, Math.floor(rowH * 0.04));
+    const MIN_SUB = 22;
 
-    return {
-        rowH,
-        padT,
-        centerX,
-        centerW,
-        titleY,
-        titleMaxH: titleH,
-        tierY,
-        tierH,
-        subY,
-        subMaxH,
-        metaY,
-        metaH,
-        helpY,
-        helpH,
-        rewardY,
-        rewardH,
+    let titleH = Math.max(17, Math.floor(rowH * 0.19));
+    let tierH = hasEliteTier ? Math.max(14, Math.floor(rowH * 0.14)) : 0;
+    let metaH = Math.max(14, Math.floor(rowH * 0.14));
+    let helpH = Math.max(12, Math.floor(rowH * 0.11));
+    let rewardH = Math.max(15, Math.floor(rowH * 0.16));
+
+    const build = (th: number, trh: number, mh: number, hh: number, rh: number): CardVerticalBands => {
+        const titleY = padT;
+        const tierY = titleY + th + gapSm;
+        const subY = (hasEliteTier ? tierY + trh : titleY + th) + gapSm;
+        const rewardY = rowH - rh - bottomPad;
+        const helpY = rewardY - hh - gapSm;
+        const metaY = helpY - mh - gapSm;
+        const subMaxH = Math.max(MIN_SUB, metaY - subY - gapSm);
+        return {
+            rowH,
+            padT,
+            centerX,
+            centerW,
+            titleY,
+            titleMaxH: th,
+            tierY,
+            tierH: trh,
+            subY,
+            subMaxH,
+            metaY,
+            metaH: mh,
+            helpY,
+            helpH: hh,
+            rewardY,
+            rewardH: rh,
+        };
     };
+
+    for (let iter = 0; iter < 40; iter++) {
+        const b = build(titleH, tierH, metaH, helpH, rewardH);
+        if (b.subMaxH >= MIN_SUB) return b;
+        if (rewardH > 12) rewardH -= 2;
+        else if (helpH > 9) helpH -= 2;
+        else if (metaH > 11) metaH -= 2;
+        else if (hasEliteTier && tierH > 10) tierH -= 2;
+        else if (titleH > 14) titleH -= 2;
+        else return build(titleH, tierH, metaH, helpH, rewardH);
+    }
+    return build(titleH, tierH, metaH, helpH, rewardH);
 }
 
 export function truncChars(s: string, maxChars: number): string {

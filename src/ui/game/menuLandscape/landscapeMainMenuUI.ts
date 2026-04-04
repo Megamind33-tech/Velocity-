@@ -299,14 +299,14 @@ export function buildTopUtilityBar(
     root.addChild(c1);
 
     const c2 =
-        kenneyStatChip(icoStarBadge, 'BEST', String(bestScore), chipW, chipH, GOLD, 'prestige', 'menu_best_star') ??
-        vectorStatChip(icoStarBadge, 'BEST', String(bestScore), chipW, chipH, GOLD, 'prestige', 'menu_best_star');
+        kenneyStatChip(icoStarBadge, 'BEST', String(bestScore), chipW, chipH, GOLD, 'none', 'menu_best_star') ??
+        vectorStatChip(icoStarBadge, 'BEST', String(bestScore), chipW, chipH, GOLD, 'none', 'menu_best_star');
     c2.position.set(x0 + chipW + gap, 5);
     root.addChild(c2);
 
     const c3 =
-        kenneyStatChip(icoGemPremium, 'PREMIUM', `${prog.unlockedCount}`, chipW, chipH, PURPLE, 'elite', 'menu_rewards_star_outline') ??
-        vectorStatChip(icoGemPremium, 'PREMIUM', `${prog.unlockedCount}`, chipW, chipH, PURPLE, 'elite', 'menu_rewards_star_outline');
+        kenneyStatChip(icoGemPremium, 'PREMIUM', `${prog.unlockedCount}`, chipW, chipH, PURPLE, 'none', 'menu_rewards_star_outline') ??
+        vectorStatChip(icoGemPremium, 'PREMIUM', `${prog.unlockedCount}`, chipW, chipH, PURPLE, 'none', 'menu_rewards_star_outline');
     c3.position.set(x0 + (chipW + gap) * 2, 5);
     if (onPremiumTap) {
         c3.eventMode = 'static';
@@ -630,7 +630,7 @@ function buildLockedMissionRowLandscape(
     const sub = fitBodyText(subHint, centerW, bands.subMaxH, {
         fontFamily: FONT_UI,
         fontWeight: '500',
-        fill: 0x5a6574,
+        fill: 0x9aacbe,
     }, 13, 9);
     sub.position.set(tx, bands.subY);
     root.addChild(sub);
@@ -659,7 +659,7 @@ function buildLockedMissionRowLandscape(
     const helper = fitBodyText(req, centerW, bands.helpH, {
         fontFamily: FONT_UI,
         fontWeight: '600',
-        fill: 0x4a5568,
+        fill: 0x7d8fa4,
     }, 9, 8);
     helper.position.set(tx, bands.helpY);
     root.addChild(helper);
@@ -908,7 +908,7 @@ function missionRow(
         completed ? 'Replay for a better score' : 'Available now',
         textMax,
         bands.helpH,
-        { fontFamily: FONT_UI, fontWeight: '600', fill: 0x6f8096 },
+        { fontFamily: FONT_UI, fontWeight: '600', fill: 0x9aa8bc },
         9,
         8,
     );
@@ -1070,7 +1070,8 @@ export function buildBottomNavDock(
         dockCellActiveRim: C.dockCellActiveRim,
         accentCyan: C.cyan,
         inactiveIconTint: 0xa8b4c4,
-        labelIdle: 0x4a5666,
+        labelIdle: 0xb4c2d4,
+        labelActive: C.cyan,
     };
     const kUnder = kenneyDockBar(cw, H);
     const dock = buildCommandDock(
@@ -1086,7 +1087,7 @@ export function buildBottomNavDock(
                     onHome();
                 },
                 draw: icoHome,
-                menuIconKey: 'menu_icon_square_grey',
+                menuIconKey: 'dock_nav_home',
             },
             {
                 label: 'MISSIONS',
@@ -1095,7 +1096,7 @@ export function buildBottomNavDock(
                     gameFlow().openMissionSelect();
                 },
                 draw: icoMap,
-                menuIconKey: 'menu_sector_circle',
+                menuIconKey: 'dock_nav_missions',
             },
             {
                 label: 'HANGAR',
@@ -1104,7 +1105,7 @@ export function buildBottomNavDock(
                     ui.showScreen('store', true);
                 },
                 draw: icoHangar,
-                menuIconKey: 'menu_rewards_star_outline',
+                menuIconKey: 'dock_nav_hangar',
             },
             {
                 label: 'STORE',
@@ -1113,7 +1114,7 @@ export function buildBottomNavDock(
                     ui.showScreen('store', true);
                 },
                 draw: icoStore,
-                menuIconKey: 'menu_store_icon',
+                menuIconKey: 'dock_nav_store',
             },
         ],
         kUnder,

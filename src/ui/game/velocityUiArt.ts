@@ -40,7 +40,11 @@ export type VelocityUiTextureKey =
     | 'menu_icon_square_grey'
     | 'menu_store_icon'
     | 'menu_rewards_star_outline'
-    | 'menu_settings_repeat';
+    | 'menu_settings_repeat'
+    | 'dock_nav_home'
+    | 'dock_nav_missions'
+    | 'dock_nav_hangar'
+    | 'dock_nav_store';
 
 const MANIFEST: Record<VelocityUiTextureKey, string> = {
     // ── Buttons (rectangle — nine-slice) ───────────────────────────────────────
@@ -88,6 +92,11 @@ const MANIFEST: Record<VelocityUiTextureKey, string> = {
     menu_store_icon:           `${BASE}/Yellow/Default/icon_square.png`,
     menu_rewards_star_outline: `${BASE}/Yellow/Default/star_outline_depth.png`,
     menu_settings_repeat:      `${BASE}/Extra/Default/icon_repeat_dark.png`,
+    /** Command dock — distinct Kenney glyphs (pack has no literal “home” icon). */
+    dock_nav_home:     `${BASE}/Blue/Default/arrow_decorative_n.png`,
+    dock_nav_missions: `${BASE}/Extra/Default/icon_play_outline.png`,
+    dock_nav_hangar:   `${BASE}/Extra/Default/icon_arrow_up_outline.png`,
+    dock_nav_store:    `${BASE}/Yellow/Default/icon_outline_square.png`,
 };
 
 export type VelocityCustomTextureKey =

@@ -19,6 +19,7 @@ export type CommandDockPalette = {
     accentCyan: number;
     inactiveIconTint: number;
     labelIdle: number;
+    labelActive: number;
 };
 
 function pressDockSlot(root: Container, onUp: () => void): void {
@@ -200,7 +201,7 @@ export function buildCommandDock(
                 fontFamily,
                 fontSize: labelFs,
                 fontWeight: on ? '800' : '700',
-                fill: on ? palette.accentCyan : palette.labelIdle,
+                fill: on ? palette.labelActive : palette.labelIdle,
                 letterSpacing: on ? 1.2 : 1.05,
             });
             ch.position.y = on ? -2 : 0;
