@@ -2,13 +2,17 @@
  * Kenney UI Pack — https://kenney.nl/assets/ui-pack (CC0)
  * Paths under `public/kenney-ui-pack/PNG`. `preloadVelocityUiTextures()` runs at boot.
  *
+ * Kenney **UI Pack — Sci-Fi** (CC0), mirrored from OpenGameArt:
+ * https://opengameart.org/content/ui-pack-sci-fi → `public/kenney-ui-scifi/PNG/`
+ *
  * Command-dock glyphs: **OpenGameArt CC0** set under `public/oga-dock-icons/`
- * (see `public/oga-dock-icons/SOURCES.md` for exact pages + authors).
+ * (provenance in `src/assets/ui/ASSET_SOURCES.md`).
  */
 
 import { Assets, Texture } from 'pixi.js';
 
 const BASE = `${import.meta.env.BASE_URL}kenney-ui-pack/PNG`;
+const SCIFI = `${import.meta.env.BASE_URL}kenney-ui-scifi/PNG`;
 const OGA_DOCK_ICONS = `${import.meta.env.BASE_URL}oga-dock-icons`;
 
 export type VelocityUiTextureKey =
@@ -48,7 +52,13 @@ export type VelocityUiTextureKey =
     | 'dock_nav_home'
     | 'dock_nav_missions'
     | 'dock_nav_hangar'
-    | 'dock_nav_store';
+    | 'dock_nav_store'
+    /** Kenney Sci-Fi pack (OGA) — glass / chrome for tabs, list, cards, dock */
+    | 'scifi_panel_glass'
+    | 'scifi_panel_glass_screws'
+    | 'scifi_panel_rectangle_screws'
+    | 'scifi_button_rectangle'
+    | 'scifi_button_rectangle_depth';
 
 const MANIFEST: Record<VelocityUiTextureKey, string> = {
     // ── Buttons (rectangle — nine-slice) ───────────────────────────────────────
@@ -98,9 +108,16 @@ const MANIFEST: Record<VelocityUiTextureKey, string> = {
     menu_settings_repeat:      `${BASE}/Extra/Default/icon_repeat_dark.png`,
     /** Command dock — OpenGameArt CC0 (manifest + SOURCES.md in `oga-dock-icons/`). */
     dock_nav_home:     `${OGA_DOCK_ICONS}/home.png`,
-    dock_nav_missions: `${OGA_DOCK_ICONS}/missions_target.png`,
+    /** Sci-Fi pack crosshair — reads clearly as “target” at dock size (replaces flat OGA reticle). */
+    dock_nav_missions: `${SCIFI}/Blue/Default/crosshair_color_a.png`,
     dock_nav_hangar:   `${OGA_DOCK_ICONS}/hangar_plane.png`,
     dock_nav_store:    `${OGA_DOCK_ICONS}/store.png`,
+
+    scifi_panel_glass: `${SCIFI}/Extra/Default/panel_glass.png`,
+    scifi_panel_glass_screws: `${SCIFI}/Extra/Default/panel_glass_screws.png`,
+    scifi_panel_rectangle_screws: `${SCIFI}/Extra/Default/panel_rectangle_screws.png`,
+    scifi_button_rectangle: `${SCIFI}/Extra/Default/button_rectangle.png`,
+    scifi_button_rectangle_depth: `${SCIFI}/Extra/Default/button_rectangle_depth.png`,
 };
 
 export type VelocityCustomTextureKey =

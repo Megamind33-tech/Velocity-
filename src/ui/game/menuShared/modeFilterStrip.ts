@@ -17,6 +17,7 @@ import { kenneyTabTrack } from '../menuLandscape/kenneyLandscapeWidgets';
 import { fitLabelToWidth } from './fitLabelToWidth';
 
 const TAB_BS = VELOCITY_UI_SLICE.button;
+const SCIFI_BS = VELOCITY_UI_SLICE.scifiButton;
 
 /** Product-wide tab channel colors (same for portrait + landscape). */
 export const MODE_FILTER_TAB_THEME = {
@@ -110,8 +111,14 @@ export function buildModeFilterStrip(
     const labels = MODE_FILTER_LABELS;
     const tabFontSize = tabW < 72 ? 8 : tabW < 90 ? 9 : 11;
 
+    const sciIdle = getVelocityUiTexture('scifi_button_rectangle');
+    const sciOn = getVelocityUiTexture('scifi_button_rectangle_depth');
+    const useScifiTabs = innerW >= 72 && !!sciIdle && !!sciOn;
     const useK9 =
-        innerW >= 116 && !!getVelocityUiTexture('button_primary') && !!getVelocityUiTexture('button_secondary');
+        !useScifiTabs &&
+        innerW >= 116 &&
+        !!getVelocityUiTexture('button_primary') &&
+        !!getVelocityUiTexture('button_secondary');
 
     const textMaxW = Math.max(36, innerW - 8);
     const buttons: Container[] = [];
@@ -161,7 +168,22 @@ export function buildModeFilterStrip(
         b.addChild(activePlate);
 
         let bg: NineSliceSprite | Graphics;
-        if (useK9) {
+        if (useScifiTabs) {
+            const spr = new NineSliceSprite({
+                texture: sciIdle!,
+                leftWidth: SCIFI_BS.L,
+                rightWidth: SCIFI_BS.R,
+                topHeight: SCIFI_BS.T,
+                bottomHeight: SCIFI_BS.B,
+                width: innerW,
+                height: innerH,
+            });
+            spr.position.set(channelGlow ? 2 : 2, channelGlow ? 0 : 0);
+            spr.alpha = 0.88;
+            spr.tint = MODE_FILTER_TAB_THEME.tabIdle.tint;
+            b.addChild(spr);
+            bg = spr;
+        } else if (useK9) {
             const spr = new NineSliceSprite({
                 texture: getVelocityUiTexture('button_secondary')!,
                 leftWidth: TAB_BS.L,
@@ -218,7 +240,15 @@ export function buildModeFilterStrip(
             plate.visible = on;
             idle.alpha = on ? 0.22 : 0.92;
 
-            if (useK9 && bg0 instanceof NineSliceSprite) {
+            if (useScifiTabs && bg0 instanceof NineSliceSprite) {
+                bg0.texture = (on ? sciOn! : sciIdle!);
+                bg0.leftWidth = SCIFI_BS.L;
+                bg0.rightWidth = SCIFI_BS.R;
+                bg0.topHeight = SCIFI_BS.T;
+                bg0.bottomHeight = SCIFI_BS.B;
+                bg0.tint = on ? MODE_FILTER_TAB_THEME.tabActive.tint : MODE_FILTER_TAB_THEME.tabIdle.tint;
+                bg0.alpha = on ? 0.98 : 0.8;
+            } else if (useK9 && bg0 instanceof NineSliceSprite) {
                 const k = on ? 'button_primary' : 'button_secondary';
                 bg0.texture = getVelocityUiTexture(k)!;
                 bg0.leftWidth = TAB_BS.L;
