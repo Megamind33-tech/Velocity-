@@ -175,7 +175,11 @@ function buildFeaturedMissionCard(p: FeaturedProps): {
         root.addChild(pair.root);
         const contentW = Math.max(260, p.cw - 44);
         const innerH = Math.max(110, p.cardH - 54);
-        const progLite = { unlockedCount: p.routesDone, totalLevels: p.routesTotal };
+        const progLite = {
+            unlockedCount: p.routesDone,
+            totalLevels: p.routesTotal,
+            rewardStars: p.rewardStars,
+        };
         const cmd = mountHeroCommandLayout(
             pair.content,
             contentW,
@@ -211,19 +215,6 @@ function buildFeaturedMissionCard(p: FeaturedProps): {
             },
         );
         if (cmd.flyCta) cmd.flyCta.label = 'heroFlyCta';
-        const bx = P_SPACE.s8;
-        const starLine = new Text({
-            text: `${p.rewardStars}★`,
-            style: ts(P_TYPO.label, P_COLORS.accentGold),
-        });
-        starLine.position.set(bx, Math.max(2, cmd.bonusLineY));
-        pair.content.addChild(starLine);
-        const bonusLine = new Text({
-            text: 'ROUTE BONUS',
-            style: ts(P_TYPO.label, P_COLORS.accentGold),
-        });
-        bonusLine.position.set(bx, Math.max(2, cmd.bonusSecondLineY));
-        pair.content.addChild(bonusLine);
         return {
             root,
             anim: {

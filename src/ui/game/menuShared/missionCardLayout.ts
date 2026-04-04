@@ -169,8 +169,8 @@ export function fitBodyText(
         if (t.height <= maxHeight) return t;
         t.destroy();
     }
-    const approx = Math.max(24, Math.floor((zoneW / CHAR_PX_BODY) * (maxHeight / 12)));
-    return new Text({
+    let approx = Math.max(24, Math.floor((zoneW / CHAR_PX_BODY) * (maxHeight / 12)));
+    let t = new Text({
         text: truncChars(fullText, approx),
         style: new TextStyle({
             fontFamily: styleBase.fontFamily,
@@ -182,6 +182,23 @@ export function fitBodyText(
             breakWords: true,
         }),
     });
+    while (t.height > maxHeight && approx > 12) {
+        approx -= 8;
+        t.destroy();
+        t = new Text({
+            text: truncChars(fullText, approx),
+            style: new TextStyle({
+                fontFamily: styleBase.fontFamily,
+                fontSize: minFont,
+                fontWeight: '500',
+                fill: styleBase.fill,
+                wordWrap: true,
+                wordWrapWidth: Math.max(40, zoneW - 4),
+                breakWords: true,
+            }),
+        });
+    }
+    return t;
 }
 
 export function fitOneLineSmall(
