@@ -140,6 +140,8 @@ export function kenneyStatChip(
     h: number,
     accentColor = 0xf0f4fa,
     cornerBadge: StatChipCornerBadge = 'none',
+    /** When textures load, prefer authored menu icon over vector draw. */
+    menuIconKey?: VelocityUiTextureKey,
 ): Container | null {
     const spr = kenneyButtonNineSlice('button_secondary', w, h);
     if (!spr) return null;
@@ -154,9 +156,23 @@ export function kenneyStatChip(
     root.addChild(strip);
 
     const iconCx = 15;
-    const ig = new Graphics();
-    drawIcon(ig, iconCx, h / 2 + 2, Math.min(17, Math.floor(h * 0.28)));
-    root.addChild(ig);
+    const iconCy = h / 2 + 2;
+    const iconS = Math.min(20, Math.floor(h * 0.32));
+    const menuTex = menuIconKey ? getVelocityUiTexture(menuIconKey) : undefined;
+    if (menuTex) {
+        const sp = new Sprite(menuTex);
+        sp.anchor.set(0.5);
+        sp.width = iconS;
+        sp.height = iconS;
+        sp.position.set(iconCx, iconCy);
+        sp.tint = accentColor;
+        sp.alpha = 0.92;
+        root.addChild(sp);
+    } else {
+        const ig = new Graphics();
+        drawIcon(ig, iconCx, iconCy, Math.min(17, Math.floor(h * 0.28)));
+        root.addChild(ig);
+    }
 
     const hasB = cornerBadge !== 'none';
     const labelMaxW = chipLabelMaxW(w, hasB);
@@ -302,9 +318,8 @@ export function mountGearIcon(parent: Container, cx: number, cy: number, size: n
 }
 
 /** Hero: framed panel + tinted inner fill. */
-export function kenneyHeroPanel(cw: number, cardH: number): { root: Container; content: Container } | null {
-    const pair = createKenneyFramedPanelWithContent(cw, cardH);
-    if (!pair) return null;
+/** Apply Velocity hero tints to a Kenney framed panel pair. */
+export function styleKenneyHeroPanelPair(pair: { root: Container; content: Container }): void {
     pair.root.alpha = 1;
     const fill = pair.root.children[0] as NineSliceSprite;
     fill.tint = 0x050a12;
@@ -312,7 +327,39 @@ export function kenneyHeroPanel(cw: number, cardH: number): { root: Container; c
     const frame = pair.root.children[1] as NineSliceSprite;
     frame.tint = GAME_COLORS.primary;
     frame.alpha = 0.72;
+}
+
+export function kenneyHeroPanel(cw: number, cardH: number): { root: Container; content: Container } | null {
+    const pair = createKenneyFramedPanelWithContent(cw, cardH);
+    if (!pair) return null;
+    styleKenneyHeroPanelPair(pair);
     return pair;
+}
+
+/** Mission list outer bay — panel_fill + rim (replaces flat vector list chrome when textures load). */
+export function kenneyListBay(cw: number, listH: number): Container | null {
+    const fillTex = getVelocityUiTexture('panel_fill');
+    if (!fillTex) return null;
+    const root = new Container();
+    const spr = new NineSliceSprite({
+        texture: fillTex,
+        leftWidth: PS.L,
+        rightWidth: PS.R,
+        topHeight: PS.T,
+        bottomHeight: PS.B,
+        width: cw,
+        height: listH,
+    });
+    spr.tint = 0x0a1520;
+    spr.alpha = 0.94;
+    root.addChild(spr);
+    const rim = new Graphics();
+    rim.roundRect(0.5, 0.5, cw - 1, listH - 1, 14);
+    rim.stroke({ color: 0x3a5a78, width: 1.2, alpha: 0.55 });
+    rim.roundRect(8, 3, cw - 16, 2, 1);
+    rim.fill({ color: GAME_COLORS.primary, alpha: 0.12 });
+    root.addChild(rim);
+    return root;
 }
 
 export function kenneyProgressBar(w: number, h: number): (Container & { setProgress: (p: number) => void }) | null {

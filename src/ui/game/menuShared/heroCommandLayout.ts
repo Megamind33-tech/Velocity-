@@ -4,6 +4,7 @@
 
 import { Container, Graphics, Sprite, Text, TextStyle } from 'pixi.js';
 import { getVelocityCustomTexture } from '../velocityUiArt';
+import { spriteIcon } from '../menuLandscape/kenneyLandscapeWidgets';
 
 export type MainMenuProgressLite = {
     unlockedCount: number;
@@ -201,23 +202,9 @@ export function mountHeroCommandLayout(
     rewardShimmer.position.set(emblemCx - emblemR, emblemCy - emblemR);
     content.addChild(rewardShimmer);
 
-    const motifTop = subY + SUB_H + (showTag ? TAG_H + GAP_STACK : GAP_STACK);
-    const motifBottom = progLblY - 4;
-    const motifLeft = ox + Math.floor(contentW * 0.52);
     const motifRight = ox + contentW - RIGHT_EMBLEM - 6;
-    const streakMot = new Graphics();
-    if (motifBottom > motifTop + 12 && motifRight > motifLeft + 20) {
-        const my0 = motifTop + 4;
-        [[0, 50, 0.11], [8, 40, 0.08], [16, 55, 0.09], [24, 32, 0.06], [32, 44, 0.07]].forEach(([dy, len, a]) => {
-            const sx = motifLeft + (dy as number) * 0.4;
-            const y = my0 + (dy as number);
-            if (y > motifBottom) return;
-            streakMot.moveTo(sx, y);
-            streakMot.lineTo(Math.min(sx + (len as number), motifRight), y - (len as number) * 0.04);
-            streakMot.stroke({ color: colors.cyan, width: 1, alpha: (a as number) * 0.75 });
-        });
-    }
-    content.addChild(streakMot);
+    const heroMotif = new Graphics();
+    content.addChild(heroMotif);
 
     const prog01 = prog.totalLevels > 0 ? prog.unlockedCount / prog.totalLevels : 0;
     const progLbl = new Text({
@@ -265,9 +252,16 @@ export function mountHeroCommandLayout(
     cls.addChild(cstrip);
 
     const wingX = CLASS_ICON_LANE / 2;
-    const wg = new Graphics();
-    helpers.icoWing(wg, wingX, useBtnH / 2, 12);
-    cls.addChild(wg);
+    const classIcon = spriteIcon('menu_pilot_class_star', Math.min(22, CLASS_ICON_LANE - 2), colors.gold);
+    if (classIcon) {
+        classIcon.position.set(wingX, useBtnH / 2);
+        classIcon.alpha = 0.95;
+        cls.addChild(classIcon);
+    } else {
+        const wg = new Graphics();
+        helpers.icoWing(wg, wingX, useBtnH / 2, 12);
+        cls.addChild(wg);
+    }
 
     const textX = CLASS_ICON_LANE;
     const maxLabelW = Math.max(48, clsW - textX - 10);
@@ -313,7 +307,7 @@ export function mountHeroCommandLayout(
         routeBarW: barW,
         routeSweep,
         rankGlow,
-        heroMotif: streakMot,
+        heroMotif,
         rewardShimmer,
         heroGlow,
         bottomRailY: rowY,

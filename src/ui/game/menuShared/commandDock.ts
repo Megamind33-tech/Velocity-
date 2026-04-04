@@ -3,7 +3,8 @@
  * Same cell logic, channel wells, active cue bar; only layout width/height vary.
  */
 
-import { Container, FederatedPointerEvent, Graphics, Text, TextStyle } from 'pixi.js';
+import { Container, FederatedPointerEvent, Graphics, Sprite, Text, TextStyle } from 'pixi.js';
+import { getVelocityUiTexture, type VelocityUiTextureKey } from '../velocityUiArt';
 
 export type CommandDockPalette = {
     dockDeck: number;
@@ -41,6 +42,8 @@ export type CommandDockItem = {
     label: string;
     onTap: () => void;
     draw: (g: Graphics, cx: number, cy: number, s: number) => void;
+    /** Kenney menu icon — primary; vector draw is fallback only. */
+    menuIconKey?: VelocityUiTextureKey;
 };
 
 export function buildCommandDock(
@@ -121,9 +124,23 @@ export function buildCommandDock(
         dockCradles.push(cradle);
         slot.addChild(cradle);
 
-        const vecG = new Graphics();
-        it.draw(vecG, cx, H * (H >= 80 ? 0.34 : 0.35), iconSize);
-        slot.addChild(vecG);
+        const iconLayer = new Container();
+        const iconCy = H * (H >= 80 ? 0.34 : 0.35);
+        const tex = it.menuIconKey ? getVelocityUiTexture(it.menuIconKey) : undefined;
+        if (tex) {
+            const sp = new Sprite(tex);
+            sp.anchor.set(0.5);
+            sp.width = iconSize;
+            sp.height = iconSize;
+            sp.position.set(cx, iconCy);
+            sp.alpha = 0.95;
+            iconLayer.addChild(sp);
+        } else {
+            const vecG = new Graphics();
+            it.draw(vecG, cx, iconCy, iconSize);
+            iconLayer.addChild(vecG);
+        }
+        slot.addChild(iconLayer);
 
         const t = new Text({
             text: it.label,
@@ -171,8 +188,13 @@ export function buildCommandDock(
         });
         slotContainers.forEach((ch, idx) => {
             const on = idx === i;
-            const vecG = ch.children[3] as Graphics;
-            vecG.tint = on ? palette.accentCyan : palette.inactiveIconTint;
+            const iconLayer = ch.children[3] as Container;
+            const firstIcon = iconLayer.children[0];
+            if (firstIcon instanceof Sprite) {
+                firstIcon.tint = on ? palette.accentCyan : palette.inactiveIconTint;
+            } else if (firstIcon instanceof Graphics) {
+                firstIcon.tint = on ? palette.accentCyan : palette.inactiveIconTint;
+            }
             const label = ch.children[4] as Text;
             label.style = new TextStyle({
                 fontFamily,
