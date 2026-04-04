@@ -823,13 +823,19 @@ function buildMissionCardPortrait(
     const completed = unlocked && level.id < maxUnlocked;
     const elite = level.id >= 18;
 
-    // ── Card surface ─────────────────────────────────────────────────────────
+    // ── Card surface — state-differentiated, not a uniform formula ──────────
     const g = new Graphics();
     g.roundRect(0, 0, cw, rowH, P_RADIUS.panel - 2);
     if (unlocked) {
         g.fill({ color: P_COLORS.bgPanelActive, alpha: 1 });
         g.stroke({ color: P_COLORS.strokeActive, width: 1.5, alpha: 0.28 });
+    } else if (elite) {
+        // ELITE LOCKED: warm dark surface — premium, sealed, aspirational
+        // Slightly warmer than regular locked — "this is something worth unlocking"
+        g.fill({ color: 0x0e0c10, alpha: 1 });
+        g.stroke({ color: P_COLORS.accentGoldSoft, width: 1, alpha: 0.38 });
     } else {
+        // REGULAR LOCKED: cold dark surface — neutral, sealed
         g.fill({ color: P_COLORS.bgPanelLocked, alpha: P_OPACITY.lockedSurface });
         g.stroke({ color: P_COLORS.stateLocked, width: 1, alpha: P_OPACITY.lockedStroke });
     }
@@ -841,14 +847,26 @@ function buildMissionCardPortrait(
     ridge.fill({ color: 0xffffff, alpha: unlocked ? 0.02 : 0.01 });
     root.addChild(ridge);
 
-    // ── Left accent strip — state indicator bar ───────────────────────────────
+    // ELITE LOCKED: faint gold ambient strip at top — premium designation
+    if (!unlocked && elite) {
+        const eliteGlow = new Graphics();
+        eliteGlow.roundRect(4, 0, cw - 8, 2, 1);
+        eliteGlow.fill({ color: P_COLORS.accentGold, alpha: 0.18 });
+        root.addChild(eliteGlow);
+    }
+
+    // ── Left accent strip — state indicator bar, color-coded per state ────────
     const leftStrip = new Graphics();
     leftStrip.roundRect(0, 6, 3, rowH - 12, 1.5);
     if (unlocked) {
         const stripColor = elite ? P_COLORS.accentGold : completed ? P_COLORS.stateLive : P_COLORS.accentCyan;
-        leftStrip.fill({ color: stripColor, alpha: 0.75 });
+        leftStrip.fill({ color: stripColor, alpha: 0.78 });
+    } else if (elite) {
+        // Elite locked: gold strip, reduced — "premium, not yet available"
+        leftStrip.fill({ color: P_COLORS.accentGold, alpha: 0.30 });
     } else {
-        leftStrip.fill({ color: P_COLORS.stateLocked, alpha: 0.35 });
+        // Regular locked: grey-blue, minimal
+        leftStrip.fill({ color: P_COLORS.stateLocked, alpha: 0.28 });
     }
     root.addChild(leftStrip);
 
@@ -856,33 +874,49 @@ function buildMissionCardPortrait(
     const icX = 18 + P_ICON.emblem;
     const icY = rowH / 2;
     if (unlocked) {
-        // Outer ambient glow ring
-        badge.circle(icX, icY, P_ICON.emblem + 4);
+        // ── UNLOCKED: double ring + ambient glow ────────────────────────────
         const glowColor = elite ? P_COLORS.accentGold : P_COLORS.accentCyan;
+        badge.circle(icX, icY, P_ICON.emblem + 4);
         badge.fill({ color: glowColor, alpha: 0.05 });
-        // Inner fill
         badge.circle(icX, icY, P_ICON.emblem);
         badge.fill({ color: P_COLORS.bgElevated, alpha: 1 });
-        // Outer ring
         badge.circle(icX, icY, P_ICON.emblem);
         badge.stroke({ color: elite ? P_COLORS.accentGold : P_COLORS.accentCyanSoft, width: 2, alpha: 0.55 });
-        // Inner ring
         badge.circle(icX, icY, P_ICON.emblem - 5);
         badge.stroke({ color: elite ? P_COLORS.accentGoldSoft : P_COLORS.accentCyanSoft, width: 1, alpha: 0.25 });
+    } else if (elite) {
+        // ── ELITE LOCKED: gold-tinted sealed badge — premium, aspirational ──
+        badge.circle(icX, icY, P_ICON.emblem + 3);
+        badge.fill({ color: P_COLORS.accentGold, alpha: 0.04 });
+        badge.circle(icX, icY, P_ICON.emblem);
+        badge.fill({ color: 0x0a0908, alpha: 1 }); // warm-dark fill
+        badge.circle(icX, icY, P_ICON.emblem);
+        badge.stroke({ color: P_COLORS.accentGoldSoft, width: 1.5, alpha: 0.50 });
+        badge.circle(icX, icY, P_ICON.emblem - 6);
+        badge.stroke({ color: P_COLORS.accentGoldSoft, width: 1, alpha: 0.18 });
     } else {
+        // ── REGULAR LOCKED: cold sealed badge ─────────────────────────────
         badge.circle(icX, icY, P_ICON.emblem);
         badge.fill({ color: P_COLORS.bgBase, alpha: 1 });
-        badge.stroke({ color: P_COLORS.stateLocked, width: 1, alpha: 0.50 });
+        badge.circle(icX, icY, P_ICON.emblem);
+        badge.stroke({ color: P_COLORS.stateLocked, width: 1, alpha: 0.42 });
+        // Subtle concentric inner ring — "sealed" layering
+        badge.circle(icX, icY, P_ICON.emblem - 6);
+        badge.stroke({ color: P_COLORS.stateLocked, width: 1, alpha: 0.15 });
     }
     root.addChild(badge);
 
     const ic = new Graphics();
-    if (unlocked) drawIconRouteNode(ic, icX, icY, 10, { color: P_COLORS.accentCyan, width: 2, alpha: 0.9 });
-    else {
-        // Larger lock icon + subtle glow — make the locked state feel intentional, not empty
-        drawIconLock(ic, icX, icY, 18, { color: P_COLORS.stateLocked, width: 2, alpha: 0.75 });
-        ic.circle(icX, icY, P_ICON.emblem - 2);
-        ic.fill({ color: P_COLORS.stateLocked, alpha: 0.06 });
+    if (unlocked) {
+        // Route node icon for playable missions
+        const iconColor = elite ? P_COLORS.accentGold : P_COLORS.accentCyan;
+        drawIconRouteNode(ic, icX, icY, 10, { color: iconColor, width: 2, alpha: 0.90 });
+    } else if (elite) {
+        // Elite locked: gold lock — visually distinct from regular
+        drawIconLock(ic, icX, icY, 14, { color: P_COLORS.accentGold, width: 1.5, alpha: 0.55 });
+    } else {
+        // Regular locked: muted grey lock — clearly unavailable
+        drawIconLock(ic, icX, icY, 14, { color: P_COLORS.stateLocked, width: 1.5, alpha: 0.60 });
     }
     root.addChild(ic);
 
@@ -892,30 +926,54 @@ function buildMissionCardPortrait(
     // Removed the unexplained 56px surplus — title now gets full available width
     const tw = Math.max(40, cw - tx - btnW - P_SPACE.s16 - 8);
 
+    // Title — state-specific contrast:
+    // unlocked: primary white; elite-locked: warm gold-tint grey (aspirational); regular-locked: muted
+    const titleColor = unlocked
+        ? P_COLORS.textPrimary
+        : elite
+        ? 0x9a8870   // warm-muted — "premium but withheld"
+        : 0x6a7280;  // cold-muted — "sealed, not for you yet"
     const title = new Text({
         // Chars per pixel: 7.5 is accurate for Kenney Future at missionTitle size
         text: trunc(level.name, Math.max(10, Math.floor(tw / 7.5))),
-        style: ts(P_TYPO.missionTitle, unlocked ? P_COLORS.textPrimary : P_COLORS.textSecondary),
+        style: ts(P_TYPO.missionTitle, titleColor),
     });
     title.position.set(tx, P_SPACE.s8);
     root.addChild(title);
 
     const hint = level.learningObjectives[0]?.hint ?? `${level.gateCount} voice gates`;
+    const subColor = unlocked ? P_COLORS.textMuted : 0x454e58;
     const sub = new Text({
         text: trunc(hint, Math.max(14, Math.floor(tw / 6))),
-        style: ts(P_TYPO.missionBody, P_COLORS.textMuted),
+        style: ts(P_TYPO.missionBody, subColor),
     });
-    sub.position.set(tx, P_SPACE.s8 + 21);
+    sub.position.set(tx, P_SPACE.s8 + 20);
     root.addChild(sub);
 
-    // State badge — below subtitle, left-anchored (no more same-row collision with title)
-    let metaStr = elite ? '★ ELITE' : completed ? '✓ CLEARED' : unlocked ? '⬡ REWARD' : '';
+    // ── State metadata badge — one clear non-competing message ───────────────
+    // STATE PRIORITY (subordinate metadata only, locked button handles primary state):
+    //   ELITE > COMPLETED > AVAILABLE/REWARD > (nothing for basic locked)
+    // For locked cards: elite badge IS shown (aspirational value signal), nothing else.
+    // For unlocked cards: show completion or reward status.
+    let metaStr = '';
+    let metaColor = P_COLORS.accentCyanSoft;
+    if (elite && unlocked && completed) {
+        metaStr = '★ ELITE  ✓';
+        metaColor = P_COLORS.accentGold;
+    } else if (elite) {
+        metaStr = '★ ELITE';
+        metaColor = P_COLORS.accentGold;
+    } else if (completed) {
+        metaStr = '✓ CLEARED';
+        metaColor = P_COLORS.stateLive;
+    } else if (unlocked && !completed) {
+        // Only show REWARD hint if newly unlocked (not elite, not completed)
+        metaStr = '⬡ REWARD';
+        metaColor = P_COLORS.accentCyanSoft;
+    }
+    // Locked non-elite: no badge — locked button is the sole state communicator
+
     if (metaStr) {
-        const metaColor = elite
-            ? P_COLORS.accentGold
-            : completed
-            ? P_COLORS.stateLive
-            : P_COLORS.accentCyanSoft;
         const meta = new Text({
             text: metaStr,
             style: new TextStyle({
@@ -966,20 +1024,20 @@ function buildLockedButton(w: number, h: number): Container {
     const c = new Container();
     c.eventMode = 'none';
 
-    // ── Outer body — clearly darker and more restrained than active card ────
+    // ── Body: sealed surface — darker + muted border ─────────────────────────
     const g = new Graphics();
     g.roundRect(0, 0, w, h, P_RADIUS.button);
     g.fill({ color: P_COLORS.bgBase, alpha: 1 });
-    g.stroke({ color: P_COLORS.stateLocked, width: 1.5, alpha: 0.45 });
+    g.stroke({ color: P_COLORS.stateLocked, width: 1.5, alpha: 0.38 });
     c.addChild(g);
 
-    // ── Inner frame depth — creates dimensional locked-panel feel ────────────
+    // ── Inner frame — dimensional depth ─────────────────────────────────────
     const inner = new Graphics();
     inner.roundRect(2, 2, w - 4, h - 4, P_RADIUS.button - 2);
-    inner.stroke({ color: P_COLORS.stateLocked, width: 1, alpha: 0.15 });
+    inner.stroke({ color: P_COLORS.stateLocked, width: 1, alpha: 0.12 });
     c.addChild(inner);
 
-    // ── Diagonal hatch fill — game-native "hazard zone" visual ──────────────
+    // ── Diagonal hatch — hazard zone game convention ─────────────────────────
     const hatch = new Graphics();
     const stride = 9;
     for (let k = -h; k < w + h; k += stride) {
@@ -989,48 +1047,36 @@ function buildLockedButton(w: number, h: number): Container {
         const y2 = k + h > h ? h : k + h - Math.max(0, k);
         hatch.moveTo(x1, y1);
         hatch.lineTo(x2, y2);
-        hatch.stroke({ color: P_COLORS.stateLocked, width: 1, alpha: 0.08 });
     }
+    hatch.stroke({ color: P_COLORS.stateLocked, width: 1, alpha: 0.07 });
     c.addChild(hatch);
 
-    // ── Lock icon — centered, prominent but not aggressive ───────────────────
+    // ── Lock icon — CENTERED at top 38% of button height ─────────────────────
+    // Vertical stack: icon top / label bottom — NO side-by-side layout that overflows
     const lockG = new Graphics();
-    const iconCx = Math.floor(w / 2) - 16;
-    const iconCy = h / 2;
-    drawIconLock(lockG, iconCx, iconCy, 13, { color: P_COLORS.stateLocked, width: 1.5, alpha: 0.70 });
+    drawIconLock(lockG, w / 2, Math.floor(h * 0.38), 10,
+        { color: P_COLORS.stateLocked, width: 1.5, alpha: 0.60 });
     c.addChild(lockG);
 
-    // ── "LOCKED" label — authoritative state text, not action ────────────────
+    // ── "LOCKED" — SINGLE dominant state, anchor(0.5, 0.5) at bottom of button
+    // Centered horizontally: no truncation possible at any button width ≥ 60px
     const t = new Text({
         text: 'LOCKED',
         style: new TextStyle({
             fontFamily: FONT,
-            fontSize: 10,
+            fontSize: 9,
             fontWeight: '700',
             fill: P_COLORS.stateLocked,
-            letterSpacing: 1.5,
+            letterSpacing: 2.0,
         }),
     });
-    t.anchor.set(0, 0.5);
-    t.position.set(iconCx + 17, h / 2 - 1);
+    t.anchor.set(0.5, 0.5);
+    t.position.set(w / 2, Math.floor(h * 0.73));
     c.addChild(t);
 
-    // ── "COMPLETE PREVIOUS" micro-hint — unlock requirement, aspiration ──────
-    const hint = new Text({
-        text: 'COMPLETE PREV.',
-        style: new TextStyle({
-            fontFamily: FONT,
-            fontSize: 7,
-            fontWeight: '600',
-            fill: P_COLORS.textMuted,
-            letterSpacing: 0.8,
-            alpha: 0.6,
-        }),
-    });
-    hint.anchor.set(0, 0);
-    hint.position.set(iconCx + 17, h / 2 + 9);
-    c.addChild(hint);
-
+    // ── NO helper text inside the button ─────────────────────────────────────
+    // "COMPLETE PREV." caused state collision and truncation.
+    // State hierarchy: ONE dominant label per badge zone.
     return c;
 }
 
