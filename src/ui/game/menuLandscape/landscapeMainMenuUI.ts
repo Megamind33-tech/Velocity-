@@ -20,6 +20,7 @@ import type { GameUIManager } from '../GameUIManager';
 import { getVelocityCustomTexture, getVelocityUiTexture, type VelocityUiTextureKey } from '../velocityUiArt';
 import { VELOCITY_UI_SLICE } from '../velocityUiSlice';
 import {
+    fitStatChipValue,
     kenneyAvatarPlate,
     kenneyButton,
     kenneyDockBar,
@@ -29,6 +30,7 @@ import {
     kenneyRowPanel,
     kenneyStatChip,
 } from './kenneyLandscapeWidgets';
+import { CHIP_BADGE_RESERVE, CHIP_TEXT_X, computeTopStripLayout } from '../menuShared/topStatusStripLayout';
 import {
     computeCardVerticalBands,
     fitBodyText,
@@ -261,7 +263,6 @@ export function buildTopUtilityBar(
 ): { root: Container; refs: TopBarRefs } {
     const H = 64;
     const root = new Container();
-    const gap = GRID;
     const rail = new Graphics();
     rail.roundRect(0, 2, cw, H - 2, 14);
     rail.fill({ color: 0x09121d, alpha: 0.68 });
@@ -270,52 +271,34 @@ export function buildTopUtilityBar(
     rail.fill({ color: C.cyan, alpha: 0.16 });
     root.addChild(rail);
 
-    let chipW = Math.floor((cw - 66 - gap * 3) / 3);
-    chipW = Math.max(108, chipW);
+    const lay = computeTopStripLayout(cw);
+    const chipW = lay.chipW;
+    const gap = lay.gap;
 
-    const av = kenneyAvatarPlate(56, onProfile);
+    const av = kenneyAvatarPlate(lay.avatarW, onProfile);
     root.addChild(av);
 
-    const x0 = 60 + gap;
-    const CYAN   = GAME_COLORS.primary;          // 0x00ffcc
-    const GOLD   = GAME_COLORS.accent_gold;      // 0xffcc00
+    const x0 = lay.chip0X;
+    const CYAN = GAME_COLORS.primary;
+    const GOLD = GAME_COLORS.accent_gold;
     const PURPLE = 0xbb88ff;
+    const chipH = H - 4;
 
     const c1 =
-        kenneyStatChip(icoBarsSignal, 'SIGNAL', `${prog.maxUnlocked}`, chipW, H - 4, CYAN) ??
-        vectorStatChip(icoBarsSignal, 'SIGNAL', `${prog.maxUnlocked}`, chipW, H - 4, CYAN);
+        kenneyStatChip(icoBarsSignal, 'SIGNAL', `${prog.maxUnlocked}`, chipW, chipH, CYAN, 'none') ??
+        vectorStatChip(icoBarsSignal, 'SIGNAL', `${prog.maxUnlocked}`, chipW, chipH, CYAN, 'none');
     c1.position.set(x0, 5);
     root.addChild(c1);
 
     const c2 =
-        kenneyStatChip(icoStarBadge, 'BEST', String(bestScore), chipW, H - 4, GOLD) ??
-        vectorStatChip(icoStarBadge, 'BEST', String(bestScore), chipW, H - 4, GOLD);
-    const prestige = getVelocityCustomTexture('rank_prestige');
-    if (prestige) {
-        const em = new Sprite(prestige);
-        em.anchor.set(1, 0);
-        em.width = 20;
-        em.height = 20;
-        em.position.set(chipW - 6, 6);
-        em.alpha = 0.9;
-        c2.addChild(em);
-    }
+        kenneyStatChip(icoStarBadge, 'BEST', String(bestScore), chipW, chipH, GOLD, 'prestige') ??
+        vectorStatChip(icoStarBadge, 'BEST', String(bestScore), chipW, chipH, GOLD, 'prestige');
     c2.position.set(x0 + chipW + gap, 5);
     root.addChild(c2);
 
     const c3 =
-        kenneyStatChip(icoGemPremium, 'PREMIUM', `${prog.unlockedCount}`, chipW, H - 4, PURPLE) ??
-        vectorStatChip(icoGemPremium, 'PREMIUM', `${prog.unlockedCount}`, chipW, H - 4, PURPLE);
-    const elite = getVelocityCustomTexture('rank_elite');
-    if (elite) {
-        const em = new Sprite(elite);
-        em.anchor.set(1, 0);
-        em.width = 20;
-        em.height = 20;
-        em.position.set(chipW - 6, 6);
-        em.alpha = 0.9;
-        c3.addChild(em);
-    }
+        kenneyStatChip(icoGemPremium, 'PREMIUM', `${prog.unlockedCount}`, chipW, chipH, PURPLE, 'elite') ??
+        vectorStatChip(icoGemPremium, 'PREMIUM', `${prog.unlockedCount}`, chipW, chipH, PURPLE, 'elite');
     c3.position.set(x0 + (chipW + gap) * 2, 5);
     if (onPremiumTap) {
         c3.eventMode = 'static';
@@ -324,15 +307,32 @@ export function buildTopUtilityBar(
     }
     root.addChild(c3);
 
+    function chipValueText(chip: Container): Text {
+        let best: Text | null = null;
+        let bestFs = 0;
+        for (const ch of chip.children) {
+            if (ch instanceof Text) {
+                const fs = typeof ch.style.fontSize === 'number' ? ch.style.fontSize : 0;
+                if (fs > bestFs) {
+                    bestFs = fs;
+                    best = ch;
+                }
+            }
+        }
+        return best ?? (chip.children[chip.children.length - 1] as Text);
+    }
+
     return {
         root,
         refs: {
-            energyText: c1.children[c1.children.length - 1] as Text,
-            bestText: c2.children[c2.children.length - 1] as Text,
-            premiumText: c3.children[c3.children.length - 1] as Text,
+            energyText: chipValueText(c1),
+            bestText: chipValueText(c2),
+            premiumText: chipValueText(c3),
         },
     };
 }
+
+type VectorChipBadge = 'none' | 'prestige' | 'elite';
 
 function vectorStatChip(
     draw: (g: Graphics, cx: number, cy: number, s: number) => void,
@@ -341,9 +341,9 @@ function vectorStatChip(
     w: number,
     h: number,
     accentColor = C.text,
+    cornerBadge: VectorChipBadge = 'none',
 ): Container {
     const root = new Container();
-    // Body — layered surface
     const bg = new Graphics();
     bg.roundRect(0, 0, w, h, R_CHIP);
     bg.fill({ color: C.surface2, alpha: 1 });
@@ -353,53 +353,56 @@ function vectorStatChip(
     lower.roundRect(4, Math.floor(h * 0.5), w - 8, Math.floor(h * 0.42), R_CHIP - 4);
     lower.fill({ color: 0x0a121c, alpha: 0.78 });
     root.addChild(lower);
-    // Inner bevel highlight
     const bevel = new Graphics();
     bevel.roundRect(2, 2, w - 4, Math.floor(h * 0.42), R_CHIP - 2);
     bevel.fill({ color: 0xffffff, alpha: 0.04 });
     root.addChild(bevel);
-    // Accent top strip
     const strip = new Graphics();
     strip.roundRect(6, 0, w - 12, 3, 1);
-    strip.fill({ color: accentColor, alpha: 0.50 });
+    strip.fill({ color: accentColor, alpha: 0.5 });
     root.addChild(strip);
-    // Icon
+
+    const iconCx = 15;
     const ig = new Graphics();
-    draw(ig, 20, h / 2 + 2, 16);
+    draw(ig, iconCx, h / 2 + 2, Math.min(16, Math.floor(h * 0.28)));
     root.addChild(ig);
-    // Label — muted, subordinate
+
+    const reserve = cornerBadge !== 'none' ? CHIP_BADGE_RESERVE : 6;
+    const valueMaxW = Math.max(28, w - CHIP_TEXT_X - reserve - 2);
+
     const lb = new Text({
         text: label.toUpperCase(),
-        style: style(9, '600', C.muted, 1),
+        style: style(9, '600', C.muted, 0.8),
     });
-    lb.position.set(40, 8);
+    lb.position.set(CHIP_TEXT_X, 8);
     root.addChild(lb);
-    // Value — accent color, dominant
-    const vt = new Text({
-        text: val,
-        style: new TextStyle({
-            fontFamily: GAME_FONTS.standard,
-            fontSize: 16,
-            fontWeight: '800',
-            fill: accentColor,
-            dropShadow: { alpha: 0.45, blur: 2, color: 0x000000, distance: 1 },
-        }),
-    });
-    vt.position.set(40, 24);
+
+    const vt = fitStatChipValue(val, valueMaxW, accentColor);
+    vt.position.set(CHIP_TEXT_X, 24);
     root.addChild(vt);
-    const rankTex = label === 'BEST'
-        ? getVelocityCustomTexture('rank_prestige')
-        : label === 'PREMIUM'
-          ? getVelocityCustomTexture('rank_elite')
-          : undefined;
-    if (rankTex) {
-        const rank = new Sprite(rankTex);
-        rank.anchor.set(1, 0);
-        rank.width = 18;
-        rank.height = 18;
-        rank.position.set(w - 6, 5);
-        rank.alpha = 0.88;
-        root.addChild(rank);
+
+    if (cornerBadge === 'prestige') {
+        const rankTex = getVelocityCustomTexture('rank_prestige');
+        if (rankTex) {
+            const rank = new Sprite(rankTex);
+            rank.anchor.set(1, 0);
+            rank.width = 20;
+            rank.height = 20;
+            rank.position.set(w - 5, 5);
+            rank.alpha = 0.9;
+            root.addChild(rank);
+        }
+    } else if (cornerBadge === 'elite') {
+        const rankTex = getVelocityCustomTexture('rank_elite');
+        if (rankTex) {
+            const rank = new Sprite(rankTex);
+            rank.anchor.set(1, 0);
+            rank.width = 20;
+            rank.height = 20;
+            rank.position.set(w - 5, 5);
+            rank.alpha = 0.9;
+            root.addChild(rank);
+        }
     }
     return root;
 }

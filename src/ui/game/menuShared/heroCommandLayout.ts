@@ -1,10 +1,10 @@
 /**
- * Shared hero “command header” interior — same mission cockpit layout in portrait + landscape.
- * Mount into Kenney framed `content` container (origin top-left of inner content area).
+ * Shared hero “command header” — explicit vertical bands (no overlap) + zoned class chip.
  */
 
 import { Container, Graphics, Sprite, Text, TextStyle } from 'pixi.js';
 import { getVelocityCustomTexture } from '../velocityUiArt';
+
 export type MainMenuProgressLite = {
     unlockedCount: number;
     totalLevels: number;
@@ -20,10 +20,8 @@ export type HeroCommandLayoutColors = {
 
 export type HeroLayoutHelpers = {
     trunc: (s: string, max: number) => string;
-    /** Returns TextStyle */
     textStyle: (size: number, weight: '400' | '500' | '600' | '700' | '800', fill: number, letterSpacing?: number) => TextStyle;
     icoRadar: (g: Graphics, cx: number, cy: number, s: number) => void;
-    /** Optional: replace default cyan ring + radar (e.g. portrait gold route emblem). */
     drawHeroEmblem?: (g: Graphics, cx: number, cy: number, radius: number) => void;
     icoWing: (g: Graphics, cx: number, cy: number, s: number) => void;
     kenneyProgressBar: (w: number, h: number) => ((Container & { setProgress: (p: number) => void }) | null);
@@ -39,6 +37,14 @@ export type HeroLayoutHelpers = {
 };
 
 const GRID = 8;
+const TITLE_H = 34;
+const SUB_H = 15;
+const TAG_H = 14;
+const GAP_STACK = 5;
+const RIGHT_EMBLEM = 68;
+const CLASS_ICON_LANE = 30;
+const CLASS_BADGE_RESERVE = 4;
+const CLASS_BADGE_SIZE = 22;
 
 export type HeroCommandMountResult = {
     flyCta: Container | null;
@@ -48,13 +54,11 @@ export type HeroCommandMountResult = {
     heroMotif: Graphics;
     rewardShimmer: Graphics;
     heroGlow: Graphics;
-    /** Y of class+FLY rail (for optional labels above). */
     bottomRailY: number;
+    /** Y for single-line bonus/meta above class row (portrait route stars). */
+    bonusLineY: number;
 };
 
-/**
- * Single integrated bottom “command rail”: progress reads into class strip + FLY (not stacked cards).
- */
 export function mountHeroCommandLayout(
     content: Container,
     contentW: number,
@@ -72,70 +76,46 @@ export function mountHeroCommandLayout(
     heroGlow.stroke({ color: colors.cyan, width: 2.5, alpha: 0.18 });
     content.addChild(heroGlow);
 
-    const rightEmblem = 64;
-    const leftTitleMax = Math.max(160, contentW - rightEmblem - GRID * 2);
-
-    const btnH = 48;
-    const rowBudget = Math.max(160, contentW - GRID * 2);
-    let flyW = Math.min(220, Math.max(120, Math.floor(rowBudget * 0.5)));
-    let clsW = rowBudget - flyW - GRID;
-    if (clsW < 120) {
-        clsW = 120;
-        flyW = Math.min(200, Math.max(96, rowBudget - clsW - GRID));
-    }
-    clsW = Math.min(Math.floor(rowBudget * 0.62), clsW);
-    flyW = rowBudget - clsW - GRID;
-
+    const leftTextMax = Math.max(120, contentW - RIGHT_EMBLEM - GRID * 2);
+    const btnHDefault = 48;
     const bottomPad = 8;
-    let rowY = innerH - btnH - bottomPad;
     const barH = 14;
-    let barY = rowY - 12 - barH;
-    let progLblY = barY - 14;
-    const subBottom = 36 + 18;
-    const tagY = 58;
-    const showTag = progLblY >= tagY + 20;
-    const minProgY = subBottom + (showTag ? 22 : 10);
-    if (progLblY < minProgY) {
-        progLblY = minProgY;
-        barY = progLblY + 14;
-        const minRowY = barY + barH + 8;
-        if (rowY < minRowY) rowY = minRowY;
-    }
-    let useBtnH = btnH;
-    if (rowY + useBtnH + bottomPad > innerH) {
-        useBtnH = Math.max(36, innerH - bottomPad - rowY);
-    }
-    if (rowY + useBtnH + bottomPad > innerH) {
-        rowY = Math.max(0, innerH - useBtnH - bottomPad);
-        barY = Math.min(barY, rowY - 8 - barH);
-        progLblY = barY - 14;
-        if (progLblY < minProgY) {
-            progLblY = minProgY;
-            barY = progLblY + 14;
-            rowY = Math.max(rowY, barY + barH + 6);
-            useBtnH = Math.max(34, innerH - bottomPad - rowY);
+    const progLblH = 15;
+    const gapBarToRail = 10;
+
+    let useBtnH = btnHDefault;
+    let rowY = innerH - useBtnH - bottomPad;
+    let barY = rowY - gapBarToRail - barH;
+    let progLblY = barY - progLblH;
+
+    const subY = TITLE_H + GAP_STACK;
+    const tagY = subY + SUB_H + GAP_STACK;
+    const minProgTop = tagY + TAG_H + GAP_STACK;
+    if (progLblY < minProgTop) {
+        progLblY = minProgTop;
+        barY = progLblY + progLblH;
+        rowY = barY + barH + gapBarToRail;
+        if (rowY + useBtnH + bottomPad > innerH) {
+            useBtnH = Math.max(36, innerH - bottomPad - rowY);
+        }
+        if (rowY + useBtnH + bottomPad > innerH) {
+            rowY = Math.max(0, innerH - useBtnH - bottomPad);
+            barY = Math.min(barY, rowY - gapBarToRail - barH);
+            progLblY = barY - progLblH;
         }
     }
 
-    // ── Speed streak (structural, ties to title zone) ─────────────────────
-    const streakMot = new Graphics();
-    const smy = 16;
-    [[0, 72, 0.13], [10, 55, 0.09], [20, 80, 0.11], [30, 40, 0.06], [40, 62, 0.08]].forEach(([dy, len, a]) => {
-        const sx = contentW * 0.58 + (dy as number) * 0.3;
-        streakMot.moveTo(sx, smy + (dy as number));
-        streakMot.lineTo(sx + (len as number), smy + (dy as number) - (len as number) * 0.05);
-        streakMot.stroke({ color: colors.cyan, width: 1, alpha: a as number });
-    });
-    content.addChild(streakMot);
+    const showTag = progLblY >= tagY + TAG_H + GAP_STACK;
 
-    const continuitySeam = new Graphics();
-    continuitySeam.roundRect(0, innerH - 2, contentW - 2, 2, 1);
-    continuitySeam.fill({ color: colors.cyan, alpha: 0.22 });
-    content.addChild(continuitySeam);
-    const continuityShadow = new Graphics();
-    continuityShadow.roundRect(0, innerH - 1, contentW - 2, 6, 2);
-    continuityShadow.fill({ color: 0x07101b, alpha: 0.34 });
-    content.addChild(continuityShadow);
+    const rowBudget = Math.max(160, contentW - GRID * 2);
+    let flyW = Math.min(220, Math.max(120, Math.floor(rowBudget * 0.48)));
+    let clsW = rowBudget - flyW - GRID;
+    if (clsW < 128) {
+        clsW = 128;
+        flyW = Math.max(96, rowBudget - clsW - GRID);
+    }
+    clsW = Math.min(Math.floor(rowBudget * 0.58), clsW);
+    flyW = rowBudget - clsW - GRID;
 
     const title = new Text({
         text: 'VELOCITY',
@@ -156,7 +136,7 @@ export function mountHeroCommandLayout(
         text: 'VOICE-POWERED FLIGHT',
         style: helpers.textStyle(11, '600', colors.muted, 1.5),
     });
-    sub.position.set(ox, 40);
+    sub.position.set(ox, subY);
     content.addChild(sub);
 
     if (showTag) {
@@ -168,22 +148,40 @@ export function mountHeroCommandLayout(
         content.addChild(tag);
     }
 
-    const emblemX = ox + contentW - rightEmblem / 2;
-    const emblemY = 34;
-    const rg = new Graphics();
+    const emblemCx = ox + contentW - RIGHT_EMBLEM / 2;
+    const emblemCy = Math.min(36, TITLE_H + SUB_H / 2 + 4);
     const emblemR = 26;
+    const rg = new Graphics();
     if (helpers.drawHeroEmblem) {
-        helpers.drawHeroEmblem(rg, emblemX, emblemY, emblemR);
+        helpers.drawHeroEmblem(rg, emblemCx, emblemCy, emblemR);
     } else {
-        rg.circle(emblemX, emblemY, emblemR);
+        rg.circle(emblemCx, emblemCy, emblemR);
         rg.stroke({ color: colors.cyan, width: 1.5, alpha: 0.35 });
-        helpers.icoRadar(rg, emblemX, emblemY, 18);
+        helpers.icoRadar(rg, emblemCx, emblemCy, 18);
     }
     content.addChild(rg);
 
     const rewardShimmer = new Graphics();
-    rewardShimmer.position.set(emblemX - emblemR, emblemY - emblemR);
+    rewardShimmer.position.set(emblemCx - emblemR, emblemCy - emblemR);
     content.addChild(rewardShimmer);
+
+    const motifTop = subY + SUB_H + (showTag ? TAG_H + GAP_STACK : GAP_STACK);
+    const motifBottom = progLblY - 4;
+    const motifLeft = ox + Math.floor(contentW * 0.52);
+    const motifRight = ox + contentW - RIGHT_EMBLEM - 6;
+    const streakMot = new Graphics();
+    if (motifBottom > motifTop + 12 && motifRight > motifLeft + 20) {
+        const my0 = motifTop + 4;
+        [[0, 50, 0.11], [8, 40, 0.08], [16, 55, 0.09], [24, 32, 0.06], [32, 44, 0.07]].forEach(([dy, len, a]) => {
+            const sx = motifLeft + (dy as number) * 0.4;
+            const y = my0 + (dy as number);
+            if (y > motifBottom) return;
+            streakMot.moveTo(sx, y);
+            streakMot.lineTo(Math.min(sx + (len as number), motifRight), y - (len as number) * 0.04);
+            streakMot.stroke({ color: colors.cyan, width: 1, alpha: a as number });
+        });
+    }
+    content.addChild(streakMot);
 
     const prog01 = prog.totalLevels > 0 ? prog.unlockedCount / prog.totalLevels : 0;
     const progLbl = new Text({
@@ -193,7 +191,7 @@ export function mountHeroCommandLayout(
     progLbl.position.set(ox, progLblY);
     content.addChild(progLbl);
 
-    const barW = Math.min(leftTitleMax, contentW - rightEmblem - GRID * 2);
+    const barW = Math.min(leftTextMax, motifRight - ox - GRID);
     const kBar = helpers.kenneyProgressBar(barW, barH);
     if (kBar) {
         kBar.position.set(ox, barY);
@@ -229,32 +227,49 @@ export function mountHeroCommandLayout(
     cstrip.roundRect(6, 0, clsW - 12, 3, 1);
     cstrip.fill({ color: colors.gold, alpha: 0.55 });
     cls.addChild(cstrip);
-    const wingX = 14;
-    const textPad = 34;
+
+    const wingX = CLASS_ICON_LANE / 2;
     const wg = new Graphics();
     helpers.icoWing(wg, wingX, useBtnH / 2, 12);
     cls.addChild(wg);
-    const clab = new Text({
-        text: helpers.trunc(`CLASS: ${rank.toUpperCase()}`, Math.max(8, Math.floor((clsW - textPad - 8) / 7))),
+
+    const textX = CLASS_ICON_LANE;
+    const badgeW = CLASS_BADGE_SIZE + CLASS_BADGE_RESERVE;
+    const maxLabelW = Math.max(40, clsW - textX - badgeW);
+    const rankUpper = rank.toUpperCase();
+    let labelText = `CLASS: ${rankUpper}`;
+    let clab = new Text({
+        text: labelText,
         style: helpers.textStyle(12, '700', colors.gold),
     });
-    clab.position.set(textPad, Math.floor((useBtnH - 13) / 2));
+    if (clab.width > maxLabelW) {
+        clab.destroy();
+        const maxChars = Math.max(6, Math.floor(maxLabelW / 7));
+        labelText = helpers.trunc(`CLASS: ${rankUpper}`, maxChars);
+        clab = new Text({
+            text: labelText,
+            style: helpers.textStyle(12, '700', colors.gold),
+        });
+    }
+    clab.position.set(textX, Math.floor((useBtnH - 13) / 2));
     cls.addChild(clab);
+
     const rankGlow = new Graphics();
     rankGlow.roundRect(0, 0, clsW, useBtnH, 12);
     rankGlow.stroke({ color: colors.gold, width: 2, alpha: 0.28 });
     cls.addChild(rankGlow);
+
     const rankPrestige = getVelocityCustomTexture('rank_prestige');
     if (rankPrestige) {
         const rs = new Sprite(rankPrestige);
-        rs.anchor.set(1, 0);
-        rs.width = 24;
-        rs.height = 24;
-        rs.position.set(clsW - 6, 5);
-        rs.alpha = 0.9;
+        rs.anchor.set(1, 1);
+        rs.width = CLASS_BADGE_SIZE;
+        rs.height = CLASS_BADGE_SIZE;
+        rs.position.set(clsW - CLASS_BADGE_RESERVE, useBtnH - CLASS_BADGE_RESERVE);
+        rs.alpha = 0.88;
         cls.addChild(rs);
     }
-    const bottomRailY = rowY;
+
     cls.position.set(ox, rowY);
     content.addChild(cls);
 
@@ -266,6 +281,8 @@ export function mountHeroCommandLayout(
     fly.position.set(flyX, rowY);
     content.addChild(fly);
 
+    const bonusLineY = Math.max(0, rowY - 17);
+
     return {
         flyCta: fly,
         routeBarW: barW,
@@ -274,6 +291,7 @@ export function mountHeroCommandLayout(
         heroMotif: streakMot,
         rewardShimmer,
         heroGlow,
-        bottomRailY,
+        bottomRailY: rowY,
+        bonusLineY,
     };
 }

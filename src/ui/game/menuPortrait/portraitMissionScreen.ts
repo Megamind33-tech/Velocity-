@@ -212,7 +212,7 @@ function buildFeaturedMissionCard(p: FeaturedProps): {
             text: `${p.rewardStars}★ route bonus`,
             style: ts(P_TYPO.label, P_COLORS.accentGold),
         });
-        starLbl.position.set(pad, Math.max(4, cmd.bottomRailY - 20));
+        starLbl.position.set(pad, Math.max(4, cmd.bonusLineY));
         pair.content.addChild(starLbl);
         return {
             root,
