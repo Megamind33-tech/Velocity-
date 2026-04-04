@@ -2,7 +2,7 @@
  * Main menu — portrait mission console OR landscape layout (PixiJS), orientation from aspect ratio.
  */
 
-import { Application, Container, FederatedPointerEvent } from 'pixi.js';
+import { Application, Container, FederatedPointerEvent, Graphics } from 'pixi.js';
 import { BaseGameScreen } from '../GameUIManager';
 import { GAME_SIZES } from '../GameUITheme';
 import { gameFlow } from '../gameFlowBridge';
@@ -158,6 +158,21 @@ export class MainMenuScreen extends BaseGameScreen {
             gameFlow().startLevelWithMicGate?.(firstPlayable);
         });
         hero.position.set(mx, y);
+
+        const continuityBay = new Graphics();
+        continuityBay.roundRect(
+            mx - 6,
+            y - 8,
+            cw + 12,
+            Math.max(220, sh - (y - 8) - safe.bottom - 76),
+            18,
+        );
+        continuityBay.fill({ color: 0x08111d, alpha: 0.32 });
+        continuityBay.stroke({ color: 0x2f445f, width: 1, alpha: 0.34 });
+        continuityBay.roundRect(mx + 10, y + heroH + 8, cw - 20, 2, 1);
+        continuityBay.fill({ color: 0x7bd8ff, alpha: 0.18 });
+        this.content.addChild(continuityBay);
+
         this.content.addChild(hero);
         this._flyBtn = findLabeledDescendant(hero, 'heroFlyCta');
 
