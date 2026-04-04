@@ -211,12 +211,19 @@ function buildFeaturedMissionCard(p: FeaturedProps): {
             },
         );
         if (cmd.flyCta) cmd.flyCta.label = 'heroFlyCta';
-        const starLbl = new Text({
-            text: `${p.rewardStars}★ route bonus`,
+        const bx = P_SPACE.s8;
+        const starLine = new Text({
+            text: `${p.rewardStars}★`,
             style: ts(P_TYPO.label, P_COLORS.accentGold),
         });
-        starLbl.position.set(P_SPACE.s8, Math.max(2, cmd.bonusLineY));
-        pair.content.addChild(starLbl);
+        starLine.position.set(bx, Math.max(2, cmd.bonusLineY));
+        pair.content.addChild(starLine);
+        const bonusLine = new Text({
+            text: 'ROUTE BONUS',
+            style: ts(P_TYPO.label, P_COLORS.accentGold),
+        });
+        bonusLine.position.set(bx, Math.max(2, cmd.bonusSecondLineY));
+        pair.content.addChild(bonusLine);
         return {
             root,
             anim: {
@@ -920,7 +927,7 @@ function buildMissionListPortrait(
 
     let scrollY = 0;
     const rowH = 104;
-    const gap = P_SPACE.s8;
+    const gap = 12;
 
     function maxScroll(): number {
         const total = scrollLayer.children.length * (rowH + gap) - gap;

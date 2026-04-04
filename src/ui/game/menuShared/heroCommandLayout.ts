@@ -55,8 +55,10 @@ export type HeroCommandMountResult = {
     rewardShimmer: Graphics;
     heroGlow: Graphics;
     bottomRailY: number;
-    /** Y for single-line bonus/meta above class row (portrait route stars). */
+    /** First line Y for portrait route bonus (e.g. stars). */
     bonusLineY: number;
+    /** Second line Y (e.g. “ROUTE BONUS”) — FIX C: never stack on one line. */
+    bonusSecondLineY: number;
 };
 
 export function mountHeroCommandLayout(
@@ -288,9 +290,14 @@ export function mountHeroCommandLayout(
 
     const contentFloor = (showTag ? tagY + TAG_H : subY + SUB_H) + 4;
     const cap = rowY - BONUS_GAP_ABOVE_RAIL - BONUS_BAND_H;
-    let bonusLineY = Math.min(cap, progLblY - 14);
+    const bonusLineGap = 15;
+    const bonusBlockH = bonusLineGap + 12;
+    let bonusLineY = Math.min(cap, progLblY - 4 - bonusBlockH);
     if (bonusLineY < contentFloor) bonusLineY = contentFloor;
-    if (bonusLineY >= progLblY - 1) bonusLineY = Math.max(0, progLblY - 16);
+    if (bonusLineY + bonusBlockH > progLblY - 2) {
+        bonusLineY = Math.max(contentFloor, progLblY - 4 - bonusBlockH);
+    }
+    const bonusSecondLineY = bonusLineY + bonusLineGap;
 
     return {
         flyCta: fly,
@@ -302,5 +309,6 @@ export function mountHeroCommandLayout(
         heroGlow,
         bottomRailY: rowY,
         bonusLineY,
+        bonusSecondLineY,
     };
 }

@@ -1023,7 +1023,7 @@ export function buildMissionList(
     const rowH =
         rowHOverride ??
         Math.max(96, Math.floor(U * 11.5));
-    const gap = GRID;
+    const gap = 12;
 
     function maxScroll(): number {
         const total = scrollLayer.children.length * (rowH + gap) - gap;

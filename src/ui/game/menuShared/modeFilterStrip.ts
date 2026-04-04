@@ -36,6 +36,7 @@ export const MODE_FILTER_TAB_THEME = {
 } as const;
 
 export const MODE_FILTER_LABELS = ['Missions', 'Routes', 'Training', 'Fleet', 'Events'] as const;
+/** Legacy abbreviations — prefer full labels + fitLabelToWidth (FIX D). */
 export const MODE_FILTER_LABELS_SHORT = ['MISS.', 'ROUTE', 'TRAIN', 'FLEET', 'EVNT'] as const;
 
 function pressTab(root: Container, onUp: () => void): void {
@@ -106,9 +107,8 @@ export function buildModeFilterStrip(
     const tabW = Math.floor((cw - innerPad * 2 - tabGap * (n - 1)) / n);
     const innerW = tabW - (channelGlow ? 4 : 6);
     const innerH = H - (channelGlow ? 12 : 16);
-    const useShort = tabW < 88;
-    const labels = useShort ? MODE_FILTER_LABELS_SHORT : MODE_FILTER_LABELS;
-    const tabFontSize = useShort ? 9 : 11;
+    const labels = MODE_FILTER_LABELS;
+    const tabFontSize = tabW < 72 ? 8 : tabW < 90 ? 9 : 11;
 
     const useK9 =
         innerW >= 116 && !!getVelocityUiTexture('button_primary') && !!getVelocityUiTexture('button_secondary');
@@ -128,7 +128,7 @@ export function buildModeFilterStrip(
                     fontSize: Math.min(fs, capFs),
                     fontWeight: on ? '800' : '700',
                     fill: on ? MODE_FILTER_TAB_THEME.tabActive.text : MODE_FILTER_TAB_THEME.tabIdle.text,
-                    letterSpacing: useShort ? 0.5 : 0.6,
+                    letterSpacing: tabFontSize <= 9 ? 0.35 : 0.5,
                     align: 'center',
                     dropShadow: on ? { alpha: 0.5, blur: 2, color: 0x000000, distance: 1 } : undefined,
                 }),
