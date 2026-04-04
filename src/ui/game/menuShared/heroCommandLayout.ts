@@ -43,8 +43,8 @@ const TAG_H = 14;
 const GAP_STACK = 5;
 const RIGHT_EMBLEM = 68;
 const CLASS_ICON_LANE = 30;
-const CLASS_BADGE_RESERVE = 4;
-const CLASS_BADGE_SIZE = 22;
+const BONUS_BAND_H = 14;
+const BONUS_GAP_ABOVE_RAIL = 6;
 
 export type HeroCommandMountResult = {
     flyCta: Container | null;
@@ -117,18 +117,42 @@ export function mountHeroCommandLayout(
     clsW = Math.min(Math.floor(rowBudget * 0.58), clsW);
     flyW = rowBudget - clsW - GRID;
 
-    const title = new Text({
-        text: 'VELOCITY',
-        style: new TextStyle({
-            fontFamily,
-            fontSize: 32,
-            fontWeight: '800',
-            fill: colors.text,
-            letterSpacing: 3,
-            dropShadow: { alpha: 0.6, blur: 5, color: colors.cyan, distance: 0 },
-            stroke: { color: 0x000000, width: 1 },
-        }),
-    });
+    const titleMaxW = Math.max(100, leftTextMax - ox - 4);
+    let titleFs = 32;
+    let title: Text | null = null;
+    for (; titleFs >= 22; titleFs -= 2) {
+        const t2 = new Text({
+            text: 'VELOCITY',
+            style: new TextStyle({
+                fontFamily,
+                fontSize: titleFs,
+                fontWeight: '800',
+                fill: colors.text,
+                letterSpacing: titleFs >= 28 ? 3 : 2,
+                dropShadow: { alpha: 0.6, blur: 5, color: colors.cyan, distance: 0 },
+                stroke: { color: 0x000000, width: 1 },
+            }),
+        });
+        if (t2.width <= titleMaxW) {
+            title = t2;
+            break;
+        }
+        t2.destroy();
+    }
+    if (!title) {
+        title = new Text({
+            text: 'VELOCITY',
+            style: new TextStyle({
+                fontFamily,
+                fontSize: 22,
+                fontWeight: '800',
+                fill: colors.text,
+                letterSpacing: 2,
+                dropShadow: { alpha: 0.6, blur: 5, color: colors.cyan, distance: 0 },
+                stroke: { color: 0x000000, width: 1 },
+            }),
+        });
+    }
     title.position.set(ox, 0);
     content.addChild(title);
 
@@ -161,6 +185,18 @@ export function mountHeroCommandLayout(
     }
     content.addChild(rg);
 
+    const rankPrestige = getVelocityCustomTexture('rank_prestige');
+    if (rankPrestige) {
+        const rs = new Sprite(rankPrestige);
+        rs.anchor.set(0.5, 0.5);
+        const badgeR = 14;
+        rs.width = badgeR * 2;
+        rs.height = badgeR * 2;
+        rs.position.set(emblemCx + emblemR * 0.52, emblemCy - emblemR * 0.52);
+        rs.alpha = 0.92;
+        content.addChild(rs);
+    }
+
     const rewardShimmer = new Graphics();
     rewardShimmer.position.set(emblemCx - emblemR, emblemCy - emblemR);
     content.addChild(rewardShimmer);
@@ -178,7 +214,7 @@ export function mountHeroCommandLayout(
             if (y > motifBottom) return;
             streakMot.moveTo(sx, y);
             streakMot.lineTo(Math.min(sx + (len as number), motifRight), y - (len as number) * 0.04);
-            streakMot.stroke({ color: colors.cyan, width: 1, alpha: a as number });
+            streakMot.stroke({ color: colors.cyan, width: 1, alpha: (a as number) * 0.75 });
         });
     }
     content.addChild(streakMot);
@@ -234,8 +270,7 @@ export function mountHeroCommandLayout(
     cls.addChild(wg);
 
     const textX = CLASS_ICON_LANE;
-    const badgeW = CLASS_BADGE_SIZE + CLASS_BADGE_RESERVE;
-    const maxLabelW = Math.max(40, clsW - textX - badgeW);
+    const maxLabelW = Math.max(48, clsW - textX - 10);
     const rankUpper = rank.toUpperCase();
     let labelText = `CLASS: ${rankUpper}`;
     let clab = new Text({
@@ -259,17 +294,6 @@ export function mountHeroCommandLayout(
     rankGlow.stroke({ color: colors.gold, width: 2, alpha: 0.28 });
     cls.addChild(rankGlow);
 
-    const rankPrestige = getVelocityCustomTexture('rank_prestige');
-    if (rankPrestige) {
-        const rs = new Sprite(rankPrestige);
-        rs.anchor.set(1, 1);
-        rs.width = CLASS_BADGE_SIZE;
-        rs.height = CLASS_BADGE_SIZE;
-        rs.position.set(clsW - CLASS_BADGE_RESERVE, useBtnH - CLASS_BADGE_RESERVE);
-        rs.alpha = 0.88;
-        cls.addChild(rs);
-    }
-
     cls.position.set(ox, rowY);
     content.addChild(cls);
 
@@ -281,7 +305,8 @@ export function mountHeroCommandLayout(
     fly.position.set(flyX, rowY);
     content.addChild(fly);
 
-    const bonusLineY = Math.max(0, rowY - 17);
+    const bonusTop = rowY - BONUS_GAP_ABOVE_RAIL - BONUS_BAND_H;
+    const bonusLineY = Math.max(0, Math.min(bonusTop, progLblY - 4 - BONUS_BAND_H));
 
     return {
         flyCta: fly,

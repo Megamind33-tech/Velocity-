@@ -21,8 +21,8 @@ const TOP_BAR_H = 64;
 const TABS_H = 58;
 const DOCK_H = 84;
 const MIN_LIST_H = 200;
-const MIN_HERO_H = 140;
-const MAX_HERO_H = 198;
+const MIN_HERO_H = 156;
+const MAX_HERO_H = 204;
 
 /**
  * @param contentInnerTop — top of content column (e.g. safeTop + 12)
