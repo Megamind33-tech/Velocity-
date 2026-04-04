@@ -640,27 +640,72 @@ function missionRow(
     const completed = unlocked && level.id < maxUnlocked;
     const elite = level.id >= 18;
 
-    const plate = kenneyRowPanel(cw, rowH);
-    if (plate) root.addChild(plate);
-    else {
+    // ── Card plate — state-differentiated surface ─────────────────────────────
+    if (unlocked) {
+        const plate = kenneyRowPanel(cw, rowH);
+        if (plate) root.addChild(plate);
+        else {
+            const bg = new Graphics();
+            bg.roundRect(0, 0, cw, rowH, 14);
+            bg.fill({ color: C.surface, alpha: 1 });
+            bg.stroke({ color: C.border, width: 1, alpha: 0.5 });
+            root.addChild(bg);
+        }
+    } else if (elite) {
+        // ELITE LOCKED: warm dark — aspirational, premium sealed
         const bg = new Graphics();
         bg.roundRect(0, 0, cw, rowH, 14);
-        bg.fill({ color: C.surface, alpha: 1 });
-        bg.stroke({ color: C.border, width: 1, alpha: 0.5 });
+        bg.fill({ color: 0x0e0c10, alpha: 1 });
+        bg.stroke({ color: C.gold, width: 1, alpha: 0.28 });
+        root.addChild(bg);
+        // Gold top ambient
+        const eg = new Graphics();
+        eg.roundRect(4, 0, cw - 8, 2, 1);
+        eg.fill({ color: C.gold, alpha: 0.14 });
+        root.addChild(eg);
+    } else {
+        // REGULAR LOCKED: cold dark
+        const bg = new Graphics();
+        bg.roundRect(0, 0, cw, rowH, 14);
+        bg.fill({ color: 0x060a10, alpha: 1 });
+        bg.stroke({ color: C.muted, width: 1, alpha: 0.22 });
         root.addChild(bg);
     }
 
     const iconR = 26;
     const icX = 14 + iconR;
     const icY = rowH / 2;
+    // Icon badge — state-specific treatment
     const icBg = new Graphics();
-    icBg.circle(icX, icY, iconR);
-    icBg.fill({ color: C.surface2, alpha: 1 });
-    icBg.stroke({ color: unlocked ? C.cyan : C.muted, width: 2, alpha: unlocked ? 0.55 : 0.4 });
+    if (unlocked) {
+        icBg.circle(icX, icY, iconR);
+        icBg.fill({ color: C.surface2, alpha: 1 });
+        icBg.stroke({ color: elite ? C.gold : C.cyan, width: 2, alpha: 0.55 });
+    } else if (elite) {
+        icBg.circle(icX, icY, iconR);
+        icBg.fill({ color: 0x0a0908, alpha: 1 });
+        icBg.stroke({ color: C.gold, width: 1.5, alpha: 0.40 });
+        icBg.circle(icX, icY, iconR - 6);
+        icBg.stroke({ color: C.gold, width: 1, alpha: 0.15 });
+    } else {
+        icBg.circle(icX, icY, iconR);
+        icBg.fill({ color: 0x060a10, alpha: 1 });
+        icBg.stroke({ color: C.muted, width: 1, alpha: 0.32 });
+        icBg.circle(icX, icY, iconR - 6);
+        icBg.stroke({ color: C.muted, width: 1, alpha: 0.10 });
+    }
     root.addChild(icBg);
     const icGlyph = new Graphics();
     if (unlocked) icoRadar(icGlyph, icX, icY, iconR * 0.55);
-    else icoLockSmall(icGlyph, icX, icY, iconR * 1.1);
+    else {
+        // Lock glyph — gold for elite, muted for regular
+        const lockColor = elite ? C.gold : C.muted;
+        const lockAlpha = elite ? 0.55 : 0.50;
+        icGlyph.roundRect(icX - iconR * 0.22, icY - iconR * 0.02, iconR * 0.44, iconR * 0.30, 3);
+        icGlyph.stroke({ color: lockColor, width: 1.5, alpha: lockAlpha });
+        icGlyph.arc(icX, icY - iconR * 0.14, iconR * 0.14, Math.PI, 0);
+        icGlyph.stroke({ color: lockColor, width: 1.5, alpha: lockAlpha });
+    }
     root.addChild(icGlyph);
 
     const btnW = 100;
