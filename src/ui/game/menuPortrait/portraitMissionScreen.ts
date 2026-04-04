@@ -26,6 +26,7 @@ import {
     drawIconHangar,
     drawIconHome,
     drawIconLock,
+    drawIconLockOpen,
     drawIconMap,
     drawIconProfile,
     drawIconRouteNode,
@@ -1028,6 +1029,17 @@ function buildMissionCardPortrait(
         alpha: 0.34,
     });
     root.addChild(actionDock);
+    if (unlocked) {
+        const unlockSig = new Graphics();
+        drawIconLockOpen(
+            unlockSig,
+            bx - 14,
+            by + Math.floor(btnH * 0.5),
+            9,
+            { color: primaryState === 'claimable' ? P_COLORS.accentGold : P_COLORS.accentCyanSoft, width: 1.5, alpha: 0.72 },
+        );
+        root.addChild(unlockSig);
+    }
 
     if (unlocked) {
         const btn =
@@ -1090,45 +1102,11 @@ function buildLockedButton(w: number, h: number, elite: boolean): Container {
     hatch.stroke({ color: P_COLORS.stateLocked, width: 1, alpha: 0.07 });
     c.addChild(hatch);
 
-    // ── Lock icon — CENTERED at top 38% of button height ─────────────────────
-    // Vertical stack: icon top / label bottom — NO side-by-side layout that overflows
+    // ── Lock icon — icon-first locked signal (text removed for fit/readability) ─────────
     const lockG = new Graphics();
-    drawIconLock(lockG, w / 2, Math.floor(h * 0.36), 10,
+    drawIconLock(lockG, w / 2, Math.floor(h * 0.50), 12,
         { color: elite ? P_COLORS.accentGold : P_COLORS.stateLocked, width: 1.5, alpha: elite ? 0.68 : 0.60 });
     c.addChild(lockG);
-
-    // ── "LOCKED" — SINGLE dominant state, anchor(0.5, 0.5) at bottom of button
-    // Centered horizontally: no truncation possible at any button width ≥ 60px
-    const t = new Text({
-        text: elite ? 'SEALED' : 'LOCKED',
-        style: new TextStyle({
-            fontFamily: FONT,
-            fontSize: 9,
-            fontWeight: '700',
-            fill: elite ? P_COLORS.accentGoldSoft : P_COLORS.stateLocked,
-            letterSpacing: 2.0,
-        }),
-    });
-    t.anchor.set(0.5, 0.5);
-    t.position.set(w / 2, Math.floor(h * 0.70));
-    c.addChild(t);
-    const sub = new Text({
-        text: elite ? 'PREMIUM ROUTE' : 'COMPLETE PREV',
-        style: new TextStyle({
-            fontFamily: FONT,
-            fontSize: 7,
-            fontWeight: '600',
-            fill: elite ? 0x7d6440 : 0x596675,
-            letterSpacing: 0.6,
-        }),
-    });
-    sub.anchor.set(0.5, 0.5);
-    sub.position.set(w / 2, Math.floor(h * 0.86));
-    c.addChild(sub);
-
-    // ── NO helper text inside the button ─────────────────────────────────────
-    // "COMPLETE PREV." caused state collision and truncation.
-    // State hierarchy: ONE dominant label per badge zone.
     return c;
 }
 
