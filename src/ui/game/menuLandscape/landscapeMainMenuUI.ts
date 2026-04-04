@@ -46,6 +46,18 @@ const C = {
     gold:     GAME_COLORS.accent_gold,
 };
 
+const SURFACE_ROLE = {
+    tabActive: { tint: 0xb8e8ff, text: 0xf8fbff },
+    tabIdle: { tint: 0xe8eef5, text: C.muted },
+    missionPlayable: { rim: C.cyan, accent: 0x2df0d0 },
+    missionCompleted: { rim: 0x62b9ff, accent: 0x8fd9ff },
+    missionClaimable: { rim: C.gold, accent: 0xffef9d },
+    missionLocked: { accent: 0x8194ac },
+    missionEliteLocked: { accent: 0xf0c96a },
+    bottomNavActive: { tint: C.cyan, label: C.cyan },
+    bottomNavIdle: { tint: C.muted, label: C.muted },
+} as const;
+
 function style(
     size: number,
     weight: '400' | '500' | '600' | '700' | '800',
@@ -554,6 +566,12 @@ export function buildModeTabs(
         const b = new Container();
         b.position.set(innerPad + i * tabW, 6);
         const idx = i;
+        const activePlate = new Graphics();
+        activePlate.visible = false;
+        activePlate.roundRect(3, 2, tabW - 12, H - 16, 10);
+        activePlate.fill({ color: 0x0f2632, alpha: 0.72 });
+        activePlate.stroke({ color: C.cyan, width: 1.2, alpha: 0.45 });
+        b.addChild(activePlate);
 
         if (useKenney) {
             const spr = new NineSliceSprite({
@@ -574,7 +592,7 @@ export function buildModeTabs(
             b.addChild(gr);
         }
 
-        const t = new Text({ text: TAB_LABELS[i], style: style(13, '600', C.muted) });
+        const t = new Text({ text: TAB_LABELS[i], style: style(13, '600', SURFACE_ROLE.tabIdle.text) });
         t.anchor.set(0.5);
         t.position.set((tabW - 6) / 2, (H - 12) / 2);
         b.addChild(t);
@@ -591,8 +609,10 @@ export function buildModeTabs(
 
     function paint(active: number): void {
         buttons.forEach((b, i) => {
-            const tx = b.children[1] as Text;
-            const bg0 = b.children[0];
+            const plate = b.children[0] as Graphics;
+            const bg0 = b.children[1];
+            const tx = b.children[2] as Text;
+            plate.visible = i === active;
             if (useKenney && bg0 instanceof NineSliceSprite) {
                 const on = i === active;
                 const k = on ? 'button_primary' : 'button_secondary';
@@ -601,9 +621,9 @@ export function buildModeTabs(
                 bg0.rightWidth = TAB_BS.R;
                 bg0.topHeight = TAB_BS.T;
                 bg0.bottomHeight = TAB_BS.B;
-                bg0.tint = on ? 0xb8e8ff : 0xe8eef5;
+                bg0.tint = on ? SURFACE_ROLE.tabActive.tint : SURFACE_ROLE.tabIdle.tint;
                 bg0.alpha = on ? 0.96 : 0.9;
-                tx.style = on ? style(13, '800', 0xf8fbff) : style(13, '600', C.muted);
+                tx.style = on ? style(13, '800', SURFACE_ROLE.tabActive.text) : style(13, '600', SURFACE_ROLE.tabIdle.text);
             } else if (bg0 instanceof Graphics) {
                 bg0.clear();
                 bg0.roundRect(0, 0, tabW - 6, H - 12, 10);
@@ -611,7 +631,7 @@ export function buildModeTabs(
                     color: i === active ? C.cyan : 0x0a121c,
                     alpha: i === active ? 0.92 : 0.8,
                 });
-                tx.style = i === active ? style(13, '800', 0x001810) : style(13, '600', C.muted);
+                tx.style = i === active ? style(13, '800', SURFACE_ROLE.tabActive.text) : style(13, '600', SURFACE_ROLE.tabIdle.text);
             }
         });
     }
@@ -638,10 +658,29 @@ function missionRow(
     const root = new Container();
     const unlocked = isLevelUnlocked(level.id);
     const completed = unlocked && level.id < maxUnlocked;
+    const claimable = unlocked && level.id === maxUnlocked;
     const elite = level.id >= 18;
+    const state: 'claimable' | 'playable' | 'completed' | 'locked' | 'elite_locked' =
+        claimable ? 'claimable' : unlocked ? (completed ? 'completed' : 'playable') : elite ? 'elite_locked' : 'locked';
 
     // ── Card plate — state-differentiated surface ─────────────────────────────
-    if (unlocked) {
+    if (state === 'claimable') {
+        const plate = kenneyRowPanel(cw, rowH);
+        if (plate) {
+            plate.alpha = 0.96;
+            root.addChild(plate);
+        } else {
+            const bg = new Graphics();
+            bg.roundRect(0, 0, cw, rowH, 14);
+            bg.fill({ color: 0x16120d, alpha: 1 });
+            bg.stroke({ color: SURFACE_ROLE.missionClaimable.rim, width: 1.6, alpha: 0.64 });
+            root.addChild(bg);
+        }
+        const crown = new Graphics();
+        crown.roundRect(5, 0, cw - 10, 3, 1);
+        crown.fill({ color: SURFACE_ROLE.missionClaimable.rim, alpha: 0.55 });
+        root.addChild(crown);
+    } else if (unlocked) {
         const plate = kenneyRowPanel(cw, rowH);
         if (plate) root.addChild(plate);
         else {
@@ -677,10 +716,18 @@ function missionRow(
     const icY = rowH / 2;
     // Icon badge — state-specific treatment
     const icBg = new Graphics();
-    if (unlocked) {
+    if (state === 'claimable') {
+        icBg.circle(icX, icY, iconR);
+        icBg.fill({ color: 0x13100c, alpha: 1 });
+        icBg.stroke({ color: SURFACE_ROLE.missionClaimable.rim, width: 2, alpha: 0.68 });
+    } else if (unlocked) {
         icBg.circle(icX, icY, iconR);
         icBg.fill({ color: C.surface2, alpha: 1 });
-        icBg.stroke({ color: elite ? C.gold : C.cyan, width: 2, alpha: 0.55 });
+        icBg.stroke({
+            color: completed ? SURFACE_ROLE.missionCompleted.rim : elite ? C.gold : SURFACE_ROLE.missionPlayable.rim,
+            width: 2,
+            alpha: 0.55,
+        });
     } else if (elite) {
         icBg.circle(icX, icY, iconR);
         icBg.fill({ color: 0x0a0908, alpha: 1 });
@@ -715,7 +762,7 @@ function missionRow(
 
     const title = new Text({
         text: trunc(level.name, Math.max(8, Math.floor(textMax / 7.5))),
-        style: style(17, '700', unlocked ? C.text : C.muted),
+        style: style(17, '700', unlocked ? C.text : state === 'elite_locked' ? 0xc7b793 : C.muted),
     });
     title.position.set(tx, 12);
     root.addChild(title);
@@ -724,30 +771,64 @@ function missionRow(
         level.learningObjectives[0]?.hint ?? `${level.gateCount} gates`;
     const sub = new Text({
         text: trunc(subHint, Math.max(8, Math.floor(textMax / 6))),
-        style: style(13, '500', C.muted),
+        style: style(13, '500', state === 'claimable' ? 0xe8d7a7 : C.muted),
     });
     sub.position.set(tx, 34);
     root.addChild(sub);
 
     // Meta badge: below subtitle, left-anchored — avoids title collision
-    let metaStr = elite ? '★ ELITE' : completed ? '✓ CLEARED' : unlocked ? '⬡ REWARD' : '';
+    let metaStr = '';
+    if (state === 'claimable') metaStr = '★ READY TO CLAIM';
+    else if (state === 'completed') metaStr = '✓ CLEARED';
+    else if (state === 'playable') metaStr = '⬡ PLAYABLE';
+    else if (state === 'elite_locked') metaStr = '★ ELITE SEALED';
     if (metaStr) {
         const meta = new Text({
             text: metaStr,
-            style: style(10, '700', elite ? C.gold : completed ? C.cyan : C.muted),
+            style: style(
+                10,
+                '700',
+                state === 'claimable'
+                    ? SURFACE_ROLE.missionClaimable.accent
+                    : state === 'completed'
+                      ? SURFACE_ROLE.missionCompleted.accent
+                      : state === 'playable'
+                        ? SURFACE_ROLE.missionPlayable.accent
+                        : SURFACE_ROLE.missionEliteLocked.accent,
+            ),
         });
         meta.anchor.set(0, 0);
         meta.position.set(tx, 34 + 16);
         root.addChild(meta);
     }
+    const reward = new Text({
+        text:
+            state === 'elite_locked'
+                ? `Unlock at Route ${level.id - 1} · Reward +${Math.max(140, level.gateCount * 24)}`
+                : `Reward +${Math.max(90, level.gateCount * 18)} Signal`,
+        style: style(
+            10,
+            '700',
+            state === 'claimable'
+                ? SURFACE_ROLE.missionClaimable.accent
+                : state === 'locked'
+                  ? SURFACE_ROLE.missionLocked.accent
+                  : state === 'elite_locked'
+                    ? SURFACE_ROLE.missionEliteLocked.accent
+                    : SURFACE_ROLE.missionPlayable.accent,
+            0.8,
+        ),
+    });
+    reward.position.set(tx, rowH - 18);
+    root.addChild(reward);
 
     const bx = cw - btnW - 12;
     const by = (rowH - btnH) / 2;
 
     if (unlocked) {
         const btn =
-            kenneyButton('PLAY', btnW, btnH, 'button_accent', true, () => onPlay(level.id)) ??
-            fallbackPrimaryBtn(btnW, btnH, 'PLAY', () => onPlay(level.id));
+            kenneyButton(state === 'claimable' ? 'CLAIM' : 'PLAY', btnW, btnH, 'button_accent', true, () => onPlay(level.id)) ??
+            fallbackPrimaryBtn(btnW, btnH, state === 'claimable' ? 'CLAIM' : 'PLAY', () => onPlay(level.id));
         btn.position.set(bx, by);
         root.addChild(btn);
     } else {
@@ -782,7 +863,7 @@ function missionRow(
             lock.addChild(lb);
             lock.addChild(hatch);
         }
-        const lt = new Text({ text: 'LOCKED', style: style(10, '700', 0x445566) });
+        const lt = new Text({ text: elite ? 'SEALED' : 'LOCKED', style: style(10, '700', 0x637791) });
         lt.anchor.set(0.5);
         lt.position.set(btnW / 2, btnH / 2);
         lock.addChild(lt);
@@ -899,6 +980,8 @@ export function buildBottomNavDock(
     const n = items.length;
     const slotW = cw / n;
     const labels: Text[] = [];
+    const glyphs: Graphics[] = [];
+    const activePlates: Graphics[] = [];
 
     items.forEach((it, i) => {
         const slot = new Container();
@@ -906,12 +989,21 @@ export function buildBottomNavDock(
         slot.eventMode = 'static';
         slot.cursor = 'pointer';
 
+        const activeBg = new Graphics();
+        activeBg.visible = false;
+        activeBg.roundRect(6, 6, slotW - 12, H - 12, 12);
+        activeBg.fill({ color: 0x0f2430, alpha: 0.55 });
+        activeBg.stroke({ color: C.cyan, width: 1, alpha: 0.5 });
+        slot.addChild(activeBg);
+        activePlates.push(activeBg);
+
         const cx = slotW / 2;
         const vg = new Graphics();
         it.vec(vg, cx, H / 2 - 8, 22);
         slot.addChild(vg);
+        glyphs.push(vg);
 
-        const t = new Text({ text: it.label, style: style(11, '600', C.muted) });
+        const t = new Text({ text: it.label, style: style(11, '600', SURFACE_ROLE.bottomNavIdle.label) });
         t.anchor.set(0.5, 0);
         t.position.set(cx, H / 2 + 14);
         slot.addChild(t);
@@ -923,7 +1015,12 @@ export function buildBottomNavDock(
 
     function setActive(i: number): void {
         labels.forEach((t, idx) => {
-            t.style = idx === i ? style(11, '800', C.cyan) : style(11, '600', C.muted);
+            const on = idx === i;
+            t.style = on
+                ? style(11, '800', SURFACE_ROLE.bottomNavActive.label)
+                : style(11, '600', SURFACE_ROLE.bottomNavIdle.label);
+            glyphs[idx].tint = on ? SURFACE_ROLE.bottomNavActive.tint : SURFACE_ROLE.bottomNavIdle.tint;
+            activePlates[idx].visible = on;
         });
     }
     setActive(0);
