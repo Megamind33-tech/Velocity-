@@ -2,6 +2,20 @@
 
 Primary UI family uses **Kenney** assets already bundled under `public/kenney-ui-pack/` (CC0).
 
+## Kenney UI Pack — Sci-Fi (`public/kenney-ui-scifi/`, CC0)
+
+Mirrored subset from OpenGameArt: [UI Pack - Sci-Fi](https://opengameart.org/content/ui-pack-sci-fi) (same Kenney CC0 release as kenney.nl). Used for **premium chrome** on the main menu:
+
+- **Mode tab strip** — `scifi_panel_rectangle_screws` track; tab cells use `scifi_button_rectangle` / `scifi_button_rectangle_depth`
+- **Mission list bay** — layered `scifi_panel_glass` + optional `scifi_panel_glass_notches` + `scifi_panel_glass_screws`, top `panel_glass_notches_top` band + centered `panel_glass_tab_blade` title rail
+- **Mission / event card faces** — glass fill + optional `scifi_panel_glass_notches` mid-layer + `scifi_panel_rectangle_screws` frame (role-tinted)
+- **Mode tab track** — optional `scifi_panel_glass_notches` over screw plate
+- **Hero + modals** — `createKenneyFramedPanelWithContent` uses sci-fi glass + notches + screw chrome when textures load (fallback: classic Kenney `panel_fill` / `panel_frame`)
+- **Dock underlay** — `scifi_panel_rectangle_screws` (replaces flat `panel_fill` when loaded)
+- **Missions dock icon** — `crosshair_color_a.png` from the same pack (clear target read at small size)
+
+`License.txt` in that folder is copied from the original zip.
+
 ## Command dock icons (`public/oga-dock-icons/`, CC0 — OpenGameArt.org)
 
 Normalized **128×128** PNGs (cropped + scaled from originals). Dock code uses **light tint** on sprites so full-color art stays readable (see `menuIconPreserveColor` in `commandDock.ts`).
@@ -9,11 +23,12 @@ Normalized **128×128** PNGs (cropped + scaled from originals). Dock code uses *
 | File | OpenGameArt | Author | Original |
 |------|-------------|--------|----------|
 | `home.png` | [2D House PNG + SVG](https://opengameart.org/content/2d-house-png-svg) | Belohlavek | `house_big.png` |
-| `missions_target.png` | [Crosshairs and Reticles](https://opengameart.org/content/crosshairs-and-reticles) | hc | `crosshairs.zip` → `crosshair1.png` |
 | `hangar_plane.png` | [Free Plane Sprite](https://opengameart.org/content/free-plane-sprite) | pzUH | `png/Plane/Fly (1).png` |
 | `store.png` | [Store button (Shop button icon)](https://opengameart.org/content/store-button-shop-button-icon) | ElSantoTiago | `store.svg` (rasterized) |
 
-`LICENSE-crosshairs-hc.txt` is from the crosshairs zip; other entries are CC0 per OGA.
+**Missions** dock glyph: Kenney Sci-Fi pack (`kenney-ui-scifi/…/crosshair_color_a.png`) — see Sci-Fi section above.
+
+All listed OGA entries are CC0 per their pages.
 
 ## Families wired by code
 - `Kenney UI Pack` (`PNG/Blue|Grey|Yellow|Red|Extra`) via `src/ui/game/velocityUiArt.ts`
