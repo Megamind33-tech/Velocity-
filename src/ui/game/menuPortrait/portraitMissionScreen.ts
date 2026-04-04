@@ -22,6 +22,8 @@ import { VELOCITY_UI_SLICE } from '../velocityUiSlice';
 
 const PORTRAIT_TAB_BS = VELOCITY_UI_SLICE.button;
 import { kenneyButton, kenneyDockBar, kenneyMissionCardFace, kenneyProgressBar } from '../menuLandscape/kenneyLandscapeWidgets';
+import { buildCommandDock, type CommandDockPalette } from '../menuShared/commandDock';
+import { buildModeFilterStrip } from '../menuShared/modeFilterStrip';
 import {
     computeCardVerticalBands,
     fitBodyText,
@@ -697,156 +699,21 @@ function buildFallbackFly(w: number, h: number, onFly: () => void): Container {
     return c;
 }
 
-const TAB_LABELS       = ['Missions', 'Routes', 'Training', 'Fleet', 'Events'] as const;
-/** Short versions used when tabW < 88 — same read, less ink */
-const TAB_LABELS_SHORT = ['MISS.', 'ROUTE', 'TRAIN', 'FLEET', 'EVNT'] as const;
-
 function buildSegmentTabs(
     cw: number,
     onSelect: (i: number) => void,
 ): { root: Container; setActive: (i: number) => void; tabGlows: Graphics[] } {
-    const H = 50;
-    const root = new Container();
-
-    // Track background — vector only (panel fill would also corrupt at this width)
-    const track = new Graphics();
-    track.roundRect(0, 0, cw, H, P_RADIUS.chip);
-    track.fill({ color: P_COLORS.bgBase, alpha: 1 });
-    track.stroke({ color: P_COLORS.strokeSubtle, width: 1, alpha: 0.6 });
-    root.addChild(track);
-
-    const n = TAB_LABELS.length;
-    const pad = P_SPACE.s6;
-    const tabW = Math.floor((cw - pad * 2) / n);
-    const innerW = tabW - 4;
-    const innerH = H - 12;
-
-    // Kenney nine-slice safe ONLY when innerW ≥ 116 (56+56 corner budget)
-    const useK9 = innerW >= 116 &&
-        !!getVelocityUiTexture('button_primary') &&
-        !!getVelocityUiTexture('button_secondary');
-
-    // Abbreviated labels when tabs are narrow
-    const useShort = tabW < 88;
-    const labels = useShort ? TAB_LABELS_SHORT : TAB_LABELS;
-    // Font size: scale down when using short labels to guarantee fit
-    const tabFontSize = useShort ? 9 : 10;
-
-    const tabGlows: Graphics[] = [];
-    const buttons: Container[] = [];
-
-    for (let i = 0; i < n; i++) {
-        const b = new Container();
-        b.position.set(pad + i * tabW, 6);
-
-        // Glow stroke (inactive = transparent, active = visible)
-        const glow = new Graphics();
-        tabGlows.push(glow);
-        b.addChild(glow);
-
-        // Background — nine-slice if safe, otherwise vector Graphics
-        let bg: NineSliceSprite | Graphics;
-        if (useK9) {
-            const spr = new NineSliceSprite({
-                texture: getVelocityUiTexture('button_secondary')!,
-                leftWidth: PORTRAIT_TAB_BS.L,
-                rightWidth: PORTRAIT_TAB_BS.R,
-                topHeight: PORTRAIT_TAB_BS.T,
-                bottomHeight: PORTRAIT_TAB_BS.B,
-                width: innerW,
-                height: innerH,
-            });
-            spr.alpha = 0.82;
-            spr.tint = 0xd8e4f2;
-            b.addChild(spr);
-            bg = spr;
-        } else {
-            const gr = new Graphics();
-            gr.roundRect(0, 0, innerW, innerH, 8);
-            gr.fill({ color: P_COLORS.bgPanel, alpha: 1 });
-            gr.stroke({ color: P_COLORS.strokeSubtle, width: 1, alpha: 0.5 });
-            b.addChild(gr);
-            bg = gr;
-        }
-
-        const t = new Text({
-            text: labels[i].toUpperCase(),
-            style: new TextStyle({
-                fontFamily: FONT,
-                fontSize: tabFontSize,
-                fontWeight: '700',
-                fill: P_COLORS.textSecondary,
-                letterSpacing: useShort ? 0.5 : 0.8,
-                align: 'center',
-            }),
-        });
-        t.anchor.set(0.5);
-        t.position.set(innerW / 2, innerH / 2);
-        b.addChild(t);
-
-        const idx = i;
-        b.eventMode = 'static';
-        b.cursor = 'pointer';
-        pressable(b, () => {
-            onSelect(idx);
-            paint(idx);
-        });
-        buttons.push(b);
-        root.addChild(b);
-    }
-
-    function paint(active: number): void {
-        buttons.forEach((b, i) => {
-            const on = i === active;
-
-            // Glow ring for active tab
-            const gw = tabGlows[i];
-            gw.clear();
-            if (on) {
-                gw.roundRect(0, 0, innerW, innerH, 8);
-                gw.stroke({ color: P_COLORS.accentCyan, width: 2, alpha: 0.65 });
-                // Bottom indicator strip
-                gw.roundRect(innerW * 0.2, innerH - 3, innerW * 0.6, 2, 1);
-                gw.fill({ color: P_COLORS.accentCyan, alpha: 0.9 });
-            }
-
-            // Background surface
-            const mid = b.children[1]; // glow=0, bg=1, text=2
-            if (mid instanceof NineSliceSprite) {
-                const k = on ? 'button_primary' : 'button_secondary';
-                mid.texture = getVelocityUiTexture(k)!;
-                mid.tint   = on ? 0xa8d8f8 : 0xd8e4f2;
-                mid.alpha  = on ? 1.0 : 0.78;
-            } else if (mid instanceof Graphics) {
-                mid.clear();
-                mid.roundRect(0, 0, innerW, innerH, 8);
-                if (on) {
-                    mid.fill({ color: P_COLORS.accentCyan, alpha: 0.18 });
-                    mid.stroke({ color: P_COLORS.strokeActive, width: 1.5, alpha: 0.85 });
-                } else {
-                    mid.fill({ color: P_COLORS.bgPanel, alpha: 0.85 });
-                    mid.stroke({ color: P_COLORS.strokeSubtle, width: 1, alpha: 0.4 });
-                }
-            }
-
-            // Text
-            const tx = b.children[2] as Text;
-            tx.style = new TextStyle({
-                fontFamily: FONT,
-                fontSize: on ? tabFontSize + 1 : tabFontSize,
-                fontWeight: on ? '800' : '600',
-                fill: on ? P_COLORS.textPrimary : P_COLORS.textMuted,
-                letterSpacing: useShort ? 0.5 : 0.8,
-                align: 'center',
-                dropShadow: on ? { alpha: 0.5, blur: 2, color: 0x000000, distance: 1 } : undefined,
-            });
-            tx.anchor.set(0.5);
-            tx.position.set(innerW / 2, innerH / 2);
-        });
-    }
-
-    paint(0);
-    return { root, setActive: paint, tabGlows };
+    const strip = buildModeFilterStrip(cw, 50, FONT, onSelect, {
+        useKenneyTrack: true,
+        channelGlow: true,
+        vectorTrack: {
+            fill: P_COLORS.bgBase,
+            stroke: P_COLORS.strokeSubtle,
+            strokeAlpha: 0.6,
+            cornerRadius: P_RADIUS.chip,
+        },
+    });
+    return { root: strip.root, setActive: strip.setActive, tabGlows: strip.tabGlows };
 }
 
 /** Locked / elite-locked — Kenney card face + banded typography (no floating Y positions). */
@@ -1404,154 +1271,57 @@ function buildBottomDockPortrait(
     onHome: () => void,
     navIndexBySlot?: (slot: number) => void,
 ): { root: Container; setActive: (i: number) => void; dockCradles: Graphics[]; slotContainers: Container[] } {
-    const H = 76;
-    const root = new Container();
+    const H = 84;
+    const palette: CommandDockPalette = {
+        dockDeck: P_COLORS.dockDeck,
+        dockDeckRim: P_COLORS.dockDeckRim,
+        dockDeckTop: P_COLORS.dockDeckTop,
+        dockChannel: P_COLORS.dockChannel,
+        dockBolt: P_COLORS.dockBolt,
+        dockCellIdle: P_COLORS.dockCellIdle,
+        dockCellIdleRim: P_COLORS.dockCellIdleRim,
+        dockCellActive: P_COLORS.dockCellActive,
+        dockCellActiveRim: P_COLORS.dockCellActiveRim,
+        accentCyan: P_COLORS.accentCyan,
+        inactiveIconTint: 0xa8b4c4,
+        labelIdle: 0x4a5666,
+    };
     const kUnder = kenneyDockBar(cw, H);
-    if (kUnder) {
-        kUnder.alpha = 0.52;
-        root.addChild(kUnder);
-    }
-    const deck = new Graphics();
-    deck.roundRect(0, 0, cw, H, 14);
-    deck.fill({ color: P_COLORS.dockDeck, alpha: 1 });
-    deck.stroke({ color: P_COLORS.dockDeckRim, width: 1.5, alpha: 0.85 });
-    root.addChild(deck);
-    const deckTop = new Graphics();
-    deckTop.roundRect(2, 2, cw - 4, Math.floor(H * 0.42), 11);
-    deckTop.fill({ color: P_COLORS.dockDeckTop, alpha: 0.35 });
-    root.addChild(deckTop);
-    const bevel = new Graphics();
-    bevel.rect(0, 0, cw, 3);
-    bevel.fill({ color: 0xffffff, alpha: 0.04 });
-    root.addChild(bevel);
-    const rivL = new Graphics();
-    rivL.circle(10, H / 2, 2.5);
-    rivL.fill({ color: P_COLORS.dockBolt, alpha: 0.55 });
-    root.addChild(rivL);
-    const rivR = new Graphics();
-    rivR.circle(cw - 10, H / 2, 2.5);
-    rivR.fill({ color: P_COLORS.dockBolt, alpha: 0.55 });
-    root.addChild(rivR);
-
-    const items: {
-        label: string;
-        onTap: () => void;
-        draw: (g: Graphics, cx: number, cy: number, s: number) => void;
-    }[] = [
-        { label: 'HOME', onTap: () => { navIndexBySlot?.(0); onHome(); }, draw: (g, cx, cy, s) => drawIconHome(g, cx, cy, s) },
-        {
-            label: 'MISSIONS',
-            onTap: () => {
-                navIndexBySlot?.(1);
-                gameFlow().openMissionSelect();
+    return buildCommandDock(
+        cw,
+        H,
+        palette,
+        FONT,
+        [
+            { label: 'HOME', onTap: () => { navIndexBySlot?.(0); onHome(); }, draw: drawIconHome },
+            {
+                label: 'MISSIONS',
+                onTap: () => {
+                    navIndexBySlot?.(1);
+                    gameFlow().openMissionSelect();
+                },
+                draw: drawIconMap,
             },
-            draw: (g, cx, cy, s) => drawIconMap(g, cx, cy, s),
-        },
-        {
-            label: 'HANGAR',
-            onTap: () => {
-                navIndexBySlot?.(2);
-                ui.showScreen('store', true);
+            {
+                label: 'HANGAR',
+                onTap: () => {
+                    navIndexBySlot?.(2);
+                    ui.showScreen('store', true);
+                },
+                draw: drawIconHangar,
             },
-            draw: (g, cx, cy, s) => drawIconHangar(g, cx, cy, s),
-        },
-        {
-            label: 'STORE',
-            onTap: () => {
-                navIndexBySlot?.(3);
-                ui.showScreen('store', true);
+            {
+                label: 'STORE',
+                onTap: () => {
+                    navIndexBySlot?.(3);
+                    ui.showScreen('store', true);
+                },
+                draw: drawIconStore,
             },
-            draw: (g, cx, cy, s) => drawIconStore(g, cx, cy, s),
-        },
-    ];
-
-    const n = items.length;
-    const slotW = cw / n;
-    const margin = 6;
-    const dockCradles: Graphics[] = [];
-    const slotContainers: Container[] = [];
-
-    items.forEach((it, i) => {
-        const slot = new Container();
-        slot.position.set(i * slotW, 0);
-        slot.eventMode = 'static';
-        slot.cursor = 'pointer';
-
-        const cx = slotW / 2;
-        const cellW = slotW - margin * 2;
-
-        const channel = new Graphics();
-        channel.roundRect(margin, 6, cellW, H - 12, 10);
-        channel.fill({ color: P_COLORS.dockChannel, alpha: 0.9 });
-        channel.stroke({ color: 0x000000, width: 1, alpha: 0.35 });
-        slot.addChild(channel);
-
-        const cradle = new Graphics();
-        cradle.roundRect(margin + 3, 9, cellW - 6, H - 22, 9);
-        dockCradles.push(cradle);
-        slot.addChild(cradle);
-
-        const vecG = new Graphics();
-        it.draw(vecG, cx, H * 0.38, 20);
-        slot.addChild(vecG);
-
-        const t = new Text({
-            text: it.label,
-            style: new TextStyle({
-                fontFamily: FONT,
-                fontSize: P_TYPO.dockLabel.fontSize,
-                fontWeight: P_TYPO.dockLabel.fontWeight,
-                fill: 0x5c6b7c,
-                letterSpacing: P_TYPO.dockLabel.letterSpacing,
-            }),
-        });
-        t.anchor.set(0.5, 0);
-        t.position.set(cx, H - 22);
-        slot.addChild(t);
-
-        pressable(slot, it.onTap);
-        root.addChild(slot);
-        slotContainers.push(slot);
-    });
-
-    function setActive(i: number): void {
-        const slotW2 = cw / items.length;
-        dockCradles.forEach((cr, idx) => {
-            const cellW = slotW2 - margin * 2;
-            cr.clear();
-            const on = idx === i;
-            cr.roundRect(margin + 3, 9, cellW - 6, H - 22, 9);
-            cr.fill({
-                color: on ? P_COLORS.dockCellActive : P_COLORS.dockCellIdle,
-                alpha: on ? 0.95 : 0.55,
-            });
-            cr.stroke({
-                color: on ? P_COLORS.dockCellActiveRim : P_COLORS.dockCellIdleRim,
-                width: on ? 2 : 1,
-                alpha: on ? 0.75 : 0.35,
-            });
-            if (on) {
-                cr.roundRect(margin + 8, 11, cellW - 16, 2, 1);
-                cr.fill({ color: P_COLORS.accentCyan, alpha: 0.45 });
-            }
-        });
-        slotContainers.forEach((ch, idx) => {
-            const on = idx === i;
-            const vecG = ch.children[2] as Graphics;
-            vecG.tint = on ? P_COLORS.accentCyan : 0xa8b4c4;
-            const label = ch.children[3] as Text;
-            label.style = new TextStyle({
-                fontFamily: FONT,
-                fontSize: on ? P_TYPO.dockLabelActive.fontSize : P_TYPO.dockLabel.fontSize,
-                fontWeight: on ? P_TYPO.dockLabelActive.fontWeight : P_TYPO.dockLabel.fontWeight,
-                fill: on ? P_COLORS.accentCyan : 0x4a5666,
-                letterSpacing: on ? P_TYPO.dockLabelActive.letterSpacing : P_TYPO.dockLabel.letterSpacing,
-            });
-            ch.position.y = on ? -1 : 0;
-        });
-    }
-    setActive(0);
-    return { root, setActive, dockCradles, slotContainers };
+        ],
+        kUnder,
+        0.52,
+    );
 }
 
 export type BuildPortraitMissionScreenParams = {
@@ -1614,7 +1384,7 @@ export function buildPortraitMissionScreen(p: BuildPortraitMissionScreenParams):
     y += cardH + P_SPACE.s12;
 
     const tabsH = 50;
-    const dockH = 76;
+    const dockH = 84;
     const listH = Math.max(156, sh - y - tabsH - P_SPACE.s10 - dockH - p.safeBottom - P_SPACE.s16);
 
     const list = buildMissionListPortrait(cw, listH, (id) => gameFlow().startLevelWithMicGate?.(id), p.getProgress);
