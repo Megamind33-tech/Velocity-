@@ -20,6 +20,7 @@ import {
 import { buildPortraitMissionScreen, type PortraitMissionBundle } from '../menuPortrait/portraitMissionScreen';
 import { getPilotRank } from '../menuLayoutHelpers';
 import { mountVelocityShell, resizeVelocityShell, type VelocityShellParts } from '../velocityScreenShell';
+import { computeLandscapeMainMenuLayout } from '../menuShared/menuLayoutNative';
 
 const GAP_Y = 12;
 
@@ -132,6 +133,7 @@ export class MainMenuScreen extends BaseGameScreen {
         }
 
         const topY = safe.top + 12;
+        const lay = computeLandscapeMainMenuLayout(sh, safe.bottom, topY);
 
         const prog = getMainMenuProgress();
         const rank = getPilotRank(prog.maxUnlocked);
@@ -145,50 +147,30 @@ export class MainMenuScreen extends BaseGameScreen {
             () => gameFlow().openAchievements?.(),
         );
         this.landscapeTopRefs = topBar.refs;
-        topBar.root.position.set(mx, topY);
+        topBar.root.position.set(mx, lay.topBarY);
         this.content.addChild(topBar.root);
 
-        let y = topY + 64 + GAP_Y;
-
-        const heroH = Math.min(190, Math.max(150, Math.floor(sh * 0.28)));
         const unlocked = getUnlockedLevelIds();
         const firstPlayable = [...unlocked].sort((a, b) => a - b)[0] ?? 1;
 
-        const hero = buildHeroFlightCard(cw, heroH, prog, rank, () => {
+        const hero = buildHeroFlightCard(cw, lay.heroH, prog, rank, () => {
             gameFlow().startLevelWithMicGate?.(firstPlayable);
         });
-        hero.position.set(mx, y);
-
-        const continuityBay = new Graphics();
-        continuityBay.roundRect(
-            mx - 6,
-            y - 8,
-            cw + 12,
-            Math.max(220, sh - (y - 8) - safe.bottom - 76),
-            18,
-        );
-        continuityBay.fill({ color: 0x08111d, alpha: 0.32 });
-        continuityBay.stroke({ color: 0x2f445f, width: 1, alpha: 0.34 });
-        continuityBay.roundRect(mx + 10, y + heroH + 8, cw - 20, 2, 1);
-        continuityBay.fill({ color: 0x7bd8ff, alpha: 0.18 });
-        this.content.addChild(continuityBay);
-
+        hero.position.set(mx, lay.heroY);
         this.content.addChild(hero);
         this._flyBtn = findLabeledDescendant(hero, 'heroFlyCta');
 
-        y += heroH + GAP_Y;
-
-        const tabsY = y;
-        y += 46 + GAP_Y;
-
-        const bottomNavH = 70;
-        const listH = Math.max(160, sh - y - bottomNavH - safe.bottom - 16);
-
-        const bundle = buildMissionList(cw, listH, (levelId) => {
-            gameFlow().startLevelWithMicGate?.(levelId);
-        }, () => getMainMenuProgress());
+        const bundle = buildMissionList(
+            cw,
+            lay.listH,
+            (levelId) => {
+                gameFlow().startLevelWithMicGate?.(levelId);
+            },
+            () => getMainMenuProgress(),
+            lay.rowH,
+        );
         this.missionBundle = bundle;
-        bundle.root.position.set(mx, y);
+        bundle.root.position.set(mx, lay.listY);
         this.content.addChild(bundle.root);
         this.setupListScroll(bundle.root, bundle);
 
@@ -197,12 +179,12 @@ export class MainMenuScreen extends BaseGameScreen {
             this.tabsSetActive(idx);
         });
         this.tabsSetActive = tabs.setActive;
-        tabs.root.position.set(mx, tabsY);
+        tabs.root.position.set(mx, lay.tabsY);
         this.content.addChild(tabs.root);
 
         const dock = buildBottomNavDock(cw, ui, () => this.navSetActive(0), (slot) => this.navSetActive(slot));
         this.navSetActive = dock.setActive;
-        dock.root.position.set(mx, sh - safe.bottom - bottomNavH - 8);
+        dock.root.position.set(mx, lay.dockY);
         this.content.addChild(dock.root);
 
         this._refreshTopBar();

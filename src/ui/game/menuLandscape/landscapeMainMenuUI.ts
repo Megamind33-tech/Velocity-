@@ -28,7 +28,6 @@ import {
     kenneyProgressBar,
     kenneyRowPanel,
     kenneyStatChip,
-    kenneyTabTrack,
 } from './kenneyLandscapeWidgets';
 import {
     computeCardVerticalBands,
@@ -36,6 +35,8 @@ import {
     fitOneLineSmall,
     fitTitleText,
 } from '../menuShared/missionCardLayout';
+import { buildCommandDock, type CommandDockPalette } from '../menuShared/commandDock';
+import { buildModeFilterStrip } from '../menuShared/modeFilterStrip';
 
 const GRID = 8;
 const TAB_BS = VELOCITY_UI_SLICE.button;
@@ -615,118 +616,15 @@ export function buildHeroFlightCard(
     return fb;
 }
 
-const TAB_LABELS = ['Missions', 'Routes', 'Training', 'Fleet', 'Events'] as const;
-
 export function buildModeTabs(
     cw: number,
     onSelect: (index: number) => void,
 ): { root: Container; setActive: (i: number) => void } {
-    const H = 58;
-    const root = new Container();
-    const U = unitFromViewport(cw, H * 5);
-    const track = kenneyTabTrack(cw, H);
-    if (track) root.addChild(track);
-    else {
-        const g = new Graphics();
-        g.roundRect(0, 0, cw, H, 12);
-        g.fill({ color: C.surface2, alpha: 1 });
-        root.addChild(g);
-    }
-
-    const n = TAB_LABELS.length;
-    const innerPad = Math.max(GRID + 2, Math.floor(U));
-    const tabGap = Math.max(4, Math.floor(U * 0.45));
-    const tabW = Math.floor((cw - innerPad * 2 - tabGap * (n - 1)) / n);
-    const buttons: Container[] = [];
-    // Nine-slice needs tabW >= 116px (56+56 corner budget); fall back to vector for narrow
-    const useKenney = tabW >= 116 && !!getVelocityUiTexture('button_primary') && !!getVelocityUiTexture('button_secondary');
-
-    for (let i = 0; i < n; i++) {
-        const b = new Container();
-        b.position.set(innerPad + i * (tabW + tabGap), 7);
-        const idx = i;
-        const idleSlot = new Graphics();
-        idleSlot.roundRect(0, 1, tabW - 6, H - 16, Math.max(10, Math.floor(U * 0.9)));
-        idleSlot.fill({ color: SURFACE_ROLE.tabIdle.face, alpha: 0.85 });
-        idleSlot.stroke({ color: SURFACE_ROLE.tabIdle.rim, width: 1, alpha: 0.7 });
-        b.addChild(idleSlot);
-
-        const activePlate = new Graphics();
-        activePlate.visible = false;
-        activePlate.roundRect(2, 0, tabW - 10, H - 17, Math.max(10, Math.floor(U)));
-        activePlate.fill({ color: SURFACE_ROLE.tabActive.face, alpha: 0.84 });
-        activePlate.stroke({ color: SURFACE_ROLE.tabActive.rim, width: 1.4, alpha: 0.52 });
-        activePlate.roundRect(8, 2, tabW - 22, 2, 1);
-        activePlate.fill({ color: SURFACE_ROLE.tabActive.cue, alpha: 0.65 });
-        b.addChild(activePlate);
-
-        if (useKenney) {
-            const spr = new NineSliceSprite({
-                texture: getVelocityUiTexture('button_secondary')!,
-                leftWidth: TAB_BS.L,
-                rightWidth: TAB_BS.R,
-                topHeight: TAB_BS.T,
-                bottomHeight: TAB_BS.B,
-                width: tabW - 10,
-                height: H - 18,
-            });
-            spr.position.set(2, 0);
-            spr.alpha = 0.86;
-            b.addChild(spr);
-        } else {
-            const gr = new Graphics();
-            gr.roundRect(2, 0, tabW - 10, H - 18, 10);
-            gr.fill({ color: 0x0b131f, alpha: 0.84 });
-            b.addChild(gr);
-        }
-
-        const t = new Text({ text: TAB_LABELS[i], style: style(13, '700', SURFACE_ROLE.tabIdle.text) });
-        t.anchor.set(0.5);
-        t.position.set((tabW - 6) / 2, (H - 18) / 2 + 1);
-        b.addChild(t);
-
-        b.eventMode = 'static';
-        b.cursor = 'pointer';
-        pressable(b, () => {
-            onSelect(idx);
-            paint(idx);
-        });
-        buttons.push(b);
-        root.addChild(b);
-    }
-
-    function paint(active: number): void {
-        buttons.forEach((b, i) => {
-            const idle = b.children[0] as Graphics;
-            const plate = b.children[1] as Graphics;
-            const bg0 = b.children[2];
-            const tx = b.children[3] as Text;
-            const on = i === active;
-            plate.visible = on;
-            idle.alpha = on ? 0.22 : 0.92;
-            if (useKenney && bg0 instanceof NineSliceSprite) {
-                const k = on ? 'button_primary' : 'button_secondary';
-                bg0.texture = getVelocityUiTexture(k)!;
-                bg0.leftWidth = TAB_BS.L;
-                bg0.rightWidth = TAB_BS.R;
-                bg0.topHeight = TAB_BS.T;
-                bg0.bottomHeight = TAB_BS.B;
-                bg0.tint = on ? SURFACE_ROLE.tabActive.tint : SURFACE_ROLE.tabIdle.tint;
-                bg0.alpha = on ? 0.97 : 0.74;
-                tx.style = on ? style(13, '800', SURFACE_ROLE.tabActive.text, 0.2) : style(13, '700', SURFACE_ROLE.tabIdle.text, 0.2);
-            } else if (bg0 instanceof Graphics) {
-                bg0.clear();
-                bg0.roundRect(2, 0, tabW - 10, H - 18, 10);
-                bg0.fill({
-                    color: on ? SURFACE_ROLE.tabActive.face : SURFACE_ROLE.tabIdle.face,
-                    alpha: on ? 0.96 : 0.78,
-                });
-                tx.style = on ? style(13, '800', SURFACE_ROLE.tabActive.text, 0.2) : style(13, '700', SURFACE_ROLE.tabIdle.text, 0.2);
-            }
-        });
-    }
-    paint(0);
-    return { root, setActive: paint };
+    const strip = buildModeFilterStrip(cw, 58, FONT_UI, onSelect, {
+        useKenneyTrack: true,
+        channelGlow: false,
+    });
+    return { root: strip.root, setActive: strip.setActive };
 }
 
 function filterLevels(tab: number): LevelDefinition[] {
@@ -1231,6 +1129,7 @@ export function buildMissionList(
     listH: number,
     onPlayLevel: (id: number) => void,
     getProgress: () => ReturnType<typeof getMainMenuProgress>,
+    rowHOverride?: number,
 ): MissionListBundle {
     const root = new Container();
     const listFrame = new Graphics();
@@ -1253,7 +1152,9 @@ export function buildMissionList(
 
     let scrollY = 0;
     const U = unitFromViewport(cw, listH);
-    const rowH = Math.max(96, Math.floor(U * 11.5));
+    const rowH =
+        rowHOverride ??
+        Math.max(96, Math.floor(U * 11.5));
     const gap = GRID;
 
     function maxScroll(): number {
@@ -1289,133 +1190,49 @@ export function buildBottomNavDock(
     navIndexBySlot?: (slot: number) => void,
 ): { root: Container; setActive: (i: number) => void; labels: Text[] } {
     const H = 84;
-    const root = new Container();
-
+    const palette: CommandDockPalette = {
+        dockDeck: C.dockDeck,
+        dockDeckRim: C.dockDeckRim,
+        dockDeckTop: C.dockDeckTop,
+        dockChannel: C.dockChannel,
+        dockBolt: C.dockBolt,
+        dockCellIdle: C.dockCellIdle,
+        dockCellIdleRim: C.dockCellIdleRim,
+        dockCellActive: C.dockCellActive,
+        dockCellActiveRim: C.dockCellActiveRim,
+        accentCyan: C.cyan,
+        inactiveIconTint: 0xa8b4c4,
+        labelIdle: 0x4a5666,
+    };
     const kUnder = kenneyDockBar(cw, H);
-    if (kUnder) {
-        kUnder.alpha = 0.55;
-        root.addChild(kUnder);
-    }
-
-    const deck = new Graphics();
-    deck.roundRect(0, 0, cw, H, 16);
-    deck.fill({ color: C.dockDeck, alpha: 1 });
-    deck.stroke({ color: C.dockDeckRim, width: 1.5, alpha: 0.85 });
-    root.addChild(deck);
-    const deckTop = new Graphics();
-    deckTop.roundRect(2, 2, cw - 4, Math.floor(H * 0.4), 12);
-    deckTop.fill({ color: C.dockDeckTop, alpha: 0.38 });
-    root.addChild(deckTop);
-    const bevel = new Graphics();
-    bevel.rect(0, 0, cw, 3);
-    bevel.fill({ color: 0xffffff, alpha: 0.035 });
-    root.addChild(bevel);
-    const rivL = new Graphics();
-    rivL.circle(12, H / 2, 2.5);
-    rivL.fill({ color: C.dockBolt, alpha: 0.55 });
-    root.addChild(rivL);
-    const rivR = new Graphics();
-    rivR.circle(cw - 12, H / 2, 2.5);
-    rivR.fill({ color: C.dockBolt, alpha: 0.55 });
-    root.addChild(rivR);
-
-    const items: {
-        label: string;
-        slot: number;
-        onTap: () => void;
-        vec: (g: Graphics, cx: number, cy: number, s: number) => void;
-    }[] = [
-        { label: 'HOME', slot: 0, onTap: () => { navIndexBySlot?.(0); onHome(); }, vec: icoHome },
-        {
-            label: 'MISSIONS',
-            slot: 1,
-            onTap: () => {
-                navIndexBySlot?.(1);
-                gameFlow().openMissionSelect();
+    const dock = buildCommandDock(
+        cw,
+        H,
+        palette,
+        FONT_UI,
+        [
+            { label: 'HOME', onTap: () => { navIndexBySlot?.(0); onHome(); }, draw: icoHome },
+            {
+                label: 'MISSIONS',
+                onTap: () => {
+                    navIndexBySlot?.(1);
+                    gameFlow().openMissionSelect();
+                },
+                draw: icoMap,
             },
-            vec: icoMap,
-        },
-        {
-            label: 'HANGAR',
-            slot: 2,
-            onTap: () => { navIndexBySlot?.(2); ui.showScreen('store', true); },
-            vec: icoHangar,
-        },
-        {
-            label: 'STORE',
-            slot: 3,
-            onTap: () => { navIndexBySlot?.(3); ui.showScreen('store', true); },
-            vec: icoStore,
-        },
-    ];
-
-    const slotW = cw / items.length;
-    const margin = Math.max(6, Math.floor(unitFromViewport(cw, H) * 0.5));
-    const labels: Text[] = [];
-    const glyphs: Graphics[] = [];
-    const dockCradles: Graphics[] = [];
-
-    items.forEach((it, i) => {
-        const slot = new Container();
-        slot.position.set(i * slotW, 0);
-        slot.eventMode = 'static';
-        slot.cursor = 'pointer';
-
-        const cellW = slotW - margin * 2;
-
-        const channel = new Graphics();
-        channel.roundRect(margin, 7, cellW, H - 14, 11);
-        channel.fill({ color: C.dockChannel, alpha: 0.92 });
-        channel.stroke({ color: 0x000000, width: 1, alpha: 0.4 });
-        slot.addChild(channel);
-
-        const cradle = new Graphics();
-        cradle.roundRect(margin + 3, 10, cellW - 6, H - 26, 9);
-        dockCradles.push(cradle);
-        slot.addChild(cradle);
-
-        const cx = slotW / 2;
-        const vg = new Graphics();
-        it.vec(vg, cx, H * 0.36, 22);
-        slot.addChild(vg);
-        glyphs.push(vg);
-
-        const t = new Text({
-            text: it.label,
-            style: style(8, '700', 0x4a5666, 1.0),
-        });
-        t.anchor.set(0.5, 0);
-        t.position.set(cx, H - 24);
-        slot.addChild(t);
-        labels.push(t);
-
-        pressable(slot, it.onTap);
-        root.addChild(slot);
-    });
-
-    function setActive(i: number): void {
-        dockCradles.forEach((cr, idx) => {
-            const cellW = slotW - margin * 2;
-            const on = idx === i;
-            cr.clear();
-            cr.roundRect(margin + 3, 10, cellW - 6, H - 26, 9);
-            cr.fill({ color: on ? C.dockCellActive : C.dockCellIdle, alpha: on ? 0.95 : 0.58 });
-            cr.stroke({
-                color: on ? C.dockCellActiveRim : C.dockCellIdleRim,
-                width: on ? 2 : 1,
-                alpha: on ? 0.78 : 0.36,
-            });
-            if (on) {
-                cr.roundRect(margin + 8, 12, cellW - 16, 2, 1);
-                cr.fill({ color: C.cyan, alpha: 0.42 });
-            }
-        });
-        labels.forEach((t, idx) => {
-            const on = idx === i;
-            t.style = style(8, on ? '800' : '700', on ? C.cyan : 0x4a5666, on ? 1.15 : 1.0);
-            glyphs[idx].tint = on ? C.cyan : 0xa8b4c4;
-        });
-    }
-    setActive(0);
-    return { root, setActive, labels };
+            {
+                label: 'HANGAR',
+                onTap: () => { navIndexBySlot?.(2); ui.showScreen('store', true); },
+                draw: icoHangar,
+            },
+            {
+                label: 'STORE',
+                onTap: () => { navIndexBySlot?.(3); ui.showScreen('store', true); },
+                draw: icoStore,
+            },
+        ],
+        kUnder,
+        0.55,
+    );
+    return { root: dock.root, setActive: dock.setActive, labels: dock.labels };
 }

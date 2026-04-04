@@ -5,6 +5,7 @@ Primary UI family uses **Kenney** assets already bundled under `public/kenney-ui
 ## Families wired by code
 - `Kenney UI Pack` (`PNG/Blue|Grey|Yellow|Red|Extra`) via `src/ui/game/velocityUiArt.ts`
   - Mission list rows (playable + locked faces) use **`panel_fill` + `panel_frame`** nine-slice via `kenneyMissionCardFace()` in `kenneyLandscapeWidgets.ts` when preloaded — vector fallback only if textures fail.
+  - Mode filter strip + command dock use **`kenneyTabTrack`** + **`kenneyDockBar`** underlays where applicable (`menuShared/modeFilterStrip.ts`, `menuShared/commandDock.ts`).
 - `Kenney UI Pack` font (`Kenney Future`) via `public/kenney-ui-pack/Font/`
 - Optional external custom packs (runtime fallback-safe slots) via `src/ui/game/velocityUiArt.ts`:
   - `game-rank-icons-vol-9` → `custom-ui/rank/rank_prestige.png`
