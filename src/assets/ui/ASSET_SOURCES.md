@@ -7,8 +7,10 @@ Primary UI family uses **Kenney** assets already bundled under `public/kenney-ui
 Mirrored subset from OpenGameArt: [UI Pack - Sci-Fi](https://opengameart.org/content/ui-pack-sci-fi) (same Kenney CC0 release as kenney.nl). Used for **premium chrome** on the main menu:
 
 - **Mode tab strip** — `scifi_panel_rectangle_screws` track; tab cells use `scifi_button_rectangle` / `scifi_button_rectangle_depth`
-- **Mission list bay** — layered `scifi_panel_glass` + `scifi_panel_glass_screws`
-- **Mission / event card faces** — glass fill + `scifi_panel_rectangle_screws` frame (role-tinted)
+- **Mission list bay** — layered `scifi_panel_glass` + optional `scifi_panel_glass_notches` + `scifi_panel_glass_screws`, top `panel_glass_notches_top` band + centered `panel_glass_tab_blade` title rail
+- **Mission / event card faces** — glass fill + optional `scifi_panel_glass_notches` mid-layer + `scifi_panel_rectangle_screws` frame (role-tinted)
+- **Mode tab track** — optional `scifi_panel_glass_notches` over screw plate
+- **Hero + modals** — `createKenneyFramedPanelWithContent` uses sci-fi glass + notches + screw chrome when textures load (fallback: classic Kenney `panel_fill` / `panel_frame`)
 - **Dock underlay** — `scifi_panel_rectangle_screws` (replaces flat `panel_fill` when loaded)
 - **Missions dock icon** — `crosshair_color_a.png` from the same pack (clear target read at small size)
 

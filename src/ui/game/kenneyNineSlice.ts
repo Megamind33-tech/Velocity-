@@ -9,6 +9,8 @@ import { VELOCITY_UI_SLICE } from './velocityUiSlice';
 
 const BS = VELOCITY_UI_SLICE.button;
 const PS = VELOCITY_UI_SLICE.panel;
+const SCIFI_GL = VELOCITY_UI_SLICE.scifiGlass;
+const SCIFI_BTN = VELOCITY_UI_SLICE.scifiButton;
 
 export function createKenneyPanelNineSlice(width: number, height: number): NineSliceSprite | null {
     const tex = getVelocityUiTexture('panel_frame');
@@ -107,14 +109,70 @@ export function createKenneyFramedPanelWithContent(
     width: number,
     height: number,
 ): { root: Container; content: Container } | null {
-    const frameTex = getVelocityUiTexture('panel_frame');
-    const fillTex = getVelocityUiTexture('panel_fill');
-    if (!frameTex || !fillTex) return null;
-
     const root = new Container();
     const inset = 10;
     const iw = Math.max(40, width - inset * 2);
     const ih = Math.max(40, height - inset * 2);
+
+    const glassTex = getVelocityUiTexture('scifi_panel_glass');
+    const chromeTex = getVelocityUiTexture('scifi_panel_rectangle_screws');
+    const notchTex = getVelocityUiTexture('scifi_panel_glass_notches');
+    const useScifi = !!glassTex && !!chromeTex;
+
+    if (useScifi) {
+        const fill = new NineSliceSprite({
+            texture: glassTex!,
+            leftWidth: SCIFI_GL.L,
+            rightWidth: SCIFI_GL.R,
+            topHeight: SCIFI_GL.T,
+            bottomHeight: SCIFI_GL.B,
+            width: iw,
+            height: ih,
+        });
+        fill.position.set(inset, inset);
+        fill.alpha = 0.9;
+        fill.tint = 0x0a1218;
+
+        const toAdd: Parameters<Container['addChild']>[0][] = [fill];
+
+        if (notchTex) {
+            const nx = new NineSliceSprite({
+                texture: notchTex,
+                leftWidth: SCIFI_GL.L,
+                rightWidth: SCIFI_GL.R,
+                topHeight: SCIFI_GL.T,
+                bottomHeight: SCIFI_GL.B,
+                width: iw,
+                height: ih,
+            });
+            nx.position.set(inset, inset);
+            nx.tint = 0x7ec8e8;
+            nx.alpha = 0.22;
+            toAdd.push(nx);
+        }
+
+        const frame = new NineSliceSprite({
+            texture: chromeTex!,
+            leftWidth: SCIFI_BTN.L,
+            rightWidth: SCIFI_BTN.R,
+            topHeight: SCIFI_BTN.T,
+            bottomHeight: SCIFI_BTN.B,
+            width,
+            height,
+        });
+        frame.alpha = 0.55;
+        frame.tint = 0x4a9ec4;
+        toAdd.push(frame);
+
+        const content = new Container();
+        root.addChild(...toAdd, content);
+        content.position.set(inset + 12, inset + 14);
+        return { root, content };
+    }
+
+    const frameTex = getVelocityUiTexture('panel_frame');
+    const fillTex = getVelocityUiTexture('panel_fill');
+    if (!frameTex || !fillTex) return null;
 
     const fill = new NineSliceSprite({
         texture: fillTex,

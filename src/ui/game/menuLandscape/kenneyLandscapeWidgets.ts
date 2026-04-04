@@ -324,12 +324,19 @@ export function mountGearIcon(parent: Container, cx: number, cy: number, size: n
 /** Apply Velocity hero tints to a Kenney framed panel pair. */
 export function styleKenneyHeroPanelPair(pair: { root: Container; content: Container }): void {
     pair.root.alpha = 1;
-    const fill = pair.root.children[0] as NineSliceSprite;
+    const ch = pair.root.children;
+    const n = ch.length;
+    const fill = ch[0] as NineSliceSprite;
     fill.tint = 0x050a12;
     fill.alpha = 1;
-    const frame = pair.root.children[1] as NineSliceSprite;
+    const frame = ch[n - 2] as NineSliceSprite;
     frame.tint = GAME_COLORS.primary;
     frame.alpha = 0.72;
+    if (n >= 4) {
+        const notch = ch[1] as NineSliceSprite;
+        notch.tint = GAME_COLORS.primary;
+        notch.alpha = 0.32;
+    }
 }
 
 export function kenneyHeroPanel(cw: number, cardH: number): { root: Container; content: Container } | null {
@@ -342,6 +349,9 @@ export function kenneyHeroPanel(cw: number, cardH: number): { root: Container; c
 /** Mission list outer bay — Sci-Fi glass (OGA Kenney pack) + screw plate when available. */
 export function kenneyListBay(cw: number, listH: number): Container | null {
     const glassTex = getVelocityUiTexture('scifi_panel_glass');
+    const notchTex = getVelocityUiTexture('scifi_panel_glass_notches');
+    const topAccentTex = getVelocityUiTexture('scifi_panel_glass_notches_top');
+    const bladeTex = getVelocityUiTexture('scifi_panel_glass_tab_blade');
     const screwTex = getVelocityUiTexture('scifi_panel_glass_screws');
     const fillTex = getVelocityUiTexture('panel_fill');
     const root = new Container();
@@ -358,6 +368,20 @@ export function kenneyListBay(cw: number, listH: number): Container | null {
         glass.tint = 0x0a1218;
         glass.alpha = 0.93;
         root.addChild(glass);
+        if (notchTex) {
+            const nx = new NineSliceSprite({
+                texture: notchTex,
+                leftWidth: SCIFI_GL.L,
+                rightWidth: SCIFI_GL.R,
+                topHeight: SCIFI_GL.T,
+                bottomHeight: SCIFI_GL.B,
+                width: cw,
+                height: listH,
+            });
+            nx.tint = GAME_COLORS.primary;
+            nx.alpha = 0.2;
+            root.addChild(nx);
+        }
         if (screwTex) {
             const screws = new NineSliceSprite({
                 texture: screwTex,
@@ -371,6 +395,37 @@ export function kenneyListBay(cw: number, listH: number): Container | null {
             screws.tint = GAME_COLORS.primary;
             screws.alpha = 0.28;
             root.addChild(screws);
+        }
+        const bandH = Math.max(10, Math.min(18, Math.floor(listH * 0.07)));
+        if (topAccentTex && bandH >= 8) {
+            const topBand = new NineSliceSprite({
+                texture: topAccentTex,
+                leftWidth: SCIFI_GL.L,
+                rightWidth: SCIFI_GL.R,
+                topHeight: SCIFI_GL.T,
+                bottomHeight: SCIFI_GL.B,
+                width: cw,
+                height: bandH,
+            });
+            topBand.tint = GAME_COLORS.primary;
+            topBand.alpha = 0.35;
+            root.addChild(topBand);
+        }
+        if (bladeTex && listH > 48) {
+            const bh = Math.max(12, Math.min(22, Math.floor(listH * 0.09)));
+            const blade = new NineSliceSprite({
+                texture: bladeTex,
+                leftWidth: SCIFI_GL.L,
+                rightWidth: SCIFI_GL.R,
+                topHeight: SCIFI_GL.T,
+                bottomHeight: SCIFI_GL.B,
+                width: Math.min(cw - 24, Math.floor(cw * 0.72)),
+                height: bh,
+            });
+            blade.position.set(Math.floor((cw - blade.width) / 2), Math.max(4, Math.floor(bandH * 0.35)));
+            blade.tint = GAME_COLORS.primary;
+            blade.alpha = 0.42;
+            root.addChild(blade);
         }
     } else if (fillTex) {
         const spr = new NineSliceSprite({
@@ -427,6 +482,7 @@ export type MissionCardFaceRole = 'playable' | 'claimable' | 'locked' | 'elite_l
  */
 export function kenneyMissionCardFace(cw: number, rowH: number, role: MissionCardFaceRole): Container | null {
     const glassTex = getVelocityUiTexture('scifi_panel_glass');
+    const notchTex = getVelocityUiTexture('scifi_panel_glass_notches');
     const chromeTex = getVelocityUiTexture('scifi_panel_rectangle_screws');
     const fillTex = getVelocityUiTexture('panel_fill');
     const frameTex = getVelocityUiTexture('panel_frame');
@@ -483,12 +539,28 @@ export function kenneyMissionCardFace(cw: number, rowH: number, role: MissionCar
         frame.tint = GAME_COLORS.primary;
         frame.alpha = useScifi ? 0.52 : 0.4;
     }
+    if (useScifi && notchTex) {
+        const nx = new NineSliceSprite({
+            texture: notchTex,
+            leftWidth: fL,
+            rightWidth: fR,
+            topHeight: fT,
+            bottomHeight: fB,
+            width: cw,
+            height: rowH,
+        });
+        nx.tint = frame.tint;
+        nx.alpha = role === 'locked' || role === 'elite_locked' ? 0.12 : 0.18;
+        root.addChild(fill, nx, frame);
+        return root;
+    }
     root.addChild(fill, frame);
     return root;
 }
 
 export function kenneyTabTrack(cw: number, h: number): Container | null {
     const sciTex = getVelocityUiTexture('scifi_panel_rectangle_screws');
+    const notchTex = getVelocityUiTexture('scifi_panel_glass_notches');
     const tex = sciTex ?? getVelocityUiTexture('panel_fill');
     if (!tex) return null;
     const root = new Container();
@@ -508,6 +580,20 @@ export function kenneyTabTrack(cw: number, h: number): Container | null {
     spr.tint = sciTex ? 0x0e1824 : 0x101a27;
     spr.alpha = sciTex ? 0.96 : 0.93;
     root.addChild(spr);
+    if (sciTex && notchTex) {
+        const nx = new NineSliceSprite({
+            texture: notchTex,
+            leftWidth: SCIFI_GL.L,
+            rightWidth: SCIFI_GL.R,
+            topHeight: SCIFI_GL.T,
+            bottomHeight: SCIFI_GL.B,
+            width: cw,
+            height: h,
+        });
+        nx.tint = 0x8ecfe8;
+        nx.alpha = 0.14;
+        root.addChild(nx);
+    }
     const rim = new Graphics();
     rim.roundRect(0.5, 0.5, cw - 1, h - 1, 12);
     rim.stroke({
