@@ -397,7 +397,7 @@ function vectorStatChip(
     let labelStr = label.toUpperCase();
     const lb = new Text({
         text: labelStr,
-        style: style(9, '600', C.muted, 0.8),
+        style: style(8, '600', C.muted, 0.8),
     });
     if (lb.width > labelMaxW) {
         while (labelStr.length > 3 && lb.width > labelMaxW) {
