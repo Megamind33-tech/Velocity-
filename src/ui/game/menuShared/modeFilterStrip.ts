@@ -36,7 +36,7 @@ export const MODE_FILTER_TAB_THEME = {
 } as const;
 
 export const MODE_FILTER_LABELS = ['Missions', 'Routes', 'Training', 'Fleet', 'Events'] as const;
-export const MODE_FILTER_LABELS_SHORT = ['MISS.', 'ROUTE', 'TRAIN', 'FLEET', 'EVNT'] as const;
+export const MODE_FILTER_LABELS_SHORT = ['MISS', 'ROUTES', 'TRAIN', 'FLEET', 'EVENTS'] as const;
 
 function pressTab(root: Container, onUp: () => void): void {
     root.eventMode = 'static';
@@ -106,7 +106,7 @@ export function buildModeFilterStrip(
     const tabW = Math.floor((cw - innerPad * 2 - tabGap * (n - 1)) / n);
     const innerW = tabW - (channelGlow ? 4 : 6);
     const innerH = H - (channelGlow ? 12 : 16);
-    const useShort = tabW < 88;
+    const useShort = tabW < 52;
     const labels = useShort ? MODE_FILTER_LABELS_SHORT : MODE_FILTER_LABELS;
     const tabFontSize = useShort ? 9 : 11;
 

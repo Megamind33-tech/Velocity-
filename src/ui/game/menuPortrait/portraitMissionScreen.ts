@@ -919,8 +919,8 @@ function buildMissionListPortrait(
     root.addChild(scrollLayer);
 
     let scrollY = 0;
-    const rowH = 104;
-    const gap = P_SPACE.s8;
+    const rowH = 128;
+    const gap = 12;
 
     function maxScroll(): number {
         const total = scrollLayer.children.length * (rowH + gap) - gap;
@@ -1057,7 +1057,7 @@ export function buildPortraitMissionScreen(p: BuildPortraitMissionScreenParams):
     root.addChild(topBar.root);
     y += TOP_BAR_H + P_SPACE.s12;
 
-    const cardH = Math.min(212, Math.max(184, Math.floor(sh * 0.27)));
+    const cardH = Math.min(240, Math.max(200, Math.floor(sh * 0.29)));
     const feat = buildFeaturedMissionCard({
         cw,
         cardH,

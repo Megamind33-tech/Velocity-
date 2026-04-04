@@ -289,8 +289,9 @@ export function mountHeroCommandLayout(
     const contentFloor = (showTag ? tagY + TAG_H : subY + SUB_H) + 4;
     const cap = rowY - BONUS_GAP_ABOVE_RAIL - BONUS_BAND_H;
     let bonusLineY = Math.min(cap, progLblY - 14);
-    if (bonusLineY < contentFloor) bonusLineY = contentFloor;
+    // Clamp upward first (away from progress label), then enforce content floor as absolute minimum
     if (bonusLineY >= progLblY - 1) bonusLineY = Math.max(0, progLblY - 16);
+    if (bonusLineY < contentFloor) bonusLineY = contentFloor;
 
     return {
         flyCta: fly,
