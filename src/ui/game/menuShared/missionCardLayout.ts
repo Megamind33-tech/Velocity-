@@ -79,7 +79,9 @@ export function computeCardVerticalBands(
 
     for (let iter = 0; iter < 40; iter++) {
         const b = build(titleH, tierH, metaH, helpH, rewardH);
-        if (b.subMaxH >= MIN_SUB) return b;
+        // Check ACTUAL available space between subY and metaY — not the clamped subMaxH
+        const actualSubH = b.metaY - b.subY - gapSm;
+        if (actualSubH >= MIN_SUB) return b;
         if (rewardH > 12) rewardH -= 2;
         else if (helpH > 9) helpH -= 2;
         else if (metaH > 11) metaH -= 2;

@@ -184,7 +184,7 @@ export function kenneyStatChip(
         text: labelStr,
         style: new TextStyle({
             fill: 0x7a8a9c,
-            fontSize: 9,
+            fontSize: 8,
             fontWeight: '600',
             fontFamily: GAME_FONTS.standard,
             letterSpacing: 0.8,

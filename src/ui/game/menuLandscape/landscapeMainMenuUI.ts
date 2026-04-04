@@ -397,7 +397,7 @@ function vectorStatChip(
     let labelStr = label.toUpperCase();
     const lb = new Text({
         text: labelStr,
-        style: style(9, '600', C.muted, 0.8),
+        style: style(8, '600', C.muted, 0.8),
     });
     if (lb.width > labelMaxW) {
         while (labelStr.length > 3 && lb.width > labelMaxW) {
@@ -1022,8 +1022,8 @@ export function buildMissionList(
     const U = unitFromViewport(cw, listH);
     const rowH =
         rowHOverride ??
-        Math.max(96, Math.floor(U * 11.5));
-    const gap = GRID;
+        Math.max(120, Math.floor(U * 13));
+    const gap = 12;
 
     function maxScroll(): number {
         const total = scrollLayer.children.length * (rowH + gap) - gap;
