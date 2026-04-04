@@ -47,6 +47,7 @@ import { buildCommandDock, type CommandDockPalette } from '../menuShared/command
 import { buildModeFilterStrip } from '../menuShared/modeFilterStrip';
 import { mountHeroCommandLayout } from '../menuShared/heroCommandLayout';
 import { mountMissionRewardIcon } from '../menuShared/missionRewardWell';
+import { mountEmblemCircleWell, mountTexturedInsetPlate } from '../menuShared/texturedPlates';
 
 const GRID = 8;
 const TAB_BS = VELOCITY_UI_SLICE.button;
@@ -553,16 +554,26 @@ function buildLockedMissionRowLandscape(
         root.addChild(face);
     }
 
-    const spine = new Graphics();
-    spine.roundRect(0, 8, leftRailW, rowH - 16, 2);
-    spine.fill({ color: elite ? C.gold : C.muted, alpha: elite ? 0.5 : 0.38 });
-    root.addChild(spine);
+    const spineG = new Graphics();
+    spineG.roundRect(0, 8, leftRailW, rowH - 16, 2);
+    spineG.fill({ color: elite ? C.gold : C.muted, alpha: elite ? 0.5 : 0.38 });
+    mountTexturedInsetPlate(root, 0, 8, leftRailW, rowH - 16, 'spine', spineG, {
+        fill: elite ? C.gold : C.muted,
+        fillAlpha: elite ? 0.52 : 0.42,
+        stroke: elite ? C.gold : C.muted,
+        strokeAlpha: 0.4,
+    });
 
-    const well = new Graphics();
-    well.roundRect(leftPad, 10, emblemWellW, rowH - 20, 10);
-    well.fill({ color: elite ? 0x0a0806 : 0x04060c, alpha: 1 });
-    well.stroke({ color: elite ? C.gold : C.lockedRim, width: 1, alpha: elite ? 0.35 : 0.28 });
-    root.addChild(well);
+    const wellG = new Graphics();
+    wellG.roundRect(leftPad, 10, emblemWellW, rowH - 20, 10);
+    wellG.fill({ color: elite ? 0x0a0806 : 0x04060c, alpha: 1 });
+    wellG.stroke({ color: elite ? C.gold : C.lockedRim, width: 1, alpha: elite ? 0.35 : 0.28 });
+    mountTexturedInsetPlate(root, leftPad, 10, emblemWellW, rowH - 20, 'well', wellG, {
+        fill: elite ? 0x0a0806 : 0x04060c,
+        fillAlpha: 1,
+        stroke: elite ? C.gold : C.lockedRim,
+        strokeAlpha: elite ? 0.38 : 0.32,
+    });
 
     const emX = leftPad + emblemWellW / 2;
     const emY = rowH / 2;
@@ -610,11 +621,18 @@ function buildLockedMissionRowLandscape(
     root.addChild(tag);
 
     if (elite) {
-        const tierPlate = new Graphics();
-        tierPlate.roundRect(tx, bands.tierY, Math.min(112, centerW - 4), bands.tierH, 6);
-        tierPlate.fill({ color: C.lockedPlaqueElite, alpha: 0.88 });
-        tierPlate.stroke({ color: C.gold, width: 1, alpha: 0.38 });
-        root.addChild(tierPlate);
+        const tw = Math.min(112, centerW - 4);
+        const th = bands.tierH;
+        const tierG = new Graphics();
+        tierG.roundRect(tx, bands.tierY, tw, th, 6);
+        tierG.fill({ color: C.lockedPlaqueElite, alpha: 0.88 });
+        tierG.stroke({ color: C.gold, width: 1, alpha: 0.38 });
+        mountTexturedInsetPlate(root, tx, bands.tierY, tw, th, 'tier', tierG, {
+            fill: C.lockedPlaqueElite,
+            fillAlpha: 0.9,
+            stroke: C.gold,
+            strokeAlpha: 0.42,
+        });
         const tier = fitOneLineSmall('ELITE ROUTE', centerW - 20, {
             fontFamily: FONT_UI,
             fontWeight: '800',
@@ -637,11 +655,18 @@ function buildLockedMissionRowLandscape(
 
     const metaStr = primaryState === 'elite_locked' ? 'SEALED ROUTE' : 'GATED';
     const metaFill = primaryState === 'elite_locked' ? SURFACE_ROLE.missionEliteLocked.accent : SURFACE_ROLE.missionLocked.accent;
-    const metaPlate = new Graphics();
-    metaPlate.roundRect(tx, bands.metaY, Math.min(centerW - 4, 128), bands.metaH, 6);
-    metaPlate.fill({ color: primaryState === 'elite_locked' ? 0x1a140c : 0x0a1218, alpha: 0.88 });
-    metaPlate.stroke({ color: elite ? C.gold : C.lockedRim, width: 1, alpha: 0.35 });
-    root.addChild(metaPlate);
+    const mw = Math.min(centerW - 4, 128);
+    const mh = bands.metaH;
+    const metaG = new Graphics();
+    metaG.roundRect(tx, bands.metaY, mw, mh, 6);
+    metaG.fill({ color: primaryState === 'elite_locked' ? 0x1a140c : 0x0a1218, alpha: 0.88 });
+    metaG.stroke({ color: elite ? C.gold : C.lockedRim, width: 1, alpha: 0.35 });
+    mountTexturedInsetPlate(root, tx, bands.metaY, mw, mh, 'meta', metaG, {
+        fill: primaryState === 'elite_locked' ? 0x1a140c : 0x0a1218,
+        fillAlpha: 0.9,
+        stroke: elite ? C.gold : C.lockedRim,
+        strokeAlpha: 0.38,
+    });
     const meta = fitOneLineSmall(metaStr, centerW - 16, {
         fontFamily: FONT_UI,
         fontWeight: '800',
@@ -664,11 +689,18 @@ function buildLockedMissionRowLandscape(
     helper.position.set(tx, bands.helpY);
     root.addChild(helper);
 
-    const rewardRail = new Graphics();
-    rewardRail.roundRect(tx - 2, bands.rewardY, centerW + 4, bands.rewardH, 7);
-    rewardRail.fill({ color: elite ? 0x120e0a : 0x060a10, alpha: 0.9 });
-    rewardRail.stroke({ color: elite ? C.gold : C.lockedRim, width: 1, alpha: 0.32 });
-    root.addChild(rewardRail);
+    const rw = centerW + 4;
+    const rh = bands.rewardH;
+    const rewardG = new Graphics();
+    rewardG.roundRect(tx - 2, bands.rewardY, rw, rh, 7);
+    rewardG.fill({ color: elite ? 0x120e0a : 0x060a10, alpha: 0.9 });
+    rewardG.stroke({ color: elite ? C.gold : C.lockedRim, width: 1, alpha: 0.32 });
+    mountTexturedInsetPlate(root, tx - 2, bands.rewardY, rw, rh, 'reward', rewardG, {
+        fill: elite ? 0x120e0a : 0x060a10,
+        fillAlpha: 0.92,
+        stroke: elite ? C.gold : C.lockedRim,
+        strokeAlpha: 0.36,
+    });
     const ryc = bands.rewardY + bands.rewardH / 2;
     const rac = elite ? C.gold : SURFACE_ROLE.missionLocked.accent;
     const rrim = elite ? C.gold : C.lockedRim;
@@ -699,15 +731,22 @@ function buildLockedMissionRowLandscape(
         ps.alpha = elite ? 0.52 : 0.4;
         root.addChild(ps);
     }
-    const plaque = new Graphics();
-    plaque.roundRect(px, py, plaqueW, ph, 12);
-    plaque.fill({ color: elite ? C.lockedPlaqueElite : C.lockedPlaque, alpha: plaqueTex ? 0.7 : 0.96 });
-    plaque.stroke({ color: elite ? C.gold : C.lockedRim, width: 2, alpha: elite ? 0.55 : 0.5 });
-    root.addChild(plaque);
-    const plaqueInner = new Graphics();
-    plaqueInner.roundRect(px + 4, py + 4, plaqueW - 8, ph - 8, 9);
-    plaqueInner.stroke({ color: 0xffffff, width: 1, alpha: elite ? 0.06 : 0.04 });
-    root.addChild(plaqueInner);
+    const plaqueOuter = new Graphics();
+    plaqueOuter.roundRect(px, py, plaqueW, ph, 12);
+    plaqueOuter.fill({ color: elite ? C.lockedPlaqueElite : C.lockedPlaque, alpha: plaqueTex ? 0.7 : 0.96 });
+    plaqueOuter.stroke({ color: elite ? C.gold : C.lockedRim, width: 2, alpha: elite ? 0.55 : 0.5 });
+    const plaqueTextured = mountTexturedInsetPlate(root, px, py, plaqueW, ph, 'plaque', plaqueOuter, {
+        fill: elite ? C.lockedPlaqueElite : C.lockedPlaque,
+        fillAlpha: plaqueTex ? 0.55 : 0.94,
+        stroke: elite ? C.gold : C.lockedRim,
+        strokeAlpha: elite ? 0.58 : 0.52,
+    });
+    if (!plaqueTextured) {
+        const plaqueInner = new Graphics();
+        plaqueInner.roundRect(px + 4, py + 4, plaqueW - 8, ph - 8, 9);
+        plaqueInner.stroke({ color: 0xffffff, width: 1, alpha: elite ? 0.06 : 0.04 });
+        root.addChild(plaqueInner);
+    }
 
     const stateWord = primaryState === 'elite_locked' ? 'SEALED' : 'LOCKED';
     const stateMain = new Text({
@@ -795,16 +834,20 @@ function missionRow(
         crown.fill({ color: SURFACE_ROLE.missionClaimable.rim, alpha: 0.55 });
         root.addChild(crown);
     }
-    const leftSpine = new Graphics();
-    leftSpine.roundRect(0, 0, 6, rowH, 3);
-    leftSpine.fill({
-        color:
-            primaryState === 'claimable'
-                ? SURFACE_ROLE.missionClaimable.rim
-                : SURFACE_ROLE.missionPlayable.rim,
-        alpha: primaryState === 'playable' ? 0.35 : 0.45,
+    const spineCol =
+        primaryState === 'claimable'
+            ? SURFACE_ROLE.missionClaimable.rim
+            : SURFACE_ROLE.missionPlayable.rim;
+    const spineA = primaryState === 'playable' ? 0.35 : 0.45;
+    const spineG2 = new Graphics();
+    spineG2.roundRect(0, 0, 6, rowH, 3);
+    spineG2.fill({ color: spineCol, alpha: spineA });
+    mountTexturedInsetPlate(root, 0, 0, 6, rowH, 'spine', spineG2, {
+        fill: spineCol,
+        fillAlpha: spineA + 0.08,
+        stroke: spineCol,
+        strokeAlpha: 0.45,
     });
-    root.addChild(leftSpine);
 
     const iconR = Math.max(24, Math.floor(U * 2.8));
     const icX = 14 + iconR;
@@ -830,7 +873,15 @@ function missionRow(
             alpha: 0.55,
         });
     }
-    root.addChild(icBg);
+    const rimCol =
+        primaryState === 'claimable'
+            ? SURFACE_ROLE.missionClaimable.rim
+            : completed
+              ? SURFACE_ROLE.missionCompleted.rim
+              : elite
+                ? C.gold
+                : SURFACE_ROLE.missionPlayable.rim;
+    mountEmblemCircleWell(root, icX, icY, iconR, icBg, { tint: rimCol, alpha: 0.92 });
     const icGlyph = new Graphics();
     icoRadar(icGlyph, icX, icY, iconR * 0.55);
     root.addChild(icGlyph);
@@ -885,15 +936,22 @@ function missionRow(
         metaStr = 'REWARD';
         metaFill = SURFACE_ROLE.missionPlayable.accent;
     }
-    const metaPlate = new Graphics();
-    metaPlate.roundRect(tx, bands.metaY, Math.min(textMax - 4, 140), bands.metaH, 6);
-    metaPlate.fill({ color: primaryState === 'claimable' ? 0x22180d : 0x09131d, alpha: 0.78 });
-    metaPlate.stroke({
+    const pmw = Math.min(textMax - 4, 140);
+    const pmh = bands.metaH;
+    const metaG2 = new Graphics();
+    metaG2.roundRect(tx, bands.metaY, pmw, pmh, 6);
+    metaG2.fill({ color: primaryState === 'claimable' ? 0x22180d : 0x09131d, alpha: 0.78 });
+    metaG2.stroke({
         color: primaryState === 'claimable' ? C.gold : C.border,
         width: 1,
         alpha: 0.32,
     });
-    root.addChild(metaPlate);
+    mountTexturedInsetPlate(root, tx, bands.metaY, pmw, pmh, 'meta', metaG2, {
+        fill: primaryState === 'claimable' ? 0x22180d : 0x09131d,
+        fillAlpha: 0.82,
+        stroke: primaryState === 'claimable' ? C.gold : C.border,
+        strokeAlpha: 0.36,
+    });
     const meta = fitOneLineSmall(metaStr, textMax - 16, {
         fontFamily: FONT_UI,
         fontWeight: '800',
@@ -915,15 +973,22 @@ function missionRow(
     helper.position.set(tx, bands.helpY);
     root.addChild(helper);
 
-    const rewardRail = new Graphics();
-    rewardRail.roundRect(tx - 4, bands.rewardY, Math.max(120, textMax + 8), bands.rewardH, 7);
-    rewardRail.fill({ color: primaryState === 'claimable' ? 0x231b0f : 0x081019, alpha: 0.78 });
-    rewardRail.stroke({
+    const rrw = Math.max(120, textMax + 8);
+    const rrh = bands.rewardH;
+    const rewardG2 = new Graphics();
+    rewardG2.roundRect(tx - 4, bands.rewardY, rrw, rrh, 7);
+    rewardG2.fill({ color: primaryState === 'claimable' ? 0x231b0f : 0x081019, alpha: 0.78 });
+    rewardG2.stroke({
         color: primaryState === 'claimable' ? C.gold : C.border,
         width: 1,
         alpha: 0.36,
     });
-    root.addChild(rewardRail);
+    mountTexturedInsetPlate(root, tx - 4, bands.rewardY, rrw, rrh, 'reward', rewardG2, {
+        fill: primaryState === 'claimable' ? 0x231b0f : 0x081019,
+        fillAlpha: 0.82,
+        stroke: primaryState === 'claimable' ? C.gold : C.border,
+        strokeAlpha: 0.4,
+    });
     const ryc2 = bands.rewardY + bands.rewardH / 2;
     const rac2 =
         primaryState === 'claimable' ? C.gold : SURFACE_ROLE.missionPlayable.accent;
@@ -949,17 +1014,22 @@ function missionRow(
 
     const bx = cw - btnW - 12;
     const by = (rowH - btnH) / 2;
-    const actionDock = new Graphics();
-    actionDock.roundRect(actionDockX, 8, btnW + 12, rowH - 16, 10);
-    actionDock.fill({ color: 0x0a1119, alpha: 0.46 });
-    actionDock.stroke({
+    const adW = btnW + 12;
+    const adH = rowH - 16;
+    const actionG = new Graphics();
+    actionG.roundRect(actionDockX, 8, adW, adH, 10);
+    actionG.fill({ color: 0x0a1119, alpha: 0.46 });
+    actionG.stroke({
         color: primaryState === 'claimable' ? C.gold : C.cyan,
         width: 1,
         alpha: primaryState === 'claimable' ? 0.44 : 0.28,
     });
-    actionDock.roundRect(actionDockX + 8, 11, btnW - 2, 2, 1);
-    actionDock.fill({ color: primaryState === 'claimable' ? C.gold : C.cyan, alpha: 0.28 });
-    root.addChild(actionDock);
+    mountTexturedInsetPlate(root, actionDockX, 8, adW, adH, 'actionDock', actionG, {
+        fill: 0x0a1119,
+        fillAlpha: 0.52,
+        stroke: primaryState === 'claimable' ? C.gold : C.cyan,
+        strokeAlpha: primaryState === 'claimable' ? 0.48 : 0.34,
+    });
     const frameTex = primaryState === 'claimable' ? getVelocityCustomTexture('frame_premium') : undefined;
     if (frameTex) {
         const frame = new Sprite(frameTex);

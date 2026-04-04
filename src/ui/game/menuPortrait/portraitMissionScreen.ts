@@ -7,6 +7,7 @@ import {
     Container,
     FederatedPointerEvent,
     Graphics,
+    NineSliceSprite,
     Sprite,
     Text,
     TextStyle,
@@ -29,6 +30,7 @@ import {
 } from '../menuLandscape/kenneyLandscapeWidgets';
 import { mountHeroCommandLayout } from '../menuShared/heroCommandLayout';
 import { mountMissionRewardIcon } from '../menuShared/missionRewardWell';
+import { mountEmblemCircleWell, mountTexturedInsetPlate } from '../menuShared/texturedPlates';
 import { buildCommandDock, type CommandDockPalette } from '../menuShared/commandDock';
 import { buildModeFilterStrip } from '../menuShared/modeFilterStrip';
 import {
@@ -105,7 +107,7 @@ export type PortraitAnimHandles = {
     routeSweep: Graphics;
     rewardShimmer: Graphics;
     tabGlows: Graphics[];
-    dockCradles: Graphics[];
+    dockCradles: (Graphics | NineSliceSprite)[];
 };
 
 export type PortraitMissionBundle = {
@@ -445,20 +447,30 @@ function buildLockedMissionCardPortrait(
         root.addChild(face);
     }
 
-    const spine = new Graphics();
-    spine.roundRect(0, 8, leftRailW, rowH - 16, 2);
-    spine.fill({ color: elite ? P_COLORS.accentGoldSoft : P_COLORS.stateLocked, alpha: elite ? 0.55 : 0.4 });
-    root.addChild(spine);
+    const spineG = new Graphics();
+    spineG.roundRect(0, 8, leftRailW, rowH - 16, 2);
+    spineG.fill({ color: elite ? P_COLORS.accentGoldSoft : P_COLORS.stateLocked, alpha: elite ? 0.55 : 0.4 });
+    mountTexturedInsetPlate(root, 0, 8, leftRailW, rowH - 16, 'spine', spineG, {
+        fill: elite ? P_COLORS.accentGoldSoft : P_COLORS.stateLocked,
+        fillAlpha: elite ? 0.58 : 0.44,
+        stroke: elite ? P_COLORS.accentGoldSoft : P_COLORS.stateLocked,
+        strokeAlpha: 0.42,
+    });
 
-    const well = new Graphics();
-    well.roundRect(leftPad, 10, emblemWellW, rowH - 20, 10);
-    well.fill({ color: elite ? P_COLORS.lockedGateWellElite : P_COLORS.lockedGateWell, alpha: 1 });
-    well.stroke({
+    const wellG = new Graphics();
+    wellG.roundRect(leftPad, 10, emblemWellW, rowH - 20, 10);
+    wellG.fill({ color: elite ? P_COLORS.lockedGateWellElite : P_COLORS.lockedGateWell, alpha: 1 });
+    wellG.stroke({
         color: elite ? P_COLORS.accentGoldSoft : P_COLORS.lockedPlaqueRim,
         width: 1,
         alpha: elite ? 0.35 : 0.28,
     });
-    root.addChild(well);
+    mountTexturedInsetPlate(root, leftPad, 10, emblemWellW, rowH - 20, 'well', wellG, {
+        fill: elite ? P_COLORS.lockedGateWellElite : P_COLORS.lockedGateWell,
+        fillAlpha: 1,
+        stroke: elite ? P_COLORS.accentGoldSoft : P_COLORS.lockedPlaqueRim,
+        strokeAlpha: elite ? 0.38 : 0.32,
+    });
 
     const emX = leftPad + emblemWellW / 2;
     const emY = rowH / 2;
@@ -494,11 +506,18 @@ function buildLockedMissionCardPortrait(
     root.addChild(title);
 
     if (elite) {
-        const tierPlate = new Graphics();
-        tierPlate.roundRect(tx, bands.tierY, Math.min(108, centerW - 4), bands.tierH, 6);
-        tierPlate.fill({ color: P_COLORS.lockedPlaqueElite, alpha: 0.88 });
-        tierPlate.stroke({ color: P_COLORS.accentGoldSoft, width: 1, alpha: 0.42 });
-        root.addChild(tierPlate);
+        const tw = Math.min(108, centerW - 4);
+        const th = bands.tierH;
+        const tierG = new Graphics();
+        tierG.roundRect(tx, bands.tierY, tw, th, 6);
+        tierG.fill({ color: P_COLORS.lockedPlaqueElite, alpha: 0.88 });
+        tierG.stroke({ color: P_COLORS.accentGoldSoft, width: 1, alpha: 0.42 });
+        mountTexturedInsetPlate(root, tx, bands.tierY, tw, th, 'tier', tierG, {
+            fill: P_COLORS.lockedPlaqueElite,
+            fillAlpha: 0.9,
+            stroke: P_COLORS.accentGoldSoft,
+            strokeAlpha: 0.44,
+        });
         const tier = fitOneLineSmall('ELITE ROUTE', centerW - 20, {
             fontFamily: FONT,
             fontWeight: '800',
@@ -528,11 +547,18 @@ function buildLockedMissionCardPortrait(
         metaStr = 'GATED';
         metaFill = 0x7a8fa4;
     }
-    const metaPlate = new Graphics();
-    metaPlate.roundRect(tx, bands.metaY, Math.min(centerW - 4, 120), bands.metaH, 6);
-    metaPlate.fill({ color: primaryState === 'elite_locked' ? 0x1a140c : 0x0a1218, alpha: 0.88 });
-    metaPlate.stroke({ color: elite ? P_COLORS.accentGoldSoft : P_COLORS.lockedPlaqueRim, width: 1, alpha: 0.35 });
-    root.addChild(metaPlate);
+    const mmw = Math.min(centerW - 4, 120);
+    const mmh = bands.metaH;
+    const metaG = new Graphics();
+    metaG.roundRect(tx, bands.metaY, mmw, mmh, 6);
+    metaG.fill({ color: primaryState === 'elite_locked' ? 0x1a140c : 0x0a1218, alpha: 0.88 });
+    metaG.stroke({ color: elite ? P_COLORS.accentGoldSoft : P_COLORS.lockedPlaqueRim, width: 1, alpha: 0.35 });
+    mountTexturedInsetPlate(root, tx, bands.metaY, mmw, mmh, 'meta', metaG, {
+        fill: primaryState === 'elite_locked' ? 0x1a140c : 0x0a1218,
+        fillAlpha: 0.9,
+        stroke: elite ? P_COLORS.accentGoldSoft : P_COLORS.lockedPlaqueRim,
+        strokeAlpha: 0.38,
+    });
     const meta = fitOneLineSmall(metaStr, centerW - 16, {
         fontFamily: FONT,
         fontWeight: '800',
@@ -556,15 +582,22 @@ function buildLockedMissionCardPortrait(
     helper.position.set(tx, bands.helpY);
     root.addChild(helper);
 
-    const rewardRail = new Graphics();
-    rewardRail.roundRect(tx - 2, bands.rewardY, centerW + 4, bands.rewardH, 7);
-    rewardRail.fill({ color: elite ? 0x120e0a : 0x060a10, alpha: 0.9 });
-    rewardRail.stroke({
+    const rrw = centerW + 4;
+    const rrh = bands.rewardH;
+    const rewardG = new Graphics();
+    rewardG.roundRect(tx - 2, bands.rewardY, rrw, rrh, 7);
+    rewardG.fill({ color: elite ? 0x120e0a : 0x060a10, alpha: 0.9 });
+    rewardG.stroke({
         color: elite ? P_COLORS.accentGoldSoft : P_COLORS.lockedPlaqueRim,
         width: 1,
         alpha: 0.32,
     });
-    root.addChild(rewardRail);
+    mountTexturedInsetPlate(root, tx - 2, bands.rewardY, rrw, rrh, 'reward', rewardG, {
+        fill: elite ? 0x120e0a : 0x060a10,
+        fillAlpha: 0.92,
+        stroke: elite ? P_COLORS.accentGoldSoft : P_COLORS.lockedPlaqueRim,
+        strokeAlpha: 0.36,
+    });
     const rycL = bands.rewardY + bands.rewardH / 2;
     const racL = elite ? P_COLORS.accentGold : 0x6b7d90;
     const rrimL = elite ? P_COLORS.accentGoldSoft : P_COLORS.lockedPlaqueRim;
@@ -595,19 +628,26 @@ function buildLockedMissionCardPortrait(
         ps.alpha = elite ? 0.55 : 0.42;
         root.addChild(ps);
     }
-    const plaque = new Graphics();
-    plaque.roundRect(px, py, plaqueW, ph, 12);
-    plaque.fill({ color: elite ? P_COLORS.lockedPlaqueElite : P_COLORS.lockedPlaque, alpha: plaqueTex ? 0.72 : 0.96 });
-    plaque.stroke({
+    const plaqueOuter = new Graphics();
+    plaqueOuter.roundRect(px, py, plaqueW, ph, 12);
+    plaqueOuter.fill({ color: elite ? P_COLORS.lockedPlaqueElite : P_COLORS.lockedPlaque, alpha: plaqueTex ? 0.72 : 0.96 });
+    plaqueOuter.stroke({
         color: elite ? P_COLORS.accentGold : P_COLORS.lockedPlaqueRim,
         width: 2,
         alpha: elite ? 0.55 : 0.5,
     });
-    root.addChild(plaque);
-    const plaqueInner = new Graphics();
-    plaqueInner.roundRect(px + 4, py + 4, plaqueW - 8, ph - 8, 9);
-    plaqueInner.stroke({ color: 0xffffff, width: 1, alpha: elite ? 0.06 : 0.04 });
-    root.addChild(plaqueInner);
+    const plaqueOk = mountTexturedInsetPlate(root, px, py, plaqueW, ph, 'plaque', plaqueOuter, {
+        fill: elite ? P_COLORS.lockedPlaqueElite : P_COLORS.lockedPlaque,
+        fillAlpha: plaqueTex ? 0.58 : 0.94,
+        stroke: elite ? P_COLORS.accentGold : P_COLORS.lockedPlaqueRim,
+        strokeAlpha: elite ? 0.58 : 0.52,
+    });
+    if (!plaqueOk) {
+        const plaqueInner = new Graphics();
+        plaqueInner.roundRect(px + 4, py + 4, plaqueW - 8, ph - 8, 9);
+        plaqueInner.stroke({ color: 0xffffff, width: 1, alpha: elite ? 0.06 : 0.04 });
+        root.addChild(plaqueInner);
+    }
 
     const stateWord = primaryState === 'elite_locked' ? 'SEALED' : 'LOCKED';
     const stateMain = new Text({
@@ -694,25 +734,28 @@ function buildMissionCardPortrait(
         root.addChild(topGold);
     }
 
-    const leftStrip = new Graphics();
-    leftStrip.roundRect(0, 6, 3, rowH - 12, 1.5);
     const stripColor = elite ? P_COLORS.accentGold : completed ? P_COLORS.stateLive : P_COLORS.accentCyan;
-    leftStrip.fill({ color: stripColor, alpha: 0.78 });
-    root.addChild(leftStrip);
+    const stripG = new Graphics();
+    stripG.roundRect(0, 6, 3, rowH - 12, 1.5);
+    stripG.fill({ color: stripColor, alpha: 0.78 });
+    mountTexturedInsetPlate(root, 0, 6, 3, rowH - 12, 'spine', stripG, {
+        fill: stripColor,
+        fillAlpha: 0.82,
+        stroke: stripColor,
+        strokeAlpha: 0.5,
+    });
 
-    const badge = new Graphics();
     const icX = 18 + P_ICON.emblem;
     const icY = rowH / 2;
-    const glowColor = elite ? P_COLORS.accentGold : P_COLORS.accentCyan;
+    const rimCol = elite ? P_COLORS.accentGold : P_COLORS.accentCyanSoft;
+    const badge = new Graphics();
     badge.circle(icX, icY, P_ICON.emblem + 4);
-    badge.fill({ color: glowColor, alpha: 0.05 });
+    badge.fill({ color: rimCol, alpha: 0.05 });
     badge.circle(icX, icY, P_ICON.emblem);
     badge.fill({ color: P_COLORS.bgElevated, alpha: 1 });
     badge.circle(icX, icY, P_ICON.emblem);
-    badge.stroke({ color: elite ? P_COLORS.accentGold : P_COLORS.accentCyanSoft, width: 2, alpha: 0.55 });
-    badge.circle(icX, icY, P_ICON.emblem - 5);
-    badge.stroke({ color: elite ? P_COLORS.accentGoldSoft : P_COLORS.accentCyanSoft, width: 1, alpha: 0.25 });
-    root.addChild(badge);
+    badge.stroke({ color: rimCol, width: 2, alpha: 0.55 });
+    mountEmblemCircleWell(root, icX, icY, P_ICON.emblem, badge, { tint: rimCol, alpha: 0.94 });
 
     const ic = new Graphics();
     const iconColor = elite ? P_COLORS.accentGold : P_COLORS.accentCyan;
@@ -777,11 +820,18 @@ function buildMissionCardPortrait(
     }
 
     if (metaStr) {
-        const metaPlate = new Graphics();
-        metaPlate.roundRect(tx, bands.metaY, Math.min(tw - 4, 130), bands.metaH, 6);
-        metaPlate.fill({ color: primaryState === 'claimable' ? 0x22180d : 0x09131d, alpha: 0.8 });
-        metaPlate.stroke({ color: primaryState === 'claimable' ? P_COLORS.accentGoldSoft : P_COLORS.strokeSubtle, width: 1, alpha: 0.35 });
-        root.addChild(metaPlate);
+        const pmw = Math.min(tw - 4, 130);
+        const pmh = bands.metaH;
+        const metaG2 = new Graphics();
+        metaG2.roundRect(tx, bands.metaY, pmw, pmh, 6);
+        metaG2.fill({ color: primaryState === 'claimable' ? 0x22180d : 0x09131d, alpha: 0.8 });
+        metaG2.stroke({ color: primaryState === 'claimable' ? P_COLORS.accentGoldSoft : P_COLORS.strokeSubtle, width: 1, alpha: 0.35 });
+        mountTexturedInsetPlate(root, tx, bands.metaY, pmw, pmh, 'meta', metaG2, {
+            fill: primaryState === 'claimable' ? 0x22180d : 0x09131d,
+            fillAlpha: 0.84,
+            stroke: primaryState === 'claimable' ? P_COLORS.accentGoldSoft : P_COLORS.strokeSubtle,
+            strokeAlpha: 0.38,
+        });
         const meta = fitOneLineSmall(metaStr, tw - 20, {
             fontFamily: FONT,
             fontWeight: '800',
@@ -803,15 +853,22 @@ function buildMissionCardPortrait(
     helper.position.set(tx, bands.helpY);
     root.addChild(helper);
 
-    const rewardRail = new Graphics();
-    rewardRail.roundRect(tx - 4, bands.rewardY, Math.max(120, tw - 4), bands.rewardH, 6);
-    rewardRail.fill({ color: primaryState === 'claimable' ? 0x231b0f : 0x0a121d, alpha: 0.78 });
-    rewardRail.stroke({
+    const rrw2 = Math.max(120, tw - 4);
+    const rrh2 = bands.rewardH;
+    const rewardG2 = new Graphics();
+    rewardG2.roundRect(tx - 4, bands.rewardY, rrw2, rrh2, 6);
+    rewardG2.fill({ color: primaryState === 'claimable' ? 0x231b0f : 0x0a121d, alpha: 0.78 });
+    rewardG2.stroke({
         color: primaryState === 'claimable' ? P_COLORS.accentGoldSoft : P_COLORS.strokeSubtle,
         width: 1,
         alpha: 0.4,
     });
-    root.addChild(rewardRail);
+    mountTexturedInsetPlate(root, tx - 4, bands.rewardY, rrw2, rrh2, 'reward', rewardG2, {
+        fill: primaryState === 'claimable' ? 0x231b0f : 0x0a121d,
+        fillAlpha: 0.82,
+        stroke: primaryState === 'claimable' ? P_COLORS.accentGoldSoft : P_COLORS.strokeSubtle,
+        strokeAlpha: 0.42,
+    });
     const rycP = bands.rewardY + bands.rewardH / 2;
     const racP = primaryState === 'claimable' ? P_COLORS.accentGold : P_COLORS.accentCyanSoft;
     const rrimP = primaryState === 'claimable' ? P_COLORS.accentGoldSoft : P_COLORS.strokeSubtle;
@@ -829,15 +886,22 @@ function buildMissionCardPortrait(
 
     const bx = cw - btnW - P_SPACE.s10;
     const by = (rowH - btnH) / 2;
-    const actionDock = new Graphics();
-    actionDock.roundRect(bx - 8, 8, btnW + 14, rowH - 16, 10);
-    actionDock.fill({ color: 0x0a121d, alpha: 0.45 });
-    actionDock.stroke({
+    const adW = btnW + 14;
+    const adH = rowH - 16;
+    const actionG = new Graphics();
+    actionG.roundRect(bx - 8, 8, adW, adH, 10);
+    actionG.fill({ color: 0x0a121d, alpha: 0.45 });
+    actionG.stroke({
         color: primaryState === 'claimable' ? P_COLORS.accentGold : P_COLORS.accentCyan,
         width: 1,
         alpha: 0.34,
     });
-    root.addChild(actionDock);
+    mountTexturedInsetPlate(root, bx - 8, 8, adW, adH, 'actionDock', actionG, {
+        fill: 0x0a121d,
+        fillAlpha: 0.52,
+        stroke: primaryState === 'claimable' ? P_COLORS.accentGold : P_COLORS.accentCyan,
+        strokeAlpha: 0.4,
+    });
     const actionFrameTex = primaryState === 'claimable' ? getVelocityCustomTexture('frame_premium') : undefined;
     if (actionFrameTex) {
         const fr = new Sprite(actionFrameTex);
@@ -950,7 +1014,7 @@ function buildBottomDockPortrait(
     ui: GameUIManager,
     onHome: () => void,
     navIndexBySlot?: (slot: number) => void,
-): { root: Container; setActive: (i: number) => void; dockCradles: Graphics[]; slotContainers: Container[] } {
+): { root: Container; setActive: (i: number) => void; dockCradles: (Graphics | NineSliceSprite)[]; slotContainers: Container[] } {
     const H = 84;
     const palette: CommandDockPalette = {
         dockDeck: P_COLORS.dockDeck,

@@ -3,8 +3,9 @@
  * Same cell logic, channel wells, active cue bar; only layout width/height vary.
  */
 
-import { Container, FederatedPointerEvent, Graphics, Sprite, Text, TextStyle } from 'pixi.js';
+import { Container, FederatedPointerEvent, Graphics, NineSliceSprite, Sprite, Text, TextStyle } from 'pixi.js';
 import { getVelocityUiTexture, type VelocityUiTextureKey } from '../velocityUiArt';
+import { VELOCITY_UI_SLICE } from '../velocityUiSlice';
 
 export type CommandDockPalette = {
     dockDeck: number;
@@ -65,8 +66,8 @@ export function buildCommandDock(
 ): {
     root: Container;
     setActive: (i: number) => void;
-    /** Portrait anim / parity — optional cradle graphics */
-    dockCradles: Graphics[];
+    /** Portrait anim / parity — cradle plates (nine-slice when textures load) */
+    dockCradles: (Graphics | NineSliceSprite)[];
     slotContainers: Container[];
     labels: Text[];
 } {
@@ -77,15 +78,54 @@ export function buildCommandDock(
     }
 
     const deckR = Math.max(12, Math.floor(H * 0.18));
-    const deck = new Graphics();
-    deck.roundRect(0, 0, cw, H, deckR);
-    deck.fill({ color: palette.dockDeck, alpha: 1 });
-    deck.stroke({ color: palette.dockDeckRim, width: 1.5, alpha: 0.85 });
-    root.addChild(deck);
-    const deckTop = new Graphics();
-    deckTop.roundRect(2, 2, cw - 4, Math.floor(H * 0.4), Math.max(8, deckR - 4));
-    deckTop.fill({ color: palette.dockDeckTop, alpha: 0.35 });
-    root.addChild(deckTop);
+    const sciDeck = getVelocityUiTexture('scifi_panel_rectangle_screws');
+    const deckTex = sciDeck ?? getVelocityUiTexture('panel_fill');
+    const BS = VELOCITY_UI_SLICE.scifiButton;
+    const PS = VELOCITY_UI_SLICE.panel;
+    const dL = sciDeck ? BS.L : PS.L;
+    const dR = sciDeck ? BS.R : PS.R;
+    const dT = sciDeck ? BS.T : PS.T;
+    const dB = sciDeck ? BS.B : PS.B;
+    if (deckTex) {
+        const deck = new NineSliceSprite({
+            texture: deckTex,
+            leftWidth: dL,
+            rightWidth: dR,
+            topHeight: dT,
+            bottomHeight: dB,
+            width: cw,
+            height: H,
+        });
+        deck.tint = palette.dockDeck;
+        deck.alpha = 0.98;
+        root.addChild(deck);
+        const glossTex = getVelocityUiTexture('panel_fill');
+        if (glossTex) {
+            const deckTop = new NineSliceSprite({
+                texture: glossTex,
+                leftWidth: PS.L,
+                rightWidth: PS.R,
+                topHeight: PS.T,
+                bottomHeight: PS.B,
+                width: cw - 6,
+                height: Math.max(8, Math.floor(H * 0.38)),
+            });
+            deckTop.position.set(3, 3);
+            deckTop.tint = palette.dockDeckTop;
+            deckTop.alpha = 0.32;
+            root.addChild(deckTop);
+        }
+    } else {
+        const deck = new Graphics();
+        deck.roundRect(0, 0, cw, H, deckR);
+        deck.fill({ color: palette.dockDeck, alpha: 1 });
+        deck.stroke({ color: palette.dockDeckRim, width: 1.5, alpha: 0.85 });
+        root.addChild(deck);
+        const deckTop = new Graphics();
+        deckTop.roundRect(2, 2, cw - 4, Math.floor(H * 0.4), Math.max(8, deckR - 4));
+        deckTop.fill({ color: palette.dockDeckTop, alpha: 0.35 });
+        root.addChild(deckTop);
+    }
     const bevel = new Graphics();
     bevel.rect(0, 0, cw, 3);
     bevel.fill({ color: 0xffffff, alpha: 0.04 });
@@ -102,7 +142,12 @@ export function buildCommandDock(
     const n = items.length;
     const slotW = cw / n;
     const margin = Math.max(4, Math.min(7, Math.floor(Math.min(cw, H) * 0.01)));
-    const dockCradles: Graphics[] = [];
+    const dockCradles: (Graphics | NineSliceSprite)[] = [];
+    const sciCradleIdle = getVelocityUiTexture('scifi_button_rectangle');
+    const cradleTex = sciCradleIdle ?? getVelocityUiTexture('button_secondary');
+    const cradleBS = sciCradleIdle ? BS : VELOCITY_UI_SLICE.button;
+    const cradleActiveTex =
+        getVelocityUiTexture('scifi_button_rectangle_depth') ?? sciCradleIdle ?? getVelocityUiTexture('button_primary');
     const slotContainers: Container[] = [];
     const labels: Text[] = [];
     const iconSize = H >= 80 ? 24 : 22;
@@ -127,8 +172,28 @@ export function buildCommandDock(
         slot.addChild(channelFace);
 
         const cradleTop = H >= 80 ? 8 : 7;
-        const cradle = new Graphics();
-        cradle.roundRect(margin + 3, cradleTop, cellW - 6, H - cradleTop * 2, 9);
+        const cwC = cellW - 6;
+        const chC = H - cradleTop * 2;
+        let cradle: Graphics | NineSliceSprite;
+        if (cradleTex && cwC >= 24 && chC >= 20) {
+            const ns = new NineSliceSprite({
+                texture: cradleTex,
+                leftWidth: cradleBS.L,
+                rightWidth: cradleBS.R,
+                topHeight: cradleBS.T,
+                bottomHeight: cradleBS.B,
+                width: cwC,
+                height: chC,
+            });
+            ns.position.set(margin + 3, cradleTop);
+            ns.alpha = 0.62;
+            ns.tint = palette.dockCellIdle;
+            cradle = ns;
+        } else {
+            const g = new Graphics();
+            g.roundRect(margin + 3, cradleTop, cwC, chC, 9);
+            cradle = g;
+        }
         dockCradles.push(cradle);
         slot.addChild(cradle);
 
@@ -182,22 +247,28 @@ export function buildCommandDock(
             const cellW = slotW2 - margin * 2;
             const on = idx === i;
             const cradleTop = H >= 80 ? 8 : 7;
-            cr.clear();
-            cr.roundRect(margin + 3, cradleTop, cellW - 6, H - cradleTop * 2, 9);
-            cr.fill({
-                color: on ? palette.dockCellActive : palette.dockCellIdle,
-                alpha: on ? 0.97 : 0.62,
-            });
-            cr.stroke({
-                color: on ? palette.dockCellActiveRim : palette.dockCellIdleRim,
-                width: on ? 2.25 : 1,
-                alpha: on ? 0.82 : 0.4,
-            });
-            if (on) {
-                cr.roundRect(margin + 7, cradleTop + 2, cellW - 14, 2, 1);
-                cr.fill({ color: palette.accentCyan, alpha: 0.5 });
-                cr.roundRect(margin + 6, H - cradleTop - 5, cellW - 12, 2, 1);
-                cr.fill({ color: palette.accentCyan, alpha: 0.22 });
+            if (cr instanceof NineSliceSprite) {
+                cr.texture = on && cradleActiveTex ? cradleActiveTex : cradleTex!;
+                cr.tint = on ? palette.dockCellActive : palette.dockCellIdle;
+                cr.alpha = on ? 0.96 : 0.72;
+            } else {
+                cr.clear();
+                cr.roundRect(margin + 3, cradleTop, cellW - 6, H - cradleTop * 2, 9);
+                cr.fill({
+                    color: on ? palette.dockCellActive : palette.dockCellIdle,
+                    alpha: on ? 0.97 : 0.62,
+                });
+                cr.stroke({
+                    color: on ? palette.dockCellActiveRim : palette.dockCellIdleRim,
+                    width: on ? 2.25 : 1,
+                    alpha: on ? 0.82 : 0.4,
+                });
+                if (on) {
+                    cr.roundRect(margin + 7, cradleTop + 2, cellW - 14, 2, 1);
+                    cr.fill({ color: palette.accentCyan, alpha: 0.5 });
+                    cr.roundRect(margin + 6, H - cradleTop - 5, cellW - 12, 2, 1);
+                    cr.fill({ color: palette.accentCyan, alpha: 0.22 });
+                }
             }
         });
         slotContainers.forEach((ch, idx) => {
