@@ -45,6 +45,8 @@ export type CommandDockItem = {
     draw: (g: Graphics, cx: number, cy: number, s: number) => void;
     /** Kenney menu icon — primary; vector draw is fallback only. */
     menuIconKey?: VelocityUiTextureKey;
+    /** Multiplier on dock `iconSize` when using a sprite (e.g. wide silhouettes). */
+    menuIconScale?: number;
 };
 
 export function buildCommandDock(
@@ -131,8 +133,9 @@ export function buildCommandDock(
         if (tex) {
             const sp = new Sprite(tex);
             sp.anchor.set(0.5);
-            sp.width = iconSize;
-            sp.height = iconSize;
+            const scale = it.menuIconScale ?? 1;
+            sp.width = iconSize * scale;
+            sp.height = iconSize * scale;
             sp.position.set(cx, iconCy);
             sp.alpha = 0.95;
             iconLayer.addChild(sp);
