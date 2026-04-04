@@ -120,11 +120,7 @@ export class MainMenuScreen extends BaseGameScreen {
             bundle.root.position.set(mx, 0);
             this.content.addChild(bundle.root);
 
-            this.landscapeTopRefs = {
-                energyText: bundle.topRefs.signal,
-                bestText: bundle.topRefs.best,
-                premiumText: bundle.topRefs.premium,
-            };
+            this.landscapeTopRefs = bundle.topRefs;
             this.tabsSetActive = bundle.setTabActive;
             this.navSetActive = bundle.setNavActive;
             this._flyBtn = bundle.flyCta;

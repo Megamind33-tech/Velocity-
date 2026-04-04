@@ -7,7 +7,6 @@ import {
     Container,
     FederatedPointerEvent,
     Graphics,
-    NineSliceSprite,
     Sprite,
     Text,
     TextStyle,
@@ -17,10 +16,8 @@ import { getMainMenuProgress, isLevelUnlocked } from '../../../data/localProgres
 import { LEVEL_DEFINITIONS, type LevelDefinition } from '../../../data/levelDefinitions';
 import { gameFlow } from '../gameFlowBridge';
 import type { GameUIManager } from '../GameUIManager';
-import { getVelocityCustomTexture, getVelocityUiTexture } from '../velocityUiArt';
-import { VELOCITY_UI_SLICE } from '../velocityUiSlice';
-
-const PORTRAIT_TAB_BS = VELOCITY_UI_SLICE.button;
+import { getVelocityCustomTexture } from '../velocityUiArt';
+import { buildTopUtilityBar, type TopBarRefs } from '../menuLandscape/landscapeMainMenuUI';
 import {
     kenneyButton,
     kenneyDockBar,
@@ -44,7 +41,6 @@ import {
     drawIconLock,
     drawIconLockOpen,
     drawIconMap,
-    drawIconProfile,
     drawIconRouteNode,
     drawIconStore,
     drawIconWing,
@@ -87,9 +83,8 @@ function trunc(s: string, max: number): string {
 }
 
 // ─── C. COMPONENT ARCHITECTURE (implemented below) ─────────────────────────
-// AmbientBackground(w,h): props none; parallax grid + stars; tick updates alpha/pos
-// StatusStrip: props cw, model, callbacks
-// StatusChip: label, value, accent, w, h
+// Shell backdrop: shared live menu backdrop (MainMenuScreen velocity shell), not a second layer here.
+// Top bar: buildTopUtilityBar (same Kenney rail + stat chips as landscape).
 // FeaturedMissionCard: featured, rank, prog, onFly, cw, cardH — returns { root, layers }
 // RouteProgress: bar + sweep line ref
 // LiveMicChip, RankChip, PrimaryCTAButton, RewardBadge — inline in Featured
@@ -119,7 +114,7 @@ export type PortraitMissionBundle = {
     setScrollY: (y: number) => void;
     getScrollY: () => number;
     maxScroll: () => number;
-    topRefs: { signal: Text; best: Text; premium: Text };
+    topRefs: TopBarRefs;
     flyCta: Container | null;
 };
 
@@ -130,319 +125,6 @@ function filterLevels(tab: number): LevelDefinition[] {
     if (tab === 2) return all.filter((l) => l.id <= 5);
     if (tab === 3) return all.filter((l) => l.id >= 11);
     return all.filter((l) => l.id >= 16);
-}
-
-function buildAmbientBackground(w: number, h: number): { root: Container; tick: (t: number) => void } {
-    const root = new Container();
-    root.zIndex = P_Z.ambient;
-    root.sortableChildren = true;
-
-    // ── Base fill — very dark, space-like ───────────────────────────────────
-    const base = new Graphics();
-    base.rect(0, 0, w, h);
-    base.fill({ color: P_COLORS.bgBase, alpha: 1 });
-    root.addChild(base);
-
-    // ── Deep horizon glow — world integration anchor ────────────────────────
-    const horizonY = h * 0.52;
-    const hglow = new Graphics();
-    hglow.rect(0, horizonY - 1, w, 1);
-    hglow.fill({ color: P_COLORS.accentCyan, alpha: 0.07 });
-    hglow.ellipse(w * 0.5, horizonY, w * 0.7, 18);
-    hglow.fill({ color: P_COLORS.accentCyan, alpha: 0.05 });
-    root.addChild(hglow);
-
-    // ── Perspective grid — angled lines converging to horizon (suggests depth/speed) ──
-    const grid = new Graphics();
-    const horizon = { x: w * 0.5, y: h * 0.4 };
-    const numLines = 10;
-    const spread = w * 1.4;
-    for (let i = 0; i <= numLines; i++) {
-        const bx = (i / numLines) * spread - spread * 0.2;
-        grid.moveTo(horizon.x + (bx - horizon.x) * 0.01, horizon.y);
-        grid.lineTo(bx, h + 20);
-        grid.stroke({ color: P_COLORS.accentCyan, width: 1, alpha: 0.05 });
-    }
-    // Horizontal cross-lines (near/far perspective)
-    for (let j = 0; j < 6; j++) {
-        const t2 = 0.12 + j * 0.15;
-        const y2 = horizon.y + (h + 20 - horizon.y) * t2;
-        grid.moveTo(0, y2);
-        grid.lineTo(w, y2);
-        grid.stroke({ color: P_COLORS.accentCyan, width: 1, alpha: 0.03 + j * 0.008 });
-    }
-    root.addChild(grid);
-
-    // ── Velocity streaks — horizontal speed blur lines ───────────────────────
-    const streaks = new Graphics();
-    let seed2 = 0xab1234cd;
-    const rnd2 = () => {
-        seed2 = (seed2 * 1664525 + 1013904223) >>> 0;
-        return seed2 / 0xffffffff;
-    };
-    for (let i = 0; i < 18; i++) {
-        const sy = rnd2() * h;
-        const sx = rnd2() * w * 0.6;
-        const len = 18 + rnd2() * 55;
-        const a = 0.04 + rnd2() * 0.08;
-        streaks.moveTo(sx, sy);
-        streaks.lineTo(sx + len, sy);
-        streaks.stroke({ color: P_COLORS.accentCyan, width: rnd2() > 0.7 ? 1.5 : 1, alpha: a });
-    }
-    root.addChild(streaks);
-
-    // ── Stars — varied size + brightness ─────────────────────────────────────
-    const stars = new Graphics();
-    let seed = 0x9e3779b9;
-    const rnd = () => {
-        seed = (seed * 1664525 + 1013904223) >>> 0;
-        return seed / 0xffffffff;
-    };
-    for (let i = 0; i < 90; i++) {
-        const x = rnd() * w;
-        const y = rnd() * h;
-        const bright = rnd() > 0.9;
-        const big = rnd() > 0.94;
-        const a = bright ? 0.35 + rnd() * 0.4 : 0.08 + rnd() * 0.22;
-        const r = big ? 2 : rnd() > 0.75 ? 1.5 : 1;
-        stars.circle(x, y, r);
-        stars.fill({ color: bright ? 0xe8f4ff : 0xaaccff, alpha: a });
-    }
-    root.addChild(stars);
-
-    // ── Upper vignette ────────────────────────────────────────────────────────
-    const vign = new Graphics();
-    vign.rect(0, 0, w, h * 0.08);
-    vign.fill({ color: 0x000000, alpha: 0.22 });
-    root.addChild(vign);
-
-    const tick = (t: number): void => {
-        const drift = Math.sin(t * 0.06) * 5;
-        grid.alpha = 0.85 + Math.sin(t * 0.28) * 0.15;
-        grid.position.set(drift * 0.18, drift * 0.08);
-        streaks.alpha = 0.85 + Math.sin(t * 0.45 + 1.2) * 0.15;
-        hglow.alpha = 0.75 + Math.sin(t * 0.6) * 0.25;
-    };
-
-    return { root, tick };
-}
-
-function buildStatusChip(
-    label: string,
-    value: string,
-    w: number,
-    h: number,
-    accent: 'cyan' | 'gold' | 'purple',
-    drawIcon?: (g: Graphics, cx: number, cy: number, s: number) => void,
-): Container {
-    const root = new Container();
-
-    const accentColor = accent === 'gold'
-        ? P_COLORS.accentGold
-        : accent === 'purple'
-        ? P_COLORS.accentPurple
-        : P_COLORS.accentCyan;
-    const accentSoft = accent === 'gold'
-        ? P_COLORS.accentGoldSoft
-        : accent === 'purple'
-        ? P_COLORS.accentPurpleSoft
-        : P_COLORS.accentCyanSoft;
-
-    // ── Background: Kenney nine-slice if available at this width, else layered vector ──
-    const chipTex = getVelocityUiTexture('button_secondary');
-    const BS = PORTRAIT_TAB_BS;
-    const canNineSlice = !!chipTex && w >= 116;
-
-    if (canNineSlice) {
-        const spr = new NineSliceSprite({
-            texture: chipTex!,
-            leftWidth: BS.L, rightWidth: BS.R,
-            topHeight: BS.T, bottomHeight: BS.B,
-            width: w, height: h,
-        });
-        spr.tint = accent === 'gold' ? 0xede6cc : accent === 'purple' ? 0xdccff0 : 0xcce4f0;
-        spr.alpha = 0.90;
-        root.addChild(spr);
-    } else {
-        // Outer body
-        const g = new Graphics();
-        g.roundRect(0, 0, w, h, P_RADIUS.chip);
-        g.fill({ color: P_COLORS.bgPanel, alpha: 1 });
-        g.stroke({ color: accentSoft, width: 1.5, alpha: 0.55 });
-        root.addChild(g);
-        // Inner highlight bevel — gives the chip physical lift
-        const bevel = new Graphics();
-        bevel.roundRect(2, 2, w - 4, Math.floor(h * 0.45), P_RADIUS.chip - 2);
-        bevel.fill({ color: 0xffffff, alpha: P_OPACITY.chipBevel });
-        root.addChild(bevel);
-        // Bottom shadow strip
-        const shadow = new Graphics();
-        shadow.roundRect(2, h - 5, w - 4, 3, P_RADIUS.chip - 2);
-        shadow.fill({ color: 0x000000, alpha: 0.18 });
-        root.addChild(shadow);
-    }
-
-    // ── Accent indicator strip (top edge — 3px, with subtle glow) ─────────────
-    const strip = new Graphics();
-    strip.roundRect(6, 0, w - 12, 3, 1);
-    strip.fill({ color: accentColor, alpha: 0.75 });
-    root.addChild(strip);
-    // Glow bloom under strip
-    const stripGlow = new Graphics();
-    stripGlow.roundRect(6, 0, w - 12, 6, 3);
-    stripGlow.fill({ color: accentColor, alpha: 0.12 });
-    root.addChild(stripGlow);
-
-    // ── Icon — left of label (adds identity, breaks generic look) ─────────────
-    const iconPad = 8;
-    if (drawIcon) {
-        const ig = new Graphics();
-        drawIcon(ig, iconPad + 8, h / 2 + 4, 9);
-        root.addChild(ig);
-    }
-    const textX = drawIcon ? iconPad + 20 : 10;
-
-    // ── Label — 9px muted, clearly subordinate ─────────────────────────────────
-    const lb = new Text({
-        text: label.toUpperCase(),
-        style: new TextStyle({
-            fontFamily: FONT,
-            fontSize: 9,
-            fontWeight: '600',
-            fill: P_COLORS.textMuted,
-            letterSpacing: 1.2,
-        }),
-    });
-    lb.position.set(textX, 6);
-    root.addChild(lb);
-
-    // ── Value — 17px bold in accent color — dominant visual target ─────────────
-    const vt = new Text({
-        text: value,
-        style: new TextStyle({
-            fontFamily: FONT,
-            fontSize: 17,
-            fontWeight: '800',
-            fill: accentColor,
-            dropShadow: { alpha: 0.55, blur: 3, color: 0x000000, distance: 1 },
-        }),
-    });
-    vt.position.set(textX, h / 2 - 1);
-    root.addChild(vt);
-
-    return root;
-}
-
-// ── Chip icon draw helpers ─────────────────────────────────────────────────────
-
-function drawChipSignal(g: Graphics, cx: number, cy: number, s: number): void {
-    const ws = s * 0.18;
-    const xs = [cx - s * 0.28, cx, cx + s * 0.28];
-    const hs = [s * 0.30, s * 0.48, s * 0.60];
-    xs.forEach((x, i) => {
-        const hh = hs[i];
-        g.roundRect(x - ws / 2, cy - hh / 2, ws, hh, 1);
-        g.fill({ color: P_COLORS.accentCyan, alpha: 0.75 + i * 0.05 });
-    });
-}
-
-function drawChipStar(g: Graphics, cx: number, cy: number, s: number): void {
-    const n = 5;
-    const ro = s * 0.48;
-    const ri = s * 0.20;
-    for (let i = 0; i < n * 2; i++) {
-        const a = (i * Math.PI) / n - Math.PI / 2;
-        const r = i % 2 === 0 ? ro : ri;
-        const px = cx + Math.cos(a) * r;
-        const py = cy + Math.sin(a) * r;
-        if (i === 0) g.moveTo(px, py); else g.lineTo(px, py);
-    }
-    g.closePath();
-    g.fill({ color: P_COLORS.accentGold, alpha: 0.85 });
-}
-
-function drawChipGem(g: Graphics, cx: number, cy: number, s: number): void {
-    g.moveTo(cx, cy - s * 0.48);
-    g.lineTo(cx + s * 0.36, cy - s * 0.08);
-    g.lineTo(cx + s * 0.26, cy + s * 0.40);
-    g.lineTo(cx - s * 0.26, cy + s * 0.40);
-    g.lineTo(cx - s * 0.36, cy - s * 0.08);
-    g.closePath();
-    g.fill({ color: P_COLORS.accentPurple, alpha: 0.80 });
-}
-
-export type StatusStripProps = {
-    cw: number;
-    signalVal: string;
-    bestVal: string;
-    premiumVal: string;
-    onProfile: () => void;
-    onPremiumTap?: () => void;
-};
-
-function buildStatusStrip(p: StatusStripProps): { root: Container; signal: Text; best: Text; premium: Text } {
-    const H = 52;
-    const root = new Container();
-    const gap = P_SPACE.s8;
-    const side = 48;
-    const chipCount = 3;
-    const chipW = Math.floor((p.cw - side - gap * (chipCount + 1)) / chipCount);
-    const wChip = Math.max(92, chipW);
-
-    const av = new Container();
-    const avBg = new Graphics();
-    avBg.circle(side / 2, side / 2, side / 2 - 2);
-    avBg.fill({ color: P_COLORS.bgPanel, alpha: 1 });
-    avBg.stroke({ color: P_COLORS.strokeActive, width: 1.5, alpha: 0.45 });
-    av.addChild(avBg);
-    const avG = new Graphics();
-    drawIconProfile(avG, side / 2, side / 2, P_ICON.strip);
-    av.addChild(avG);
-    pressable(av, p.onProfile);
-    root.addChild(av);
-
-    const x0 = side + gap;
-    const c1 = buildStatusChip('SIGNAL', p.signalVal, wChip, H - 4, 'cyan', drawChipSignal);
-    c1.position.set(x0, 2);
-    root.addChild(c1);
-    const c2 = buildStatusChip('BEST', p.bestVal, wChip, H - 4, 'gold', drawChipStar);
-    c2.position.set(x0 + wChip + gap, 2);
-    const prestigeTex = getVelocityCustomTexture('rank_prestige');
-    if (prestigeTex) {
-        const em = new Sprite(prestigeTex);
-        em.anchor.set(1, 0);
-        em.width = 22;
-        em.height = 22;
-        em.position.set(wChip - 5, 5);
-        em.alpha = 0.88;
-        c2.addChild(em);
-    }
-    root.addChild(c2);
-    const c3 = buildStatusChip('PREMIUM', p.premiumVal, wChip, H - 4, 'purple', drawChipGem);
-    c3.position.set(x0 + (wChip + gap) * 2, 2);
-    const eliteTex = getVelocityCustomTexture('rank_elite');
-    if (eliteTex) {
-        const em = new Sprite(eliteTex);
-        em.anchor.set(1, 0);
-        em.width = 22;
-        em.height = 22;
-        em.position.set(wChip - 5, 5);
-        em.alpha = 0.88;
-        c3.addChild(em);
-    }
-    if (p.onPremiumTap) {
-        c3.eventMode = 'static';
-        c3.cursor = 'pointer';
-        pressable(c3, p.onPremiumTap);
-    }
-    root.addChild(c3);
-
-    return {
-        root,
-        signal: c1.children[c1.children.length - 1] as Text,
-        best: c2.children[c2.children.length - 1] as Text,
-        premium: c3.children[c3.children.length - 1] as Text,
-    };
 }
 
 type FeaturedProps = {
@@ -1256,6 +938,14 @@ function buildMissionListPortrait(
     maxScroll: () => number;
 } {
     const root = new Container();
+    const listFrame = new Graphics();
+    listFrame.roundRect(0, 0, cw, listH, 14);
+    listFrame.fill({ color: 0x08131f, alpha: 0.28 });
+    listFrame.stroke({ color: 0x2e435f, width: 1, alpha: 0.26 });
+    listFrame.roundRect(8, 2, cw - 16, 2, 1);
+    listFrame.fill({ color: P_COLORS.accentCyan, alpha: 0.14 });
+    root.addChild(listFrame);
+
     const maskG = new Graphics();
     maskG.rect(0, 0, cw, listH);
     maskG.fill({ color: 0xffffff, alpha: 1 });
@@ -1377,23 +1067,19 @@ export function buildPortraitMissionScreen(p: BuildPortraitMissionScreenParams):
     root.sortableChildren = true;
     root.zIndex = P_Z.shell;
 
-    const ambient = buildAmbientBackground(cw, sh);
-    ambient.root.zIndex = P_Z.ambient;
-    root.addChild(ambient.root);
+    const TOP_BAR_H = 64;
+    let y = p.safeTop + 12;
 
-    let y = p.safeTop + P_SPACE.s10;
-
-    const strip = buildStatusStrip({
+    const topBar = buildTopUtilityBar(
         cw,
-        signalVal: `${prog.maxUnlocked}`,
-        bestVal: String(p.getBestScore()),
-        premiumVal: `${prog.unlockedCount}`,
-        onProfile: () => p.ui.showScreen('settings', true),
-        onPremiumTap: () => gameFlow().openAchievements?.(),
-    });
-    strip.root.position.set(0, y);
-    root.addChild(strip.root);
-    y += 60 + P_SPACE.s12;
+        () => p.ui.showScreen('settings', true),
+        prog,
+        p.getBestScore(),
+        () => gameFlow().openAchievements?.(),
+    );
+    topBar.root.position.set(0, y);
+    root.addChild(topBar.root);
+    y += TOP_BAR_H + P_SPACE.s12;
 
     const cardH = Math.min(200, Math.max(168, Math.floor(sh * 0.26)));
     const feat = buildFeaturedMissionCard({
@@ -1447,7 +1133,6 @@ export function buildPortraitMissionScreen(p: BuildPortraitMissionScreenParams):
     const routeBarW = feat.routeBarW;
 
     const tick = (t: number): void => {
-        ambient.tick(t);
         anim.heroGlow.alpha = 0.2 + Math.sin(t * 0.9) * 0.12;
         anim.rankGlow.alpha = 0.35 + Math.sin(t * 2.2) * 0.25;
 
@@ -1471,7 +1156,7 @@ export function buildPortraitMissionScreen(p: BuildPortraitMissionScreenParams):
         setScrollY: list.setScrollY,
         getScrollY: list.getScrollY,
         maxScroll: list.maxScroll,
-        topRefs: { signal: strip.signal, best: strip.best, premium: strip.premium },
+        topRefs: topBar.refs,
         flyCta: feat.flyCta,
     };
 }
