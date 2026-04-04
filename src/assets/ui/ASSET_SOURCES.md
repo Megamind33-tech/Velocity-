@@ -2,6 +2,17 @@
 
 Primary UI family uses **Kenney** assets already bundled under `public/kenney-ui-pack/` (CC0).
 
+## Command dock icons (`public/kenney-dock-icons/`, CC0)
+
+Semantic bottom-nav glyphs (white silhouettes — tinted in code like other dock sprites):
+
+| File | Source |
+|------|--------|
+| `home.png`, `target.png`, `cart.png` | [Kenney Game Icons](https://kenney.nl/assets/game-icons) — `PNG/White/1x/` |
+| `hangar_plane.png` | Cropped `planeBlue1` region from [Kenney Tappy Plane](https://kenney.nl/assets/tappy-plane) `Spritesheet/sheet.png`, resized to 128×128 for UI |
+
+Shipped `LICENSE-*.txt` in that folder are copies from the original zips.
+
 ## Families wired by code
 - `Kenney UI Pack` (`PNG/Blue|Grey|Yellow|Red|Extra`) via `src/ui/game/velocityUiArt.ts`
   - Mission list rows (playable + locked faces) use **`panel_fill` + `panel_frame`** nine-slice via `kenneyMissionCardFace()` in `kenneyLandscapeWidgets.ts` when preloaded — vector fallback only if textures fail.

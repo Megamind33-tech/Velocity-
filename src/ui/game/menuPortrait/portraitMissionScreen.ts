@@ -1000,6 +1000,7 @@ function buildBottomDockPortrait(
                 },
                 draw: drawIconHangar,
                 menuIconKey: 'dock_nav_hangar',
+                menuIconScale: 1.08,
             },
             {
                 label: 'STORE',

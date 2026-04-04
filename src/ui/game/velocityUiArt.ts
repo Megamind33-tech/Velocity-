@@ -1,11 +1,16 @@
 /**
  * Kenney UI Pack — https://kenney.nl/assets/ui-pack (CC0)
  * Paths under `public/kenney-ui-pack/PNG`. `preloadVelocityUiTextures()` runs at boot.
+ *
+ * Command-dock glyphs use additional Kenney CC0 packs shipped under `public/kenney-dock-icons/`:
+ * - Game Icons (home, target, cart): https://kenney.nl/assets/game-icons
+ * - Hangar plane: cropped from Tappy Plane spritesheet — https://kenney.nl/assets/tappy-plane
  */
 
 import { Assets, Texture } from 'pixi.js';
 
 const BASE = `${import.meta.env.BASE_URL}kenney-ui-pack/PNG`;
+const DOCK_ICONS = `${import.meta.env.BASE_URL}kenney-dock-icons`;
 
 export type VelocityUiTextureKey =
     | 'button_primary'
@@ -92,11 +97,11 @@ const MANIFEST: Record<VelocityUiTextureKey, string> = {
     menu_store_icon:           `${BASE}/Yellow/Default/icon_square.png`,
     menu_rewards_star_outline: `${BASE}/Yellow/Default/star_outline_depth.png`,
     menu_settings_repeat:      `${BASE}/Extra/Default/icon_repeat_dark.png`,
-    /** Command dock — distinct Kenney glyphs (pack has no literal “home” icon). */
-    dock_nav_home:     `${BASE}/Blue/Default/arrow_decorative_n.png`,
-    dock_nav_missions: `${BASE}/Extra/Default/icon_play_outline.png`,
-    dock_nav_hangar:   `${BASE}/Extra/Default/icon_arrow_up_outline.png`,
-    dock_nav_store:    `${BASE}/Yellow/Default/icon_outline_square.png`,
+    /** Command dock — Kenney Game Icons + Tappy Plane (see file header). */
+    dock_nav_home:     `${DOCK_ICONS}/home.png`,
+    dock_nav_missions: `${DOCK_ICONS}/target.png`,
+    dock_nav_hangar:   `${DOCK_ICONS}/hangar_plane.png`,
+    dock_nav_store:    `${DOCK_ICONS}/cart.png`,
 };
 
 export type VelocityCustomTextureKey =
