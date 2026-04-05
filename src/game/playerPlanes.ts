@@ -11,7 +11,9 @@ const BASE = `${import.meta.env.BASE_URL}oga-players`;
 /** Hangar plane id → static texture URL */
 export const PLAYER_PLANE_TEXTURE_URL: Record<string, string> = {
     cadet: `${BASE}/plane_cadet.png`,
+    cartoon: `${BASE}/plane_cartoon.png`,
     scout: `${BASE}/plane_scout.png`,
+    liner: `${BASE}/plane_liner.png`,
     interceptor: `${BASE}/plane_interceptor_jet.png`,
 };
 

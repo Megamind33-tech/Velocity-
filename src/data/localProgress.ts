@@ -98,7 +98,9 @@ export function getUnlockedPlaneIds(maxUnlockedLevel: number): string[] {
     } catch {
         /* ignore */
     }
+    if (maxUnlockedLevel >= 3) base.add('cartoon');
     if (maxUnlockedLevel >= 5) base.add('scout');
+    if (maxUnlockedLevel >= 8) base.add('liner');
     if (maxUnlockedLevel >= 10) base.add('interceptor');
     return [...base];
 }

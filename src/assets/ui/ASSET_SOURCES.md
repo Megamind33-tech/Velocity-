@@ -36,6 +36,8 @@ All listed OGA entries are CC0 per their pages.
 2D sprites for the **hangar + in-run player ship** (see `src/game/playerPlanes.ts`). Provenance and licenses: **`public/oga-players/SOURCES.md`** and **`LICENSE-fighters-CC-BY-3.0.txt`**.
 
 - **Cadet / Scout** — cropped from [Fighter planes ww2 theme](https://opengameart.org/content/fighter-planes-ww2-theme) (CC-BY 3.0, Nick).
+- **Cartoon** — from [Low poly cartoon plane](https://opengameart.org/content/low-poly-cartoon-plane) `Plane.png` (CC0, alpaqagames), cropped + scaled.
+- **Liner** — center crop from [Jet airplane](https://opengameart.org/content/jet-airplane) `passengerjet_tex_plain.png` (CC0, weirdybeardyman).
 - **Interceptor** — center crop from [Private Jet](https://opengameart.org/content/private-jet) texture (CC0, weirdybeardyman).
 
 [Scifi Plane](https://opengameart.org/content/scifi-plane) (CC-BY 3.0, Ulf) is **3D-only** in the OGA download; not bundled until a 2D render or pipeline exists.

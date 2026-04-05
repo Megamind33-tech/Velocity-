@@ -23,7 +23,9 @@ import { getPlayerPlaneTexture } from '../../../game/playerPlanes';
 
 const PLANES: { id: string; label: string; tier: string }[] = [
     { id: 'cadet', label: 'CADET MK-I', tier: 'Starter' },
+    { id: 'cartoon', label: 'STUNT FOX', tier: 'Unlock L3+' },
     { id: 'scout', label: 'SCOUT RAPTOR', tier: 'Unlock L5+' },
+    { id: 'liner', label: 'SKY LINER', tier: 'Unlock L8+' },
     { id: 'interceptor', label: 'INTERCEPTOR', tier: 'Unlock L10+' },
 ];
 
