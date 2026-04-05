@@ -23,6 +23,7 @@ import { createVelocityGameButton } from '../velocityUiButtons';
 import { fitLabelToWidth } from '../menuShared/fitLabelToWidth';
 import { animateModalEntrance } from '../modalAnimations';
 import { AnimationManager } from '../AnimationManager';
+import { animateScoreCountUp } from '../contentAnimations';
 
 function ts(fill: number, size: number, weight: '400'|'600'|'700'|'800' = '700', spacing = 0): TextStyle {
     return new TextStyle({
@@ -158,7 +159,7 @@ export class GameOverScreen extends BaseGameScreen {
         const innerW = this.layout.innerW;
         const body = this.layout.body;
         const nt = fitLabelToWidth(
-            str,
+            '0',
             innerW - 24,
             (fs) =>
                 new TextStyle({
@@ -180,6 +181,11 @@ export class GameOverScreen extends BaseGameScreen {
         this.scoreValText.destroy();
         this.scoreValText = nt;
         body.addChildAt(nt, idx);
+
+        // Animate score count-up
+        animateScoreCountUp(this.scoreValText, 0, s.score, {
+            duration: 1000,
+        });
     }
 
     show(): void {

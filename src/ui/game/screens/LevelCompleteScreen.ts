@@ -11,7 +11,7 @@
  *   - No data list. No stat dashboard. Celebration + action.
  */
 
-import { Application, Container, Graphics, Sprite, Text, TextStyle } from 'pixi.js';
+import { Application, Container, DisplayObject, Graphics, Sprite, Text, TextStyle } from 'pixi.js';
 import { BaseGameScreen } from '../GameUIManager';
 import { GAME_COLORS, GAME_FONTS, GAME_SIZES } from '../GameUITheme';
 import { gameFlow, getLastRunSummary, runEndActions } from '../gameFlowBridge';
@@ -24,8 +24,9 @@ import {
 } from '../velocityModalLayout';
 import { createVelocityGameButton } from '../velocityUiButtons';
 import { getVelocityUiTexture } from '../velocityUiArt';
-import { animateModalEntrance, animateModalExit } from '../modalAnimations';
+import { animateModalEntrance } from '../modalAnimations';
 import { AnimationManager } from '../AnimationManager';
+import { animateScoreCountUp, animateStarReveal } from '../contentAnimations';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -232,7 +233,11 @@ export class LevelCompleteScreen extends BaseGameScreen {
 
     refreshRunSummary(): void {
         const s = getLastRunSummary();
-        this.scoreValText.text = String(s.score);
+
+        // Animate score count-up
+        animateScoreCountUp(this.scoreValText, 0, s.score, {
+            duration: 1000,
+        });
 
         // Rebuild stars with correct count
         const { body, innerW } = this.layout;
@@ -247,6 +252,13 @@ export class LevelCompleteScreen extends BaseGameScreen {
         const scoreY = 4 + 16 + GAME_SIZES.font.score_hero + 12 + 14;
         this.starRow.position.set(0, scoreY);
         body.addChild(this.starRow);
+
+        // Animate star reveal with stagger
+        const starSprites = this.starRow.children as DisplayObject[];
+        animateStarReveal(starSprites, {
+            duration: 300,
+            starDelay: 150,
+        });
     }
 
     show(): void {
