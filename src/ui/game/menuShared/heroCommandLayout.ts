@@ -5,6 +5,7 @@
 import { Container, Graphics, Sprite, Text, TextStyle } from 'pixi.js';
 import { getVelocityCustomTexture } from '../velocityUiArt';
 import { spriteIcon } from '../menuLandscape/kenneyLandscapeWidgets';
+import { buildHeroAmbientParts, mountClassChipKenneyRim } from './heroAmbientAccents';
 
 export type MainMenuProgressLite = {
     unlockedCount: number;
@@ -50,11 +51,8 @@ const CLASS_ICON_LANE = 30;
 export type HeroCommandMountResult = {
     flyCta: Container | null;
     routeBarW: number;
-    routeSweep: Graphics;
-    rankGlow: Graphics;
-    heroMotif: Graphics;
-    rewardShimmer: Graphics;
-    heroGlow: Graphics;
+    /** Kenney/sprite hero life — tint pulse, tiled bar glint, class rim (no vector sweeps). */
+    heroAmbientTick: (t: number) => void;
     bottomRailY: number;
     /** First line Y for portrait route bonus (e.g. stars). */
     bonusLineY: number;
@@ -74,11 +72,6 @@ export function mountHeroCommandLayout(
     fontFamily: string,
     helpers: HeroLayoutHelpers,
 ): HeroCommandMountResult {
-    const heroGlow = new Graphics();
-    heroGlow.roundRect(1, 1, contentW - 2, innerH - 2, 14);
-    heroGlow.stroke({ color: colors.cyan, width: 2.5, alpha: 0.18 });
-    content.addChild(heroGlow);
-
     const leftTextMax = Math.max(120, contentW - RIGHT_EMBLEM - GRID * 2);
     const btnHDefault = 48;
     const bottomPad = 8;
@@ -200,13 +193,7 @@ export function mountHeroCommandLayout(
         content.addChild(rs);
     }
 
-    const rewardShimmer = new Graphics();
-    rewardShimmer.position.set(emblemCx - emblemR, emblemCy - emblemR);
-    content.addChild(rewardShimmer);
-
     const motifRight = ox + contentW - RIGHT_EMBLEM - 6;
-    const heroMotif = new Graphics();
-    content.addChild(heroMotif);
 
     const contentFloor = (showTag ? tagY + TAG_H : subY + SUB_H) + 4;
     const bonusStars = prog.rewardStars;
@@ -253,10 +240,12 @@ export function mountHeroCommandLayout(
 
     const barW = Math.min(leftTextMax, motifRight - ox - GRID);
     const kBar = helpers.kenneyProgressBar(barW, barH);
+    let glintAnchor: Container;
     if (kBar) {
         kBar.position.set(ox, barY);
         kBar.setProgress(prog01);
         content.addChild(kBar);
+        glintAnchor = kBar;
     } else {
         const bbg = new Graphics();
         bbg.roundRect(ox, barY, barW, 10, 5);
@@ -267,13 +256,11 @@ export function mountHeroCommandLayout(
         f.roundRect(ox + 2, barY + 2, Math.max(4, (barW - 4) * prog01), 6, 3);
         f.fill({ color: colors.cyan, alpha: 0.9 });
         content.addChild(f);
+        glintAnchor = f;
     }
 
-    const routeSweep = new Graphics();
-    routeSweep.position.set(ox, barY);
-    content.addChild(routeSweep);
-
     const cls = new Container();
+    const rankRim = mountClassChipKenneyRim(cls, clsW, useBtnH, colors.gold);
     const cb = new Graphics();
     cb.roundRect(0, 0, clsW, useBtnH, 12);
     cb.fill({ color: 0x080e16, alpha: 1 });
@@ -320,11 +307,6 @@ export function mountHeroCommandLayout(
     clab.position.set(textX, Math.floor((useBtnH - 13) / 2));
     cls.addChild(clab);
 
-    const rankGlow = new Graphics();
-    rankGlow.roundRect(0, 0, clsW, useBtnH, 12);
-    rankGlow.stroke({ color: colors.gold, width: 2, alpha: 0.28 });
-    cls.addChild(rankGlow);
-
     cls.position.set(ox, rowY);
     content.addChild(cls);
 
@@ -336,14 +318,31 @@ export function mountHeroCommandLayout(
     fly.position.set(flyX, rowY);
     content.addChild(fly);
 
+    const ambient = buildHeroAmbientParts({
+        contentW,
+        innerH,
+        ox,
+        colors: { cyan: colors.cyan, gold: colors.gold },
+        barW,
+        barH,
+        barY,
+        emblemCx,
+        emblemCy,
+        emblemR,
+        rankRim,
+    });
+    content.addChildAt(ambient.rim, 0);
+    content.addChildAt(ambient.motifRoot, 1);
+    content.addChildAt(ambient.routeRoot, content.getChildIndex(glintAnchor) + 1);
+    if (ambient.rewardSpr) {
+        const emIdx = content.getChildIndex(rg);
+        content.addChildAt(ambient.rewardSpr, emIdx + 1);
+    }
+
     return {
         flyCta: fly,
         routeBarW: barW,
-        routeSweep,
-        rankGlow,
-        heroMotif,
-        rewardShimmer,
-        heroGlow,
+        heroAmbientTick: ambient.tick,
         bottomRailY: rowY,
         bonusLineY,
         bonusSecondLineY,

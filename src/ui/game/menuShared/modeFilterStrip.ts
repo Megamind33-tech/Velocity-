@@ -116,9 +116,10 @@ export function buildModeFilterStrip(
     const useScifiTabs = innerW >= 72 && !!sciIdle && !!sciOn;
     const useK9 =
         !useScifiTabs &&
-        innerW >= 116 &&
+        innerW >= 72 &&
         !!getVelocityUiTexture('button_primary') &&
         !!getVelocityUiTexture('button_secondary');
+    const texturedTabBg = useScifiTabs || useK9;
 
     const textMaxW = Math.max(36, innerW - 8);
     const buttons: Container[] = [];
@@ -152,20 +153,22 @@ export function buildModeFilterStrip(
         tabGlows.push(glow);
         b.addChild(glow);
 
-        const idleSlot = new Graphics();
-        idleSlot.roundRect(0, 1, tabW - 6, H - 16, 10);
-        idleSlot.fill({ color: MODE_FILTER_TAB_THEME.tabIdle.face, alpha: 0.85 });
-        idleSlot.stroke({ color: MODE_FILTER_TAB_THEME.tabIdle.rim, width: 1, alpha: 0.7 });
-        b.addChild(idleSlot);
+        if (!texturedTabBg) {
+            const idleSlot = new Graphics();
+            idleSlot.roundRect(0, 1, tabW - 6, H - 16, 10);
+            idleSlot.fill({ color: MODE_FILTER_TAB_THEME.tabIdle.face, alpha: 0.85 });
+            idleSlot.stroke({ color: MODE_FILTER_TAB_THEME.tabIdle.rim, width: 1, alpha: 0.7 });
+            b.addChild(idleSlot);
 
-        const activePlate = new Graphics();
-        activePlate.visible = false;
-        activePlate.roundRect(2, 0, tabW - 10, H - 17, 10);
-        activePlate.fill({ color: MODE_FILTER_TAB_THEME.tabActive.face, alpha: 0.84 });
-        activePlate.stroke({ color: MODE_FILTER_TAB_THEME.tabActive.rim, width: 1.4, alpha: 0.52 });
-        activePlate.roundRect(8, 2, tabW - 22, 2, 1);
-        activePlate.fill({ color: MODE_FILTER_TAB_THEME.tabActive.cue, alpha: 0.65 });
-        b.addChild(activePlate);
+            const activePlate = new Graphics();
+            activePlate.visible = false;
+            activePlate.roundRect(2, 0, tabW - 10, H - 17, 10);
+            activePlate.fill({ color: MODE_FILTER_TAB_THEME.tabActive.face, alpha: 0.84 });
+            activePlate.stroke({ color: MODE_FILTER_TAB_THEME.tabActive.rim, width: 1.4, alpha: 0.52 });
+            activePlate.roundRect(8, 2, tabW - 22, 2, 1);
+            activePlate.fill({ color: MODE_FILTER_TAB_THEME.tabActive.cue, alpha: 0.65 });
+            b.addChild(activePlate);
+        }
 
         let bg: NineSliceSprite | Graphics;
         if (useScifiTabs) {
@@ -232,13 +235,15 @@ export function buildModeFilterStrip(
                 gw.fill({ color: MODE_FILTER_TAB_THEME.tabActive.cue, alpha: 0.9 });
             }
 
-            const idle = b.children[1] as Graphics;
-            const plate = b.children[2] as Graphics;
-            const bg0 = b.children[3];
-            const tx = b.children[4] as Text;
+            const bgIdx = texturedTabBg ? 1 : 3;
+            const txIdx = texturedTabBg ? 2 : 4;
+            const idle = texturedTabBg ? null : (b.children[1] as Graphics);
+            const plate = texturedTabBg ? null : (b.children[2] as Graphics);
+            const bg0 = b.children[bgIdx];
+            const tx = b.children[txIdx] as Text;
 
-            plate.visible = on;
-            idle.alpha = on ? 0.22 : 0.92;
+            if (plate) plate.visible = on;
+            if (idle) idle.alpha = on ? 0.22 : 0.92;
 
             if (useScifiTabs && bg0 instanceof NineSliceSprite) {
                 bg0.texture = (on ? sciOn! : sciIdle!);
@@ -275,7 +280,7 @@ export function buildModeFilterStrip(
             tx.destroy();
             nextLabel.anchor.set(0.5);
             nextLabel.position.set((tabW - 6) / 2, (H - 18) / 2 + 1);
-            b.addChildAt(nextLabel, 4);
+            b.addChildAt(nextLabel, txIdx);
         });
     }
 

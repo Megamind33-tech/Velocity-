@@ -13,6 +13,7 @@ Mirrored subset from OpenGameArt: [UI Pack - Sci-Fi](https://opengameart.org/con
 - **Hero + modals** — `createKenneyFramedPanelWithContent` uses sci-fi glass + notches + screw chrome when textures load (fallback: classic Kenney `panel_fill` / `panel_frame`)
 - **Dock underlay** — `scifi_panel_rectangle_screws` (replaces flat `panel_fill` when loaded)
 - **Missions dock icon** — `crosshair_color_a.png` from the same pack (clear target read at small size)
+- **Corner notches** — `panel_glass_notch_tl.png`, `panel_glass_notch_tr.png` (hero ambient accents)
 
 `License.txt` in that folder is copied from the original zip.
 
@@ -51,7 +52,9 @@ All listed OGA entries are CC0 per their pages.
 - `src/assets/ui/fallback-icons/` (reserved for single fallback family only)
 
 ## Current fallback policy
-Primary chrome remains **Kenney UI Pack**. Command-dock **glyphs** are a separate **CC0 OpenGameArt** set (`oga-dock-icons/`) chosen for readable semantics (house, reticle, plane, shop). If a slot is missing at runtime, `commandDock` still falls back to vector `draw` paths.
+Primary chrome remains **Kenney UI Pack** + **Sci-Fi** subset. Mission row **inset plates** (meta, reward rail, emblem well, tier, locked plaque, action dock, left spine) and **playable route orbs** use `menuShared/texturedPlates.ts` — nine-slice **glass + screw chrome** (or classic `panel_fill` / `panel_frame`) so vector `roundRect` wireframes are not the primary read when textures preload. Command-dock **deck + cradle cells** use the same textures. Mode tabs skip duplicate vector slot/plate layers when Kenney or Sci-Fi button nine-slices are active.
+
+Command-dock **glyphs** use **CC0 OpenGameArt** (`oga-dock-icons/`) plus Sci-Fi crosshair for missions. If a texture fails to load, isolated vector fallbacks remain for that component only.
 
 ## Curated files in-repo (normalized)
 Shipped under `public/custom-ui/` after resize (max side 384 rank/frames, 256 badges):

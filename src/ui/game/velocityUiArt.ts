@@ -58,6 +58,8 @@ export type VelocityUiTextureKey =
     | 'scifi_panel_glass_screws'
     | 'scifi_panel_glass_notches'
     | 'scifi_panel_glass_notches_top'
+    | 'scifi_panel_glass_notch_tl'
+    | 'scifi_panel_glass_notch_tr'
     | 'scifi_panel_glass_tab_blade'
     | 'scifi_panel_rectangle_screws'
     | 'scifi_button_rectangle'
@@ -120,6 +122,8 @@ const MANIFEST: Record<VelocityUiTextureKey, string> = {
     scifi_panel_glass_screws: `${SCIFI}/Extra/Default/panel_glass_screws.png`,
     scifi_panel_glass_notches: `${SCIFI}/Extra/Default/panel_glass_notches.png`,
     scifi_panel_glass_notches_top: `${SCIFI}/Extra/Default/panel_glass_notches_top.png`,
+    scifi_panel_glass_notch_tl: `${SCIFI}/Extra/Default/panel_glass_notch_tl.png`,
+    scifi_panel_glass_notch_tr: `${SCIFI}/Extra/Default/panel_glass_notch_tr.png`,
     scifi_panel_glass_tab_blade: `${SCIFI}/Extra/Default/panel_glass_tab_blade.png`,
     scifi_panel_rectangle_screws: `${SCIFI}/Extra/Default/panel_rectangle_screws.png`,
     scifi_button_rectangle: `${SCIFI}/Extra/Default/button_rectangle.png`,
