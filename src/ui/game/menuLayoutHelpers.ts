@@ -70,28 +70,31 @@ export interface MenuButtonExtras {
     social?: 'leaderboard' | 'achievements';
 }
 
-// ─── Role palette ─────────────────────────────────────────────────────────────
+// ─── Role palette (AAA-Quality spec colors) ───────────────────────────────────
 
 const ROLE_PALETTE = {
     primary: {
-        bg:     0x061c22,
-        border: 0x00ffcc,
-        shine:  0x66ffee,
-        tint:   0x22ccbb,
+        // CTA: Cyan accent for high-priority interactive elements
+        bg:     GAME_COLORS.bg_surface,     // #1A1A2E (dark surface)
+        border: GAME_COLORS.accent_cyan,    // #00D1FF (spec cyan)
+        shine:  0x33E5FF,                   // Lighter cyan for shine (10% lighter)
+        tint:   GAME_COLORS.accent_cyan,    // #00D1FF
         radius: 10,
     },
     utility: {
-        bg:     0x0b1520,
-        border: 0x4d7fa8,
-        shine:  0x6699bb,
-        tint:   0x5588aa,
+        // Secondary: Muted colors for secondary actions
+        bg:     GAME_COLORS.bg_surface,     // #1A1A2E
+        border: GAME_COLORS.text_disabled,  // #4B5563 (muted)
+        shine:  GAME_COLORS.text_secondary, // #9CA3AF (lighter muted)
+        tint:   GAME_COLORS.text_secondary, // #9CA3AF
         radius: 8,
     },
     economy: {
-        bg:     0x130e00,
-        border: 0xffcc44,
-        shine:  0xffe077,
-        tint:   0xffaa22,
+        // Economy: Gold for premium/reward affordances
+        bg:     GAME_COLORS.bg_surface,     // #1A1A2E
+        border: GAME_COLORS.primary_cta,    // #FFD166 (spec gold)
+        shine:  0xFFE599,                   // Lighter gold for shine (10% lighter)
+        tint:   GAME_COLORS.primary_cta,    // #FFD166
         radius: 8,
     },
 } as const;
@@ -160,7 +163,7 @@ export function createMenuButton(
     if (role === 'primary' && extras?.ctaLaunch) {
         const deck = new Graphics();
         deck.roundRect(0, h * 0.58, width, h * 0.42, P.radius);
-        deck.fill({ color: 0x020a0c, alpha: 0.92 });
+        deck.fill({ color: GAME_COLORS.bg_base, alpha: 0.85 });
         deck.eventMode = 'none';
         root.addChild(deck);
 
@@ -196,10 +199,12 @@ export function createMenuButton(
 
     // 1c. Social modules — prestige column + tinted lift (leaderboard vs achievements)
     if (role === 'utility' && extras?.social) {
-        const acc = extras.social === 'leaderboard' ? GAME_COLORS.accent_gold : 0xcc88ff;
+        // Gold for leaderboard, purple for achievements (spec colors)
+        const acc = extras.social === 'leaderboard' ? GAME_COLORS.primary_cta : GAME_COLORS.accent_purple;
         const zone = new Graphics();
         zone.roundRect(0, 0, socialColW, h, 6);
-        zone.fill({ color: extras.social === 'leaderboard' ? 0x120a00 : 0x100818, alpha: 0.98 });
+        // Dark surface background for social zone
+        zone.fill({ color: GAME_COLORS.bg_surface, alpha: 0.9 });
         zone.eventMode = 'none';
         root.addChild(zone);
 
@@ -222,8 +227,8 @@ export function createMenuButton(
             style: {
                 fill:          acc,
                 fontSize:      6,
-                fontFamily:    GAME_FONTS.arcade,
-                letterSpacing: 1,
+                fontFamily:    GAME_FONTS.functional,  // Exo 2
+                letterSpacing: 0.5,
             },
         });
         tierLbl.alpha = 0.75;
@@ -236,7 +241,8 @@ export function createMenuButton(
     if (role === 'utility') {
         const lift = new Graphics();
         lift.roundRect(2, 2, width - 4, h - 4, P.radius - 1);
-        lift.fill({ color: 0xffffff, alpha: 0.035 });
+        // Very subtle light lift using spec primary text color
+        lift.fill({ color: GAME_COLORS.text_primary, alpha: 0.04 });
         lift.eventMode = 'none';
         root.addChild(lift);
     }
