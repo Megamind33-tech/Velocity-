@@ -10,9 +10,17 @@ import {
     type VelocityModalLayout,
 } from '../velocityModalLayout';
 import { createVelocityGameButton } from '../velocityUiButtons';
+import { animateModalEntrance } from '../modalAnimations';
+import { AnimationManager } from '../AnimationManager';
+import { createShimmer } from '../polishEffects';
+import { animateModalExit } from '../modalAnimations';
 
 export class StoreScreen extends BaseGameScreen {
     private layout!: VelocityModalLayout;
+    private animManager = AnimationManager.getInstance();
+    private cancelEntrance: (() => void) | null = null;
+    private cancelPolish: (() => void) | null = null;
+    private cancelExit: (() => void) | null = null;
 
     constructor(app: Application) {
         super(app);
@@ -33,7 +41,7 @@ export class StoreScreen extends BaseGameScreen {
             innerW - 16,
             (fs) =>
                 new TextStyle({
-                    fontFamily: GAME_FONTS.arcade,
+                    fontFamily: GAME_FONTS.functional,
                     fontSize: fs,
                     fontWeight: 'bold',
                     fill: GAME_COLORS.accent_gold,
@@ -46,7 +54,7 @@ export class StoreScreen extends BaseGameScreen {
         body.addChild(balFit);
 
         const btnW = Math.min(280, innerW);
-        const btnH = 46;
+        const btnH = 48;
         const gap = 12;
         let y = GAME_SIZES.spacing.xxl;
 
@@ -63,10 +71,10 @@ export class StoreScreen extends BaseGameScreen {
                 btnW - 28,
                 (fs) =>
                     new TextStyle({
-                        fontFamily: GAME_FONTS.arcade,
+                        fontFamily: GAME_FONTS.functional,
                         fontSize: fs,
                         fontWeight: 'bold',
-                        fill: 0xffffff,
+                        fill: GAME_COLORS.text_primary,
                     }),
                 15,
                 10,
@@ -94,6 +102,19 @@ export class StoreScreen extends BaseGameScreen {
 
     show(): void {
         super.show();
+
+        // Animate modal entrance
+        this.cancelEntrance?.();
+        this.container.alpha = 0;
+        this.container.scale.set(0.95, 0.95);
+        this.cancelEntrance = animateModalEntrance(this.container, {
+            duration: 300,
+            onComplete: () => {
+                // Apply shimmer effect after entrance for polish
+                this.cancelPolish?.();
+                this.cancelPolish = createShimmer(this.container, { loop: true });
+            },
+        });
     }
 
     resize(width: number, height: number): void {
@@ -104,5 +125,19 @@ export class StoreScreen extends BaseGameScreen {
         this.layout.panelH = panelH;
         this.layout.innerW = velocityModalInnerWidth(panelW);
         repositionVelocityModal(this.layout, width, height);
+    }
+
+    hide(): void {
+        this.cancelEntrance?.();
+        this.cancelPolish?.();
+        this.cancelExit?.();
+        this.animManager.cancelGroup('modal-entrance');
+        this.animManager.cancelGroup('polish-shimmer');
+
+        // Smooth exit animation before hiding
+        this.cancelExit = animateModalExit(this.container, {
+            duration: 200,
+            onComplete: () => super.hide(),
+        });
     }
 }

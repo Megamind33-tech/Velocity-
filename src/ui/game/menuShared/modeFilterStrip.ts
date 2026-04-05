@@ -13,7 +13,7 @@ import {
 } from 'pixi.js';
 import { getVelocityUiTexture } from '../velocityUiArt';
 import { VELOCITY_UI_SLICE } from '../velocityUiSlice';
-import { kenneyTabTrack } from '../menuLandscape/kenneyLandscapeWidgets';
+import { kenneyTabTrack } from '../menuPortrait/kenneyWidgets';
 import { fitLabelToWidth } from './fitLabelToWidth';
 
 const TAB_BS = VELOCITY_UI_SLICE.button;

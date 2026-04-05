@@ -1,11 +1,13 @@
 /**
  * Uniform buttons: SunGraphica nine-slice when preloaded, else vector fallback.
+ * All buttons automatically receive AAA-quality hover and press animations.
  */
 
 import { Container } from 'pixi.js';
 import { createGameButton } from './GameUIComponents';
 import { createKenneyNineSliceButton, type KenneyButtonVariant } from './kenneyNineSlice';
 import { velocityUiArtReady } from './velocityUiArt';
+import { enhanceButtonInteraction } from './buttonInteractionEnhancer';
 
 export type VelocityButtonType = 'primary' | 'secondary' | 'accent' | 'danger' | 'success';
 
@@ -19,6 +21,7 @@ function toKenneyVariant(type: VelocityButtonType): KenneyButtonVariant {
 
 /**
  * Standard game button — same chrome everywhere (menus, modals, map, results).
+ * Automatically includes AAA-quality hover and press animations.
  */
 export function createVelocityGameButton(
     label: string,
@@ -34,7 +37,13 @@ export function createVelocityGameButton(
     const kenney =
         velocityUiArtReady() &&
         createKenneyNineSliceButton(label, w, h, toKenneyVariant(type), onClick);
-    if (kenney) return kenney;
+    const button = kenney || createGameButton(label, onClick, fallbackType, 'large', { width: w, height: h });
 
-    return createGameButton(label, onClick, fallbackType, 'large', { width: w, height: h });
+    // Apply professional animations to all buttons
+    enhanceButtonInteraction(button, {
+        enableHover: true,
+        enablePress: true,
+    });
+
+    return button;
 }

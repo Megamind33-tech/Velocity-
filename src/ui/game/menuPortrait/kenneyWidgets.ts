@@ -651,3 +651,156 @@ export function spriteIcon(key: VelocityUiTextureKey, size: number, tint?: numbe
     if (tint !== undefined) s.tint = tint;
     return s;
 }
+export function buildTopUtilityBar(
+    cw: number,
+    onProfile: () => void,
+    prog: ReturnType<typeof getMainMenuProgress>,
+    bestScore: number,
+    onPremiumTap?: () => void,
+): { root: Container; refs: TopBarRefs } {
+    const H = 64;
+    const root = new Container();
+    const rail = new Graphics();
+    rail.roundRect(0, 2, cw, H - 2, 14);
+    rail.fill({ color: 0x09121d, alpha: 0.68 });
+    rail.stroke({ color: 0x2c3f58, width: 1, alpha: 0.52 });
+    rail.roundRect(10, 4, cw - 20, 2, 1);
+    rail.fill({ color: C.cyan, alpha: 0.16 });
+    root.addChild(rail);
+
+    const lay = computeTopStripLayout(cw);
+    const chipW = lay.chipW;
+    const gap = lay.gap;
+    const chipH = H - 4;
+
+    const av = kenneyAvatarPlate(lay.avatarW, onProfile);
+    av.position.set(0, 5 + Math.max(0, (chipH - lay.avatarW) / 2));
+    root.addChild(av);
+
+    const x0 = lay.chip0X;
+    const CYAN = GAME_COLORS.primary;
+    const GOLD = GAME_COLORS.accent_gold;
+    const PURPLE = 0xbb88ff;
+
+    const c1 =
+        kenneyStatChip(icoBarsSignal, 'SIGNAL', `${prog.maxUnlocked}`, chipW, chipH, CYAN, 'none', 'menu_status_led') ??
+        vectorStatChip(icoBarsSignal, 'SIGNAL', `${prog.maxUnlocked}`, chipW, chipH, CYAN, 'none', 'menu_status_led');
+    c1.position.set(x0, 5);
+    root.addChild(c1);
+
+    const c2 =
+        kenneyStatChip(icoStarBadge, 'BEST', String(bestScore), chipW, chipH, GOLD, 'none', 'menu_best_star') ??
+        vectorStatChip(icoStarBadge, 'BEST', String(bestScore), chipW, chipH, GOLD, 'none', 'menu_best_star');
+    c2.position.set(x0 + chipW + gap, 5);
+    root.addChild(c2);
+
+    const c3 =
+        kenneyStatChip(icoGemPremium, 'PREMIUM', `${prog.unlockedCount}`, chipW, chipH, PURPLE, 'none', 'menu_rewards_star_outline') ??
+        vectorStatChip(icoGemPremium, 'PREMIUM', `${prog.unlockedCount}`, chipW, chipH, PURPLE, 'none', 'menu_rewards_star_outline');
+    c3.position.set(x0 + (chipW + gap) * 2, 5);
+    if (onPremiumTap) {
+        c3.eventMode = 'static';
+        c3.cursor = 'pointer';
+        pressable(c3, onPremiumTap);
+    }
+    root.addChild(c3);
+
+    function chipValueText(chip: Container): Text {
+        let best: Text | null = null;
+        let bestFs = 0;
+        for (const ch of chip.children) {
+            if (ch instanceof Text) {
+                const fs = typeof ch.style.fontSize === 'number' ? ch.style.fontSize : 0;
+                if (fs > bestFs) {
+                    bestFs = fs;
+                    best = ch;
+                }
+            }
+        }
+        return best ?? (chip.children[chip.children.length - 1] as Text);
+    }
+
+    return {
+        root,
+        refs: {
+            energyText: chipValueText(c1),
+            bestText: chipValueText(c2),
+            premiumText: chipValueText(c3),
+        },
+    };
+}
+
+type VectorChipBadge = 'none' | 'prestige' | 'elite';
+
+function vectorStatChip(
+    draw: (g: Graphics, cx: number, cy: number, s: number) => void,
+    label: string,
+    val: string,
+    w: number,
+    h: number,
+    accentColor = C.text,
+    cornerBadge: VectorChipBadge = 'none',
+    menuIconKey?: VelocityUiTextureKey,
+): Container {
+    const root = new Container();
+    const bg = new Graphics();
+    bg.roundRect(0, 0, w, h, R_CHIP);
+    bg.fill({ color: C.surface2, alpha: 1 });
+    bg.stroke({ color: C.border, width: 1.5, alpha: 0.55 });
+    root.addChild(bg);
+    const lower = new Graphics();
+    lower.roundRect(4, Math.floor(h * 0.5), w - 8, Math.floor(h * 0.42), R_CHIP - 4);
+    lower.fill({ color: 0x0a121c, alpha: 0.78 });
+    root.addChild(lower);
+    const bevel = new Graphics();
+    bevel.roundRect(2, 2, w - 4, Math.floor(h * 0.42), R_CHIP - 2);
+    bevel.fill({ color: 0xffffff, alpha: 0.04 });
+    root.addChild(bevel);
+    const strip = new Graphics();
+    strip.roundRect(6, 0, w - 12, 3, 1);
+    strip.fill({ color: accentColor, alpha: 0.5 });
+    root.addChild(strip);
+
+    const iconCx = 15;
+    const iconCy = h / 2 + 2;
+    const iconS = Math.min(20, Math.floor(h * 0.32));
+    const menuTex = menuIconKey ? getVelocityUiTexture(menuIconKey) : undefined;
+    if (menuTex) {
+        const sp = new Sprite(menuTex);
+        sp.anchor.set(0.5);
+        sp.width = iconS;
+        sp.height = iconS;
+        sp.position.set(iconCx, iconCy);
+        sp.tint = accentColor;
+        sp.alpha = 0.92;
+        root.addChild(sp);
+    } else {
+        const ig = new Graphics();
+        draw(ig, iconCx, iconCy, Math.min(16, Math.floor(h * 0.28)));
+        root.addChild(ig);
+    }
+
+    const hasB = cornerBadge !== 'none';
+    const labelMaxW = chipLabelMaxW(w, hasB);
+    const valueMaxW = chipValueMaxW(w, hasB);
+
+    let labelStr = label.toUpperCase();
+    const lb = new Text({
+        text: labelStr,
+        style: style(9, '600', 0xa8b8c8, 0.8),
+    });
+    if (lb.width > labelMaxW) {
+        while (labelStr.length > 3 && lb.width > labelMaxW) {
+            labelStr = `${labelStr.slice(0, -2)}…`;
+            lb.text = labelStr;
+        }
+    }
+    lb.position.set(CHIP_TEXT_X, 8);
+    root.addChild(lb);
+
+    const vt = fitStatChipValue(val, valueMaxW, accentColor);
+    vt.position.set(CHIP_TEXT_X, 24);
+    root.addChild(vt);
+
+    return root;
+}

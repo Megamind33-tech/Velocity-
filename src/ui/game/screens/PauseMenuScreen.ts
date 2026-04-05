@@ -8,6 +8,10 @@ import { ResponsiveUIManager } from '../../ResponsiveUIManager';
 import { mountVelocityShell, resizeVelocityShell, type VelocityShellParts } from '../velocityScreenShell';
 import { createVelocityGameButton } from '../velocityUiButtons';
 import { velocityUiArtReady } from '../velocityUiArt';
+import { animateModalEntrance } from '../modalAnimations';
+import { AnimationManager } from '../AnimationManager';
+import { createShimmer } from '../polishEffects';
+import { animateModalExit } from '../modalAnimations';
 
 /**
  * Pause: same shell as other modals + Kenney panel + uniform buttons.
@@ -18,6 +22,10 @@ export class PauseMenuScreen extends BaseGameScreen {
     private panelBgSlot!: Container;
     private titleText!: Text;
     private content!: Container;
+    private animManager = AnimationManager.getInstance();
+    private cancelEntrance: (() => void) | null = null;
+    private cancelPolish: (() => void) | null = null;
+    private cancelExit: (() => void) | null = null;
 
     constructor(app: Application) {
         super(app);
@@ -41,7 +49,7 @@ export class PauseMenuScreen extends BaseGameScreen {
                 fill: modal.border,
                 fontSize: GAME_SIZES.font.xl,
                 fontWeight: 'bold',
-                fontFamily: GAME_FONTS.arcade,
+                fontFamily: GAME_FONTS.functional,
                 dropShadow: {
                     alpha: 0.6,
                     blur: 2,
@@ -204,9 +212,36 @@ export class PauseMenuScreen extends BaseGameScreen {
     show(): void {
         super.show();
         this.layoutPause();
+
+        // Animate modal entrance
+        this.cancelEntrance?.();
+        this.panel.alpha = 0;
+        this.panel.scale.set(0.95, 0.95);
+        this.cancelEntrance = animateModalEntrance(this.panel, {
+            duration: 300,
+            onComplete: () => {
+                // Apply shimmer effect after entrance for polish
+                this.cancelPolish?.();
+                this.cancelPolish = createShimmer(this.panel, { loop: true });
+            },
+        });
     }
 
     resize(width: number, height: number): void {
         this.layoutPause();
+    }
+
+    hide(): void {
+        this.cancelEntrance?.();
+        this.cancelPolish?.();
+        this.cancelExit?.();
+        this.animManager.cancelGroup('modal-entrance');
+        this.animManager.cancelGroup('polish-shimmer');
+
+        // Smooth exit animation before hiding (animate panel)
+        this.cancelExit = animateModalExit(this.panel, {
+            duration: 200,
+            onComplete: () => super.hide(),
+        });
     }
 }

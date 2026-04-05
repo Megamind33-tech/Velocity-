@@ -38,9 +38,10 @@ export function computeCardVerticalBands(
     centerW: number,
     hasEliteTier: boolean,
 ): CardVerticalBands {
-    const padT = Math.max(6, Math.floor(rowH * 0.07));
-    const gapSm = Math.max(3, Math.floor(rowH * 0.03));
-    const bottomPad = Math.max(4, Math.floor(rowH * 0.04));
+    // Card padding follows grid: use 8px minimum, scale with rowH for proportionality
+    const padT = Math.max(8, Math.floor(rowH * 0.08));
+    const gapSm = Math.max(4, Math.floor(rowH * 0.04));
+    const bottomPad = Math.max(8, Math.floor(rowH * 0.05));
     const MIN_SUB = 22;
 
     let titleH = Math.max(17, Math.floor(rowH * 0.19));

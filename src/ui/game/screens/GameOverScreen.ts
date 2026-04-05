@@ -21,16 +21,20 @@ import {
 } from '../velocityModalLayout';
 import { createVelocityGameButton } from '../velocityUiButtons';
 import { fitLabelToWidth } from '../menuShared/fitLabelToWidth';
+import { animateModalEntrance } from '../modalAnimations';
+import { AnimationManager } from '../AnimationManager';
+import { animateScoreCountUp } from '../contentAnimations';
+import { createGlowPulse } from '../polishEffects';
 
 function ts(fill: number, size: number, weight: '400'|'600'|'700'|'800' = '700', spacing = 0): TextStyle {
     return new TextStyle({
         fill,
         fontSize: size,
         fontWeight: weight,
-        fontFamily: GAME_FONTS.arcade,
+        fontFamily: GAME_FONTS.functional,
         letterSpacing: spacing,
         dropShadow: size >= 18
-            ? { alpha: 0.6, blur: 3, color: 0x000000, distance: 2 }
+            ? { alpha: 0.5, blur: 2, color: 0x000000, distance: 1 }
             : undefined,
     });
 }
@@ -39,6 +43,9 @@ export class GameOverScreen extends BaseGameScreen {
     private layout!: VelocityModalLayout;
     private scoreValText!: Text;
     private scoreY = 0;
+    private animManager = AnimationManager.getInstance();
+    private cancelEntrance: (() => void) | null = null;
+    private cancelPolish: (() => void) | null = null;
 
     constructor(app: Application) {
         super(app);
@@ -98,9 +105,9 @@ export class GameOverScreen extends BaseGameScreen {
                     fill: GAME_COLORS.accent_gold,
                     fontSize: fs,
                     fontWeight: '800',
-                    fontFamily: GAME_FONTS.arcade,
+                    fontFamily: GAME_FONTS.functional,
                     letterSpacing: fs >= 28 ? 2 : 1,
-                    dropShadow: { alpha: 0.7, blur: 8, color: GAME_COLORS.accent_gold, distance: 0 },
+                    dropShadow: { alpha: 0.4, blur: 2, color: GAME_COLORS.accent_gold, distance: 0 },
                     stroke: { color: 0x000000, width: 1.5 },
                 }),
             GAME_SIZES.font.score_hero,
@@ -129,7 +136,7 @@ export class GameOverScreen extends BaseGameScreen {
             'MISSION SELECT',
             'secondary',
             () => gameFlow().openMissionSelect(),
-            { width: btnW, height: 44 },
+            { width: btnW, height: 40 },
         );
         mapBtn.position.set(0, y);
         body.addChild(mapBtn);
@@ -142,7 +149,7 @@ export class GameOverScreen extends BaseGameScreen {
                 gameFlow().openMainMenu();
                 this.uiManager.showScreen('main-menu');
             },
-            { width: btnW, height: 44 },
+            { width: btnW, height: 40 },
         );
         menuBtn.position.set(0, y);
         body.addChild(menuBtn);
@@ -154,16 +161,16 @@ export class GameOverScreen extends BaseGameScreen {
         const innerW = this.layout.innerW;
         const body = this.layout.body;
         const nt = fitLabelToWidth(
-            str,
+            '0',
             innerW - 24,
             (fs) =>
                 new TextStyle({
                     fill: GAME_COLORS.accent_gold,
                     fontSize: fs,
                     fontWeight: '800',
-                    fontFamily: GAME_FONTS.arcade,
+                    fontFamily: GAME_FONTS.functional,
                     letterSpacing: fs >= 28 ? 2 : 1,
-                    dropShadow: { alpha: 0.7, blur: 8, color: GAME_COLORS.accent_gold, distance: 0 },
+                    dropShadow: { alpha: 0.4, blur: 2, color: GAME_COLORS.accent_gold, distance: 0 },
                     stroke: { color: 0x000000, width: 1.5 },
                 }),
             GAME_SIZES.font.score_hero,
@@ -176,11 +183,29 @@ export class GameOverScreen extends BaseGameScreen {
         this.scoreValText.destroy();
         this.scoreValText = nt;
         body.addChildAt(nt, idx);
+
+        // Animate score count-up
+        animateScoreCountUp(this.scoreValText, 0, s.score, {
+            duration: 1000,
+        });
     }
 
     show(): void {
         super.show();
         this.refreshRunSummary();
+
+        // Animate modal entrance
+        this.cancelEntrance?.();
+        this.container.alpha = 0;
+        this.container.scale.set(0.95, 0.95);
+        this.cancelEntrance = animateModalEntrance(this.container, {
+            duration: 300,
+            onComplete: () => {
+                // Apply subtle glow pulse after entrance (less intense than level complete)
+                this.cancelPolish?.();
+                this.cancelPolish = createGlowPulse(this.container, 0.95, 1.0, { loop: true });
+            },
+        });
     }
 
     resize(width: number, height: number): void {
@@ -191,5 +216,13 @@ export class GameOverScreen extends BaseGameScreen {
         this.layout.panelH = panelH;
         this.layout.innerW = velocityModalInnerWidth(panelW);
         repositionVelocityModal(this.layout, width, height);
+    }
+
+    hide(): void {
+        this.cancelEntrance?.();
+        this.cancelPolish?.();
+        this.animManager.cancelGroup('modal-entrance');
+        this.animManager.cancelGroup('polish-glow');
+        super.hide();
     }
 }

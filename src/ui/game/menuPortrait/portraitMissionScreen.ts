@@ -18,8 +18,9 @@ import { LEVEL_DEFINITIONS, type LevelDefinition } from '../../../data/levelDefi
 import { gameFlow } from '../gameFlowBridge';
 import type { GameUIManager } from '../GameUIManager';
 import { getVelocityCustomTexture } from '../velocityUiArt';
-import { buildTopUtilityBar, type TopBarRefs } from '../menuLandscape/landscapeMainMenuUI';
 import {
+    buildTopUtilityBar,
+    type TopBarRefs,
     kenneyButton,
     kenneyDockBar,
     kenneyHeroPanel,
@@ -27,7 +28,7 @@ import {
     kenneyMissionCardFace,
     kenneyProgressBar,
     spriteIcon,
-} from '../menuLandscape/kenneyLandscapeWidgets';
+} from './kenneyWidgets';
 import { mountHeroCommandLayout } from '../menuShared/heroCommandLayout';
 import { mountMissionRewardIcon } from '../menuShared/missionRewardWell';
 import { mountEmblemCircleWell, mountTexturedInsetPlate } from '../menuShared/texturedPlates';
@@ -173,8 +174,8 @@ function buildFeaturedMissionCard(p: FeaturedProps): {
     const pair = kenneyHeroPanel(p.cw, p.cardH);
     if (pair) {
         root.addChild(pair.root);
-        const contentW = Math.max(260, p.cw - 44);
-        const innerH = Math.max(110, p.cardH - 54);
+        const contentW = Math.max(240, p.cw - pad * 2);
+        const innerH = Math.max(110, p.cardH - 48);
         const progLite = {
             unlockedCount: p.routesDone,
             totalLevels: p.routesTotal,
@@ -246,7 +247,7 @@ function buildFeaturedMissionCard(p: FeaturedProps): {
             fontWeight: P_TYPO.heroTitle.fontWeight,
             fill: P_COLORS.textPrimary,
             letterSpacing: P_TYPO.heroTitle.letterSpacing,
-            dropShadow: { alpha: 0.7, blur: 6, color: P_COLORS.accentCyan, distance: 0 },
+            dropShadow: { alpha: 0.4, blur: 2, color: P_COLORS.accentCyan, distance: 0 },
             stroke: { color: 0x000000, width: 1 },
         }),
     });
@@ -299,16 +300,18 @@ function buildFeaturedMissionCard(p: FeaturedProps): {
     const eg = new Graphics();
     portraitHeroGoldEmblem(eg, ex, ey, emblemR);
     root.addChild(eg);
-    const rowY = p.cardH - pad - 48;
-    const chipH = 44;
+    const chipH = 48;
+    const rowY = p.cardH - pad - chipH;
     const rowInner = p.cw - pad * 2;
-    let flyW = Math.min(180, Math.max(120, Math.floor(rowInner * 0.46)));
+    let flyW = Math.min(160, Math.max(120, Math.floor(rowInner * 0.48)));
     let rankW = rowInner - flyW - P_SPACE.s8;
     if (rankW < 140) {
         rankW = 140;
         flyW = Math.max(100, rowInner - rankW - P_SPACE.s8);
     }
     rankW = Math.min(rankW, rowInner - flyW - P_SPACE.s8);
+    // Snap to 8px grid
+    flyW = Math.floor(flyW / 8) * 8;
     const rankRoot = new Container();
     const rankRim = mountClassChipKenneyRim(rankRoot, rankW, chipH, P_COLORS.accentGold);
     const rb = new Graphics();
@@ -350,7 +353,7 @@ function buildFeaturedMissionCard(p: FeaturedProps): {
     });
     starLbl.position.set(pad, rowY - 20);
     root.addChild(starLbl);
-    const fly = kenneyButton('FLY NOW', flyW, 44, 'button_accent', false, p.onFly) ?? buildFallbackFly(flyW, 44, p.onFly);
+    const fly = kenneyButton('FLY NOW', flyW, chipH, 'button_accent', false, p.onFly) ?? buildFallbackFly(flyW, chipH, p.onFly);
     fly.label = 'heroFlyCta';
     fly.position.set(p.cw - pad - flyW, rowY);
     root.addChild(fly);
@@ -402,8 +405,9 @@ function buildFallbackFly(w: number, h: number, onFly: () => void): Container {
 function buildSegmentTabs(
     cw: number,
     onSelect: (i: number) => void,
+    h: number = 48,
 ): { root: Container; setActive: (i: number) => void; tabGlows: Graphics[] } {
-    const strip = buildModeFilterStrip(cw, 50, FONT, onSelect, {
+    const strip = buildModeFilterStrip(cw, h, FONT, onSelect, {
         useKenneyTrack: true,
         channelGlow: true,
         vectorTrack: {
@@ -765,7 +769,7 @@ function buildMissionCardPortrait(
     root.addChild(ic);
 
     const btnW = 104;
-    const btnH = 44;
+    const btnH = 40;
     const tx = icX + P_ICON.emblem + P_SPACE.s12;
     const tw = Math.max(40, cw - tx - btnW - P_SPACE.s16 - 8);
     const tagReserve = 56;
@@ -1016,8 +1020,9 @@ function buildBottomDockPortrait(
     ui: GameUIManager,
     onHome: () => void,
     navIndexBySlot?: (slot: number) => void,
+    h: number = 80,
 ): { root: Container; setActive: (i: number) => void; dockCradles: (Graphics | NineSliceSprite)[]; slotContainers: Container[] } {
-    const H = 84;
+    const H = h;
     const palette: CommandDockPalette = {
         dockDeck: P_COLORS.dockDeck,
         dockDeckRim: P_COLORS.dockDeckRim,
@@ -1141,18 +1146,20 @@ export function buildPortraitMissionScreen(p: BuildPortraitMissionScreenParams):
     root.addChild(feat.root);
     y += cardH + P_SPACE.s12;
 
-    const tabsH = 50;
-    const dockH = 84;
-    const listH = Math.max(156, sh - y - tabsH - P_SPACE.s10 - dockH - p.safeBottom - P_SPACE.s16);
+    const tabsH = 48;
+    const dockH = 80;
+    const gapAfterTabs = P_SPACE.s8;
+    const gapBeforeDock = P_SPACE.s8;
+    const listH = Math.max(156, sh - y - tabsH - gapAfterTabs - dockH - gapBeforeDock - p.safeBottom);
 
     const list = buildMissionListPortrait(cw, listH, (id) => gameFlow().startLevelWithMicGate?.(id), p.getProgress);
 
     const tabs = buildSegmentTabs(cw, (idx) => {
         list.rebuild(idx);
-    });
+    }, tabsH);
     tabs.root.position.set(0, y);
     root.addChild(tabs.root);
-    y += tabsH + P_SPACE.s10;
+    y += tabsH + gapAfterTabs;
 
     list.root.position.set(0, y);
     root.addChild(list.root);
@@ -1163,6 +1170,7 @@ export function buildPortraitMissionScreen(p: BuildPortraitMissionScreenParams):
         p.ui,
         () => navApply(0),
         (slot) => navApply(slot),
+        dockH,
     );
     navApply = dock.setActive;
     dock.root.position.set(0, sh - p.safeBottom - dockH - P_SPACE.s8);

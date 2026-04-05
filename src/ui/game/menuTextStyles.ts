@@ -1,70 +1,79 @@
 /**
  * menuTextStyles — shared text style factories for Velocity's menu screens.
  *
- * Readability discipline (per brief):
- *   - No dropShadow blur > 3 anywhere.
- *   - Contrast achieved through fill value, not glow radius.
- *   - Stroke used for crisp pixel-edge definition, not decoration.
- *   - Shadow kept to 1–2 px distance, alpha ≤ 0.70.
- *   - Do not make everything equally bright — hierarchy is enforced.
+ * Font system (AAA-Quality spec):
+ *   - Display: Orbitron (screen titles, hero text)
+ *   - Functional: Exo 2 (all body, buttons, cards, nav)
+ *   - Numerical: Oxanium (currency, stats, timers, HUD values)
  *
- * Hierarchy (strongest → quietest):
- *   heroTitle  >  primaryButtonLabel  >  utilityButtonLabel / economyButtonLabel
- *     >  heroSubtitle  >  hudValue  >  pilotRank
- *     >  hudLabel  >  helperText  >  footerUtilityLabel
+ * Color system (spec palette):
+ *   - Primary text: #F0F0F0 (never pure white)
+ *   - Secondary text: #9CA3AF
+ *   - Disabled text: #4B5563
+ *   - Interactive/Info: #00D1FF (cyan)
+ *   - Success: #22C55E (green)
+ *   - Danger: #EF4444 (red)
+ *
+ * Readability discipline:
+ *   - No dropShadow blur > 3 anywhere
+ *   - Contrast achieved through fill value, not glow radius
+ *   - Stroke for crisp edge definition, not decoration
+ *   - Shadow kept to 1–2 px distance, alpha ≤ 0.70
+ *   - Visual hierarchy maintained throughout
  */
 
 import { TextStyle } from 'pixi.js';
-import { GAME_FONTS } from './GameUITheme';
+import { GAME_FONTS, GAME_COLORS } from './GameUITheme';
 
-const F = GAME_FONTS.arcade;
+const F = GAME_FONTS.functional;  // Exo 2
+const C = GAME_COLORS;
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Hero region
 // ─────────────────────────────────────────────────────────────────────────────
 
 /**
- * VELOCITY hero title.
- * Pure white fill → maximum contrast on any dark background.
- * Thin dark stroke prevents colour bleeding at edges.
- * 2 px directional shadow creates depth; blur capped at 2.
+ * VELOCITY hero title - screen titles, main headings.
+ * Spec text color #F0F0F0 (never pure white) for better anti-aliasing.
+ * Thin dark stroke for crisp edge definition on dark background.
+ * Subtle directional shadow for depth.
  */
 export function heroTitleStyle(fontSize: number): TextStyle {
     return new TextStyle({
-        fill:          0xffffff,
+        fill:          C.text_primary,              // #F0F0F0
         fontSize,
         fontWeight:    'bold',
-        fontFamily:    F,
-        letterSpacing: 4,
-        stroke:        { color: 0x002a18, width: 1.5 },
-        dropShadow:    { alpha: 0.65, blur: 2, color: 0x001810, distance: 2 },
+        fontFamily:    F,                           // Exo 2
+        letterSpacing: 1,
+        stroke:        { color: C.bg_base, width: 1 },
+        dropShadow:    { alpha: 0.5, blur: 1, color: C.bg_base, distance: 1 },
     });
 }
 
 /**
- * "Voice-Powered Flight" subtitle.
- * Cool near-white, clearly subordinate to title, but fully legible.
+ * Subtitle - secondary to hero title, like "Voice-Powered Flight".
+ * Secondary text color #9CA3AF - clearly subordinate but fully legible.
  */
 export function heroSubtitleStyle(): TextStyle {
     return new TextStyle({
-        fill:          0xddeeff,
+        fill:          C.text_secondary,           // #9CA3AF
         fontSize:      14,
         fontWeight:    'normal',
-        fontFamily:    F,
-        letterSpacing: 1,
-        dropShadow:    { alpha: 0.40, blur: 1, color: 0x000810, distance: 1 },
+        fontFamily:    F,                          // Exo 2
+        letterSpacing: 0.5,
+        dropShadow:    { alpha: 0.3, blur: 1, color: C.bg_base, distance: 1 },
     });
 }
 
 /**
- * "Mic required · tap to begin" helper tip.
- * Must feel like support text — present and readable, not ghosted.
+ * Helper text - support labels like "Mic required · tap to begin".
+ * Secondary color, readable but clearly subordinate.
  */
 export function helperTextStyle(): TextStyle {
     return new TextStyle({
-        fill:          0xaec8d8,
+        fill:          C.text_secondary,           // #9CA3AF
         fontSize:      10,
-        fontFamily:    F,
+        fontFamily:    F,                          // Exo 2
         letterSpacing: 0.5,
     });
 }
@@ -75,29 +84,31 @@ export function helperTextStyle(): TextStyle {
 
 /**
  * HUD micro-labels — BEST / SECTOR / ROUTES / PILOT.
- * Small but crisp: brighter than text_muted, tight letter-spacing.
+ * Small but crisp using disabled text color, tight letter-spacing.
+ * Uses Oxanium for numerical context.
  */
 export function hudLabelStyle(): TextStyle {
     return new TextStyle({
-        fill:          0x8899aa,
+        fill:          C.text_disabled,            // #4B5563
         fontSize:      9,
-        fontFamily:    F,
-        letterSpacing: 1.5,
+        fontFamily:    GAME_FONTS.numerical,       // Oxanium for data labels
+        letterSpacing: 1,
     });
 }
 
 /**
  * HUD stat value — numeric or short string.
- * Receives the accent colour from the caller (gold / cyan / steel).
- * Minimal 1 px sharp shadow only — no blur haze.
+ * Receives the accent colour from the caller (gold / cyan / green).
+ * Uses Oxanium font for numerical emphasis.
+ * Minimal shadow for depth without obscuring text.
  */
 export function hudValueStyle(fill: number): TextStyle {
     return new TextStyle({
         fill,
         fontSize:      13,
         fontWeight:    'bold',
-        fontFamily:    F,
-        dropShadow:    { alpha: 0.50, blur: 1, color: 0x000000, distance: 1 },
+        fontFamily:    GAME_FONTS.numerical,       // Oxanium
+        dropShadow:    { alpha: 0.4, blur: 1, color: C.bg_base, distance: 1 },
     });
 }
 
@@ -106,68 +117,71 @@ export function hudValueStyle(fill: number): TextStyle {
 // ─────────────────────────────────────────────────────────────────────────────
 
 /**
- * MISSION SELECT — dominant CTA.
- * White fill + thin dark stroke = maximum punch.
- * 2 px blur max — no neon fuzz.
+ * Primary button label — "FLY NOW", dominant CTA.
+ * Dark text (#0D1117) on gold background (#FFD166) for maximum contrast.
+ * Bold weight for visual prominence.
  */
 export function primaryButtonLabelStyle(): TextStyle {
     return new TextStyle({
-        fill:          0xffffff,
+        fill:          C.bg_base,                  // #0D1117 (dark on light)
         fontSize:      16,
         fontWeight:    'bold',
-        fontFamily:    F,
+        fontFamily:    F,                          // Exo 2
         align:         'center',
-        letterSpacing: 2.5,
-        stroke:        { color: 0x002816, width: 1 },
-        dropShadow:    { alpha: 0.60, blur: 2, color: 0x001810, distance: 1 },
+        letterSpacing: 1,
+        stroke:        { color: C.bg_modal, width: 0.5 },
+        dropShadow:    { alpha: 0.3, blur: 1, color: C.bg_base, distance: 1 },
     });
 }
 
 /**
- * LEADERBOARD / ACHIEVEMENTS — utility tier.
- * Near-white on steel-blue: high contrast without competing with CTA.
+ * Utility button label — LEADERBOARD, ACHIEVEMENTS, secondary tier.
+ * Primary text color on dark surface for good contrast.
+ * Clearly readable but subordinate to primary CTA.
  */
 export function utilityButtonLabelStyle(): TextStyle {
     return new TextStyle({
-        fill:          0xeef6ff,
+        fill:          C.text_primary,             // #F0F0F0
         fontSize:      13,
         fontWeight:    'bold',
-        fontFamily:    F,
+        fontFamily:    F,                          // Exo 2
         align:         'center',
-        letterSpacing: 1.5,
-        stroke:        { color: 0x00101e, width: 0.75 },
-        dropShadow:    { alpha: 0.50, blur: 1.5, color: 0x000e1e, distance: 1 },
+        letterSpacing: 0.5,
+        stroke:        { color: C.bg_base, width: 0.5 },
+        dropShadow:    { alpha: 0.3, blur: 1, color: C.bg_base, distance: 1 },
     });
 }
 
 /**
- * STORE / REWARDS — economy tier.
- * Warm cream-white on amber: clearly readable, warm feeling.
+ * Economy button label — STORE, REWARDS, economy tier.
+ * Primary text color on dark surface for readability.
+ * Slightly larger than utility buttons for economic emphasis.
  */
 export function economyButtonLabelStyle(): TextStyle {
     return new TextStyle({
-        fill:          0xfff8e0,
+        fill:          C.text_primary,             // #F0F0F0
         fontSize:      14,
         fontWeight:    'bold',
-        fontFamily:    F,
+        fontFamily:    F,                          // Exo 2
         align:         'center',
-        letterSpacing: 1.5,
-        stroke:        { color: 0x2a1000, width: 0.75 },
-        dropShadow:    { alpha: 0.50, blur: 1.5, color: 0x2a1000, distance: 1 },
+        letterSpacing: 0.5,
+        stroke:        { color: C.bg_base, width: 0.5 },
+        dropShadow:    { alpha: 0.3, blur: 1, color: C.bg_base, distance: 1 },
     });
 }
 
 /**
- * SETTINGS footer row — lowest priority utility.
- * Legible at a glance, clearly secondary to every button above it.
+ * Footer utility label — SETTINGS, lowest priority utility.
+ * Secondary text color for clear visual hierarchy.
+ * Legible at a glance but clearly subordinate to main buttons.
  */
 export function footerUtilityLabelStyle(): TextStyle {
     return new TextStyle({
-        fill:          0x99b8cc,
+        fill:          C.text_secondary,           // #9CA3AF
         fontSize:      12,
         fontWeight:    'bold',
-        fontFamily:    F,
-        letterSpacing: 2.5,
+        fontFamily:    F,                          // Exo 2
+        letterSpacing: 0.5,
     });
 }
 
@@ -177,15 +191,16 @@ export function footerUtilityLabelStyle(): TextStyle {
 
 /**
  * Pilot rank value — CADET / PILOT / ACE / ELITE etc.
- * Cyan, bold. Small directional shadow for depth; blur kept at 2.
+ * Cyan/interactive color (#00D1FF), bold, small directional shadow.
+ * Uses Oxanium for data emphasis.
  */
 export function pilotRankStyle(): TextStyle {
     return new TextStyle({
-        fill:          0x00ffcc,
+        fill:          C.accent_cyan,              // #00D1FF
         fontSize:      13,
         fontWeight:    'bold',
-        fontFamily:    F,
-        letterSpacing: 1,
-        dropShadow:    { alpha: 0.40, blur: 2, color: 0x003322, distance: 1 },
+        fontFamily:    GAME_FONTS.numerical,       // Oxanium
+        letterSpacing: 0.5,
+        dropShadow:    { alpha: 0.3, blur: 1, color: C.bg_base, distance: 1 },
     });
 }
