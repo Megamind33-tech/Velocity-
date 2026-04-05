@@ -18,8 +18,9 @@ import { LEVEL_DEFINITIONS, type LevelDefinition } from '../../../data/levelDefi
 import { gameFlow } from '../gameFlowBridge';
 import type { GameUIManager } from '../GameUIManager';
 import { getVelocityCustomTexture } from '../velocityUiArt';
-import { buildTopUtilityBar, type TopBarRefs } from '../menuLandscape/landscapeMainMenuUI';
 import {
+    buildTopUtilityBar,
+    type TopBarRefs,
     kenneyButton,
     kenneyDockBar,
     kenneyHeroPanel,
@@ -27,7 +28,7 @@ import {
     kenneyMissionCardFace,
     kenneyProgressBar,
     spriteIcon,
-} from '../menuLandscape/kenneyLandscapeWidgets';
+} from './kenneyWidgets';
 import { mountHeroCommandLayout } from '../menuShared/heroCommandLayout';
 import { mountMissionRewardIcon } from '../menuShared/missionRewardWell';
 import { mountEmblemCircleWell, mountTexturedInsetPlate } from '../menuShared/texturedPlates';
