@@ -33,8 +33,8 @@ interface StorePlane {
 
 export class PlaneStoreScreen extends Container {
   private storeData: StorePlane[] = [];
-  private scrollContainer: Container;
-  private navigation: Container;
+  private scrollContainer!: Container;
+  private navigation!: Container;
 
   constructor() {
     super();
@@ -198,7 +198,7 @@ export class PlaneStoreScreen extends Container {
 
     // Price badge
     const priceBg = new Graphics();
-    priceBg.beginFill(ColorTheme.get('brand.success'), 0.8);
+    priceBg.beginFill(ColorTheme.get('semantic.success'), 0.8);
     priceBg.drawRoundedRect(0, 0, 100, 24, 4);
     priceBg.endFill();
     priceBg.position.set(240, 28);

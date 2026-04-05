@@ -35,9 +35,9 @@ interface PlaneData {
 export class HangarScreen extends Container {
   private selectedPlaneId: string | null = null;
   private planesData: PlaneData[] = [];
-  private planesList: Container;
-  private detailsPanel: Container;
-  private navigation: Container;
+  private planesList!: Container;
+  private detailsPanel!: Container;
+  private navigation!: Container;
   private scrollOffset: number = 0;
 
   constructor() {
@@ -160,6 +160,7 @@ export class HangarScreen extends Container {
         blur: 10,
         distance: 0,
         alpha: 0.6,
+        angle: Math.PI / 4,
       },
     });
     title.position.set(16, 12);
@@ -434,6 +435,9 @@ export class HangarScreen extends Container {
       this.detailsPanel.addChild(valueText);
 
       const bar = new StatsBar({
+        label: '',
+        maxValue: 100,
+        color: stat.color,
         width: 124,
         height: 6,
         showValue: false,

@@ -4,11 +4,19 @@
  * Two-panel design: products grid (left) + details (right)
  */
 
-import { Container, Graphics, Text } from 'pixi.js';
+import { Container, Graphics, Sprite, Text } from 'pixi.js';
 import { UIButton } from '../components/UIButton';
 import { StatsBar } from '../components/StatsBar';
 import { ColorTheme } from '../utils/ColorTheme';
 import { navigationEvents } from './NavigationEvents';
+import { getPlayerPlaneTexture } from '../game/playerPlanes';
+import {
+  getMainMenuProgress,
+  getShopTokens,
+  getUnlockedPlaneIds,
+  spendShopTokens,
+  unlockHangarPlane,
+} from '../data/localProgress';
 
 interface ShopItem {
   id: string;
@@ -18,10 +26,17 @@ interface ShopItem {
   icon: string;
   description: string;
   bonus?: string;
+  planeAssetId?: string;
+  stats?: {
+    power: number;
+    attack: number;
+    defense: number;
+    speed: number;
+  };
 }
 
 interface PlaneItem extends ShopItem {
-  stats: {
+  stats?: {
     power: number;
     attack: number;
     defense: number;
@@ -35,16 +50,30 @@ export class ShopScreen extends Container {
   private currentTab: TabType = 'tokens';
   private selectedItemId: string | null = null;
   private items: ShopItem[] = [];
-  private tabButtons: Container;
-  private itemsGrid: Container;
-  private detailsPanel: Container;
-  private navigation: Container;
+  private tabButtons!: Container;
+  private itemsGrid!: Container;
+  private detailsPanel!: Container;
+  private navigation!: Container;
 
   constructor() {
     super();
     this.loadShopData();
     this.setupBackground();
     this.setupLayout();
+  }
+
+  /** Dock “Plane store” — open unified shop on PLANES tab. */
+  openToPlanesTab(): void {
+    this.currentTab = 'planes';
+    const firstPlane = this.items.find((i) => i.category === 'planes');
+    this.selectedItemId = firstPlane?.id ?? this.selectedItemId;
+    this.setupLayout();
+  }
+
+  private isPlaneOwned(planeAssetId: string | undefined): boolean {
+    if (!planeAssetId) return false;
+    const prog = getMainMenuProgress();
+    return getUnlockedPlaneIds(prog.maxUnlocked).includes(planeAssetId);
   }
 
   /**
@@ -130,33 +159,61 @@ export class ShopScreen extends Container {
         icon: 'fuel.png',
         description: 'Never run out of fuel',
       },
-      // PLANES
+      // PLANES — OGA-derived craft (token unlock → hangar + runs)
       {
-        id: 'raptor',
-        name: 'F-22 RAPTOR',
-        price: 24.99,
+        id: 'plane-cadet',
+        name: 'CADET MK-I',
+        price: 0,
         category: 'planes',
-        icon: 'plane_raptor.png',
-        description: 'Cutting-edge fighter jet',
-        bonus: 'Advanced maneuverability',
+        icon: 'plane_cadet.png',
+        planeAssetId: 'cadet',
+        description: 'Starter craft — WW2 fighter crop (OGA)',
+        bonus: 'Always available',
+        stats: { power: 70, attack: 65, defense: 72, speed: 68 },
       },
       {
-        id: 'spirit',
-        name: 'B-2 SPIRIT',
-        price: 34.99,
+        id: 'plane-cartoon',
+        name: 'STUNT FOX',
+        price: 450,
         category: 'planes',
-        icon: 'plane_spirit.png',
-        description: 'Legendary stealth bomber',
-        bonus: 'Heavy payload capacity',
+        icon: 'plane_cartoon.png',
+        planeAssetId: 'cartoon',
+        description: 'Low-poly cartoon plane (OGA CC0)',
+        bonus: 'Playful silhouette',
+        stats: { power: 62, attack: 55, defense: 58, speed: 88 },
       },
       {
-        id: 'aurora',
-        name: 'AURORA',
-        price: 49.99,
+        id: 'plane-scout',
+        name: 'SCOUT RAPTOR',
+        price: 650,
         category: 'planes',
-        icon: 'plane_aurora.png',
-        description: 'Experimental hypersonic',
-        bonus: 'Max speed capability',
+        icon: 'plane_scout.png',
+        planeAssetId: 'scout',
+        description: 'WW2 fighter crop — second livery',
+        bonus: 'Balanced sortie craft',
+        stats: { power: 78, attack: 82, defense: 70, speed: 80 },
+      },
+      {
+        id: 'plane-liner',
+        name: 'SKY LINER',
+        price: 900,
+        category: 'planes',
+        icon: 'plane_liner.png',
+        planeAssetId: 'liner',
+        description: 'Jet liner texture crop (OGA CC0)',
+        bonus: 'Heavy presence',
+        stats: { power: 72, attack: 60, defense: 88, speed: 62 },
+      },
+      {
+        id: 'plane-interceptor',
+        name: 'INTERCEPTOR',
+        price: 1200,
+        category: 'planes',
+        icon: 'plane_interceptor_jet.png',
+        planeAssetId: 'interceptor',
+        description: 'Private jet texture crop (OGA CC0)',
+        bonus: 'Premium profile',
+        stats: { power: 88, attack: 85, defense: 78, speed: 92 },
       },
     ];
 
@@ -297,13 +354,26 @@ export class ShopScreen extends Container {
     bg.endFill();
     card.addChild(bg);
 
-    // Item icon placeholder
     const iconBg = new Graphics();
     iconBg.beginFill(ColorTheme.get('brand.secondary'), 0.5);
     iconBg.drawRoundedRect(0, 0, 60, 60, 4);
     iconBg.endFill();
     iconBg.position.set(58, 8);
     card.addChild(iconBg);
+
+    if (item.planeAssetId) {
+      try {
+        const spr = new Sprite(getPlayerPlaneTexture(item.planeAssetId));
+        spr.anchor.set(0.5);
+        const box = 52;
+        const sc = box / Math.max(spr.texture.height, 1);
+        spr.scale.set(sc);
+        spr.position.set(58 + 30, 8 + 30);
+        card.addChild(spr);
+      } catch {
+        /* texture fallback */
+      }
+    }
 
     // Item name
     const nameText = new Text(item.name, {
@@ -319,14 +389,20 @@ export class ShopScreen extends Container {
 
     // Price - highlighted
     const priceBg = new Graphics();
-    priceBg.beginFill(ColorTheme.get('brand.success'), 0.7);
+    priceBg.beginFill(ColorTheme.get('semantic.success'), 0.7);
     priceBg.drawRoundedRect(0, 0, 160, 20, 2);
     priceBg.endFill();
     priceBg.position.set(8, 96);
     card.addChild(priceBg);
 
-    const priceText = new Text(`$${item.price}`, {
-      fontSize: 12,
+    const priceLabel =
+      item.category === 'planes'
+        ? item.price <= 0
+          ? 'FREE'
+          : `${Math.floor(item.price)} TOKENS`
+        : `$${item.price}`;
+    const priceText = new Text(priceLabel, {
+      fontSize: 11,
       fontWeight: 'bold',
       fontFamily: 'Oxanium, Arial',
       fill: 0xffffff,
@@ -435,6 +511,9 @@ export class ShopScreen extends Container {
           this.detailsPanel.addChild(label);
 
           const bar = new StatsBar({
+            label: '',
+            maxValue: 100,
+            color: ColorTheme.get('brand.primary'),
             width: 156,
             height: 8,
             showValue: false,
@@ -450,15 +529,57 @@ export class ShopScreen extends Container {
       }
     }
 
-    // BUY button
-    yPos += 20;
+    const bal = getShopTokens();
+    const balLine = new Text(`Your tokens: ${bal}`, {
+      fontSize: 11,
+      fontWeight: 'bold',
+      fontFamily: 'Oxanium, Arial',
+      fill: ColorTheme.get('brand.secondary'),
+    });
+    balLine.position.set(12, yPos);
+    this.detailsPanel.addChild(balLine);
+    yPos += 22;
+
+    yPos += 8;
+    const planeId = selected.planeAssetId;
+    const owned = planeId ? this.isPlaneOwned(planeId) : false;
+    const tokenCost = selected.category === 'planes' ? Math.floor(selected.price) : 0;
+    const canBuyPlane =
+      selected.category === 'planes' &&
+      planeId &&
+      !owned &&
+      tokenCost > 0 &&
+      bal >= tokenCost;
+
+    let buyLabel = 'BUY NOW';
+    let buyVariant: 'success' | 'secondary' | 'danger' = 'success';
+    if (selected.category === 'planes' && planeId) {
+      if (owned || tokenCost <= 0) {
+        buyLabel = 'OWNED';
+        buyVariant = 'secondary';
+      } else if (!canBuyPlane) {
+        buyLabel = 'NOT ENOUGH TOKENS';
+        buyVariant = 'danger';
+      } else {
+        buyLabel = `UNLOCK — ${tokenCost} TOKENS`;
+      }
+    }
+
     const buyButton = new UIButton({
-      text: 'BUY NOW',
-      width: 156,
+      text: buyLabel,
+      width: 168,
       height: 36,
-      variant: 'success',
+      variant: buyVariant,
       onClick: () => {
-        console.log('Purchasing:', selected.name);
+        if (selected.category !== 'planes' || !planeId) {
+          console.log('Purchasing:', selected.name);
+          return;
+        }
+        if (owned || tokenCost <= 0) return;
+        if (spendShopTokens(tokenCost)) {
+          unlockHangarPlane(planeId);
+          this.setupLayout();
+        }
       },
     });
     buyButton.position.set(12, yPos);

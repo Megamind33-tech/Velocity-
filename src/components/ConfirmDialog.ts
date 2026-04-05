@@ -8,7 +8,6 @@ import {
   Graphics,
   Text,
   Sprite,
-  DisplayObject,
   BlurFilter,
 } from 'pixi.js';
 import { UIPanel } from './UIPanel';
@@ -33,8 +32,8 @@ interface ConfirmDialogConfig {
 }
 
 export class ConfirmDialog extends Container {
-  private overlay: Graphics;
-  private panel: UIPanel;
+  private overlay!: Graphics;
+  private panel!: UIPanel;
   private config: ConfirmDialogConfig;
   private isAnimating: boolean = false;
 

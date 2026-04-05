@@ -7,6 +7,7 @@
 import { Container, Application } from 'pixi.js';
 import { ShopScreen } from './ShopScreen';
 import { HangarScreen } from './HangarScreen';
+import { consumePlaneStoreOpen } from './shopNavigationIntent';
 
 // Game screen types
 export type VelocityScreenType = 'shop' | 'hangar' | 'main-menu';
@@ -35,7 +36,12 @@ class ShopScreenWrapper implements IVelocityScreen {
 
   show(): void {
     this.container.visible = true;
-    this.screen.fadeIn(300).catch(console.error);
+    const planesFirst = consumePlaneStoreOpen();
+    this.screen.fadeIn(300).then(() => {
+      if (planesFirst) {
+        this.screen.openToPlanesTab();
+      }
+    }).catch(console.error);
   }
 
   hide(): void {

@@ -27,7 +27,7 @@ export class SmartText extends Text {
   private originalFontSize: number;
 
   constructor(config: SmartTextConfig) {
-    super(config.text, config.style);
+    super({ text: config.text, style: config.style as Partial<TextStyle> });
 
     this.maxWidth = config.maxWidth;
     this.maxHeight = config.maxHeight;
@@ -163,7 +163,7 @@ export class SmartText extends Text {
     reapplyHandling: boolean = true
   ): void {
     if (newStyle) {
-      this.style = new TextStyle(newStyle);
+      this.style = new TextStyle(newStyle as Partial<TextStyle>);
       this.originalFontSize = this.style.fontSize as number;
     }
 

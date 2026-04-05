@@ -39,10 +39,13 @@ import { LevelCompleteScreen } from './ui/game/screens/LevelCompleteScreen';
 import { SettingsScreen } from './ui/game/screens/SettingsScreen';
 import { LeaderboardScreen } from './ui/game/screens/LeaderboardScreen';
 import { AchievementsScreen } from './ui/game/screens/AchievementsScreen';
+import { StoreScreen } from './ui/game/screens/StoreScreen';
+import { HangarScreen as PixiHangarScreen } from './ui/game/screens/HangarScreen';
 import { RewardsScreen } from './ui/game/screens/RewardsScreen';
 // Import new professional AAA screens and navigation
 import { ScreenManager } from './screens/ScreenManager';
 import { navigationEvents } from './screens/NavigationEvents';
+import { requestPlaneStoreOpen } from './screens/shopNavigationIntent';
 import {
     registerGameFlowCallbacks,
     registerHudDataSource,
@@ -113,6 +116,8 @@ async function init() {
     uiManager.registerScreen('settings', new SettingsScreen(app));
     uiManager.registerScreen('leaderboard', new LeaderboardScreen(app));
     uiManager.registerScreen('achievements', new AchievementsScreen(app));
+    uiManager.registerScreen('store', new StoreScreen(app));
+    uiManager.registerScreen('hangar', new PixiHangarScreen(app));
     uiManager.registerScreen('rewards', new RewardsScreen(app));
 
     // Initialize professional AAA screens with ScreenManager
@@ -130,7 +135,8 @@ async function init() {
                 await screenManager.showScreen('hangar', 'slide-left');
                 break;
             case 'plane-store':
-                await screenManager.showScreen('plane-store', 'slide-left');
+                requestPlaneStoreOpen();
+                await screenManager.showScreen('shop', 'slide-left');
                 break;
             case 'back':
                 await screenManager.goBack();
@@ -145,7 +151,7 @@ async function init() {
                 // Return to main menu
                 screenManager.dispose();
                 navigationEvents.clearListeners();
-                await uiManager.showScreen('main-menu', true, 'fade');
+                await uiManager.showScreen('main-menu', true, 'crossfade');
                 break;
             default:
                 console.log('Navigation action:', action);

@@ -62,6 +62,44 @@ export function getMainMenuProgress(): { maxUnlocked: number; unlockedCount: num
 
 const HANGAR_PLANE_KEY = 'velocity_hangar_plane_v1';
 const HANGAR_UNLOCKS_KEY = 'velocity_hangar_unlocks_v1';
+const SHOP_TOKENS_KEY = 'velocity_shop_tokens_v1';
+
+const SHOP_STARTING_TOKENS = 800;
+
+/** Soft currency for in-game store (planes, etc.). */
+export function getShopTokens(): number {
+    try {
+        const raw = localStorage.getItem(SHOP_TOKENS_KEY);
+        if (raw === null) {
+            setShopTokens(SHOP_STARTING_TOKENS);
+            return SHOP_STARTING_TOKENS;
+        }
+        const n = Number(raw);
+        return Number.isFinite(n) && n >= 0 ? Math.floor(n) : 0;
+    } catch {
+        return SHOP_STARTING_TOKENS;
+    }
+}
+
+export function setShopTokens(amount: number): void {
+    try {
+        localStorage.setItem(SHOP_TOKENS_KEY, String(Math.max(0, Math.floor(amount))));
+    } catch {
+        /* ignore */
+    }
+}
+
+/** Returns false if insufficient balance. */
+export function spendShopTokens(cost: number): boolean {
+    const cur = getShopTokens();
+    if (cur < cost) return false;
+    setShopTokens(cur - cost);
+    return true;
+}
+
+export function addShopTokens(delta: number): void {
+    setShopTokens(getShopTokens() + Math.floor(delta));
+}
 
 /** Hangar: selected craft id (persisted). */
 export function getSelectedPlaneId(): string {
@@ -125,6 +163,7 @@ export function resetLocalProgress(): void {
         localStorage.removeItem(HIGH_SCORE_KEY);
         localStorage.removeItem(HANGAR_PLANE_KEY);
         localStorage.removeItem(HANGAR_UNLOCKS_KEY);
+        localStorage.removeItem(SHOP_TOKENS_KEY);
     } catch {
         /* ignore */
     }
