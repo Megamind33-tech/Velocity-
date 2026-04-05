@@ -801,3 +801,6 @@ function vectorStatChip(
     const vt = fitStatChipValue(val, valueMaxW, accentColor);
     vt.position.set(CHIP_TEXT_X, 24);
     root.addChild(vt);
+
+    return root;
+}
