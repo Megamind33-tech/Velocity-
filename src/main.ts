@@ -56,7 +56,20 @@ function showInitFailure(message: string, detail?: string): void {
     el.setAttribute('role', 'alert');
     el.style.cssText =
         'position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px;background:#0a0a1a;color:#00ffcc;font-family:system-ui,sans-serif;text-align:center;z-index:99999;';
-    el.innerHTML = `<h1 style="margin:0 0 12px;font-size:1.1rem">Velocity</h1><p style="margin:0;opacity:.9;max-width:320px">${message}</p>${detail ? `<pre style="margin-top:16px;font-size:11px;opacity:.6;white-space:pre-wrap;max-width:100%">${detail}</pre>` : ''}`;
+    const h1 = document.createElement('h1');
+    h1.style.cssText = 'margin:0 0 12px;font-size:1.1rem';
+    h1.textContent = 'Velocity';
+    const p = document.createElement('p');
+    p.style.cssText = 'margin:0;opacity:.9;max-width:320px';
+    p.textContent = message;
+    el.appendChild(h1);
+    el.appendChild(p);
+    if (detail) {
+        const pre = document.createElement('pre');
+        pre.style.cssText = 'margin-top:16px;font-size:11px;opacity:.6;white-space:pre-wrap;max-width:100%';
+        pre.textContent = detail;
+        el.appendChild(pre);
+    }
     document.body.appendChild(el);
 }
 

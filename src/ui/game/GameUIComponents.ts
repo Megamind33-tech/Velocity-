@@ -3,7 +3,7 @@
  * Creates consistent, game-focused UI elements
  */
 
-import { Container, Graphics, Text, TextStyle } from 'pixi.js';
+import { Container, FederatedPointerEvent, Graphics, Text, TextStyle } from 'pixi.js';
 import { GAME_COLORS, GAME_FONTS, GAME_SIZES, GAME_BUTTON_STYLES, GAME_PANEL_STYLES } from './GameUITheme';
 
 export type GameButtonOptions = {
@@ -112,28 +112,64 @@ export function createGameButton(
     text.position.set(bw / 2, bh / 2);
     button.addChild(text);
 
-    // Click handler
-    button.on('pointerdown', (e: any) => {
-        e.stopPropagation();
-        onClick();
-    });
+    const stop = (e: FederatedPointerEvent) => e.stopPropagation();
 
-    const redrawBg = (hover: boolean) => {
+    const redrawBg = (pressed: boolean, hover: boolean) => {
         const bgGraphic = button.children[0] as Graphics;
         bgGraphic.clear();
         bgGraphic.roundRect(0, 0, bw, bh, GAME_SIZES.radius.small);
-        bgGraphic.fill({ color: hover ? style.hover_bg : style.bg, alpha: 0.95 });
+        const bgCol = pressed ? style.hover_bg : hover ? style.hover_bg : style.bg;
+        const bdCol = pressed ? style.hover_border : hover ? style.hover_border : style.border;
+        bgGraphic.fill({ color: bgCol, alpha: pressed ? 1 : 0.95 });
         bgGraphic.stroke({
-            color: hover ? style.hover_border : style.border,
-            width: GAME_SIZES.border.normal + (hover ? 1 : 0),
+            color: bdCol,
+            width: GAME_SIZES.border.normal + (hover || pressed ? 1 : 0),
             alpha: 1.0,
         });
     };
 
-    // Hover effects (desktop / some tablets)
-    button.on('pointermove', () => redrawBg(true));
+    let armed = false;
+    let hover = false;
 
-    button.on('pointerout', () => redrawBg(false));
+    const paint = () => redrawBg(armed, hover);
+
+    button.on('pointerdown', (e) => {
+        stop(e);
+        armed = true;
+        button.scale.set(0.97);
+        paint();
+    });
+    button.on('pointerup', (e) => {
+        stop(e);
+        const commit = armed;
+        armed = false;
+        button.scale.set(1);
+        paint();
+        if (commit) onClick();
+    });
+    button.on('pointerupoutside', (e) => {
+        stop(e);
+        armed = false;
+        button.scale.set(1);
+        paint();
+    });
+    button.on('pointercancel', () => {
+        armed = false;
+        button.scale.set(1);
+        paint();
+    });
+
+    // Hover / focus-adjacent affordance (desktop / some tablets; ignored until first move)
+    button.on('pointerover', () => {
+        hover = true;
+        if (!armed) paint();
+    });
+    button.on('pointerout', () => {
+        hover = false;
+        armed = false;
+        button.scale.set(1);
+        paint();
+    });
 
     return button;
 }

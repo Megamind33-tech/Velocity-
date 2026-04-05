@@ -12,7 +12,7 @@
  *   - Everything edge-safe, no center overlap with gameplay field
  */
 
-import { Application, Container, Graphics, NineSliceSprite, Sprite, Text, TextStyle } from 'pixi.js';
+import { Application, Container, FederatedPointerEvent, Graphics, NineSliceSprite, Sprite, Text, TextStyle } from 'pixi.js';
 import { BaseGameScreen } from '../GameUIManager';
 import { GAME_COLORS, GAME_FONTS, GAME_SIZES } from '../GameUITheme';
 import { getHudDataSource, requestGamePause } from '../gameFlowBridge';
@@ -55,7 +55,9 @@ function majorStyle(fill: number): TextStyle {
         fontFamily: GAME_FONTS.arcade,
         fontWeight: 'bold',
         letterSpacing: 1,
-        dropShadow: { alpha: 0.7, blur: 3, color: 0x000000, distance: 2 },
+        stroke: { color: 0x000000, width: 4, alpha: 0.88 },
+        padding: 4,
+        dropShadow: { alpha: 0.55, blur: 2, color: 0x000000, distance: 1 },
     });
 }
 
@@ -66,7 +68,9 @@ function secondaryStyle(fill: number): TextStyle {
         fontFamily: GAME_FONTS.arcade,
         fontWeight: 'bold',
         letterSpacing: 1,
-        dropShadow: { alpha: 0.55, blur: 2, color: 0x000000, distance: 1 },
+        stroke: { color: 0x000000, width: 3, alpha: 0.82 },
+        padding: 3,
+        dropShadow: { alpha: 0.45, blur: 2, color: 0x000000, distance: 1 },
     });
 }
 
@@ -77,7 +81,9 @@ function detailStyle(fill: number): TextStyle {
         fontFamily: GAME_FONTS.narrow,
         fontWeight: 'bold',
         letterSpacing: 0.5,
-        dropShadow: { alpha: 0.5, blur: 2, color: 0x000000, distance: 1 },
+        stroke: { color: 0x000000, width: 2, alpha: 0.78 },
+        padding: 2,
+        dropShadow: { alpha: 0.4, blur: 1, color: 0x000000, distance: 1 },
     });
 }
 
@@ -196,10 +202,32 @@ export class InGameHUDScreen extends BaseGameScreen {
 
         root.eventMode = 'static';
         root.cursor = 'pointer';
-        root.on('pointerdown', () => root.scale.set(0.95));
-        root.on('pointerup', () => { root.scale.set(1); requestGamePause(); });
-        root.on('pointerupoutside', () => root.scale.set(1));
-        root.on('pointercancel',    () => root.scale.set(1));
+        root.accessible = true;
+        root.accessibleTitle = 'Pause';
+        root.accessibleType = 'button';
+
+        const stop = (e: FederatedPointerEvent) => e.stopPropagation();
+        const release = () => {
+            root.scale.set(1);
+        };
+
+        root.on('pointerdown', (e) => {
+            stop(e);
+            root.scale.set(0.96);
+        });
+        root.on('pointerup', (e) => {
+            stop(e);
+            release();
+            requestGamePause();
+        });
+        root.on('pointerupoutside', (e) => {
+            stop(e);
+            release();
+        });
+        root.on('pointercancel', (e) => {
+            stop(e);
+            release();
+        });
 
         return root;
     }

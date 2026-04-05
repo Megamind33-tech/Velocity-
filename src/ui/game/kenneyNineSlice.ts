@@ -81,7 +81,7 @@ export function createKenneyNineSliceButton(
     const stop = (e: FederatedPointerEvent) => e.stopPropagation();
 
     const onDown = () => {
-        root.scale.set(0.98);
+        root.scale.set(0.96);
     };
     const onUp = () => {
         root.scale.set(1);
