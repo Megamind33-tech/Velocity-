@@ -4,60 +4,108 @@
  */
 
 /**
- * Velocity Color Palette
- * Based on the game's existing design language
+ * VELOCITY COLOR SYSTEM (AAA-Quality Mobile Game UI)
+ * Mandatory palette - NO DEVIATIONS
+ *
+ * Three elevation levels with precise opacity cascading:
+ *   Background Base → Surface Layer (+7%) → Elevated Surface (+10%) → Modal (+15%)
+ *
+ * Semantic color usage (STRICT ENFORCEMENT):
+ *   Gold (#FFD166) - PRIMARY CTAs, currency ONLY
+ *   Cyan (#00D1FF) - Interactive elements, info ONLY
+ *   Purple (#A259FF) - Rewards/achievements ONLY
+ *   Green (#22C55E) - Success/claims
+ *   Red (#EF4444) - Danger/warnings
  */
 export const GAME_COLORS = {
-    // Primary brand color (Velocity cyan)
-    primary: 0x00ffcc,      // Bright cyan - main accent
-    primaryDark: 0x00aa99,  // Darker cyan for hover/active states
+    // BACKGROUND ELEVATION SYSTEM
+    // Layer 0: Deepest space black with blue undertone
+    bg_base: 0x0D1117,
 
-    // Backgrounds
-    bg_darkest: 0x0a0a1a,   // Almost black (main background)
-    bg_dark: 0x1a1a3a,      // Dark blue-black (panels)
-    bg_medium: 0x2a2a4a,    // Medium dark (secondary panels)
+    // Layer 1: Cards, panels, surfaces (1st elevation)
+    // 7% lighter than base for subtle depth
+    bg_surface: 0x1A1A2E,
 
-    // Accents
-    accent_gold: 0xffcc00,  // Gold for highlights
-    accent_red: 0xff3300,   // Red for warnings/danger
-    accent_green: 0x00ff00, // Green for success
-    accent_orange: 0xff6600, // Orange for info
+    // Layer 2: Elevated content - modals, active panels (2nd elevation)
+    // 10% lighter than surface for clear hierarchy
+    bg_elevated: 0x252540,
 
-    // Text
-    text_primary: 0xffffff,    // White for main text
-    text_secondary: 0xcccccc,  // Light gray for secondary
-    text_muted: 0x999999,      // Gray for disabled/muted
-    text_accent: 0x00ffcc,     // Cyan for emphasis
+    // Layer 3: Modal/overlay highest elevation (3rd level)
+    // 15% lighter than elevated for maximum prominence
+    bg_modal: 0x2F2F4A,
 
-    // UI elements
-    border_primary: 0x00ffcc,  // Cyan borders
-    border_secondary: 0x666666, // Gray borders
-    glow_color: 0x00ffcc,      // Cyan glow
+    // PRIMARY ACTION COLORS
+    // Gold - ONLY on FLY NOW, primary CTAs, currency indicators, premium items
+    primary_cta: 0xFFD166,
 
-    // Game specific
-    hud_bg: 0x111122,          // Very dark for HUD panels
-    panel_bg: 0x1a1a3a,        // Dark panel background
+    // Cyan - ONLY on interactive elements, navigation highlights, info accents
+    accent_cyan: 0x00D1FF,
 
-    /** In-run HUD copy (readable on light Kenney chrome) */
-    hud_score_value: 0xffcc00,
-    hud_level_value: 0x00ffcc,
-    hud_alt: 0xffaa44,
-    hud_spd: 0x66ddff,
-    hud_vocal_label: 0x00ffcc,
+    // Purple - ONLY on achievement badges, reward notifications, epic/rare items
+    accent_purple: 0xA259FF,
+
+    // SEMANTIC COLORS
+    // Success - claim confirmations, completion states
+    success: 0x22C55E,
+
+    // Danger - warnings, alerts, low fuel, critical states
+    danger: 0xEF4444,
+
+    // TEXT COLORS
+    // Primary body text (never pure white #FFFFFF)
+    text_primary: 0xF0F0F0,
+
+    // Labels, captions, metadata
+    text_secondary: 0x9CA3AF,
+
+    // Inactive/disabled elements
+    text_disabled: 0x4B5563,
+
+    // BACKWARDS COMPATIBILITY (mapped to new system)
+    primary: 0x00D1FF,              // Cyan (interactive)
+    primaryDark: 0x00A8CC,          // Darker cyan
+    accent_gold: 0xFFD166,          // Gold
+    accent_red: 0xEF4444,           // Red danger
+    accent_green: 0x22C55E,         // Green success
+    accent_orange: 0xFFD166,        // Orange → gold
+    text_muted: 0x4B5563,           // Disabled text
+    text_accent: 0x00D1FF,          // Cyan accent
+    border_primary: 0x00D1FF,       // Cyan borders
+    border_secondary: 0x4B5563,     // Gray borders
+    glow_color: 0x00D1FF,           // Cyan glow
+    bg_darkest: 0x0D1117,           // Base background (for shadow/contrast)
+    bg_dark: 0x1A1A2E,              // Alias for surface
+    bg_medium: 0x252540,            // Alias for elevated
+    hud_bg: 0x1A1A2E,               // Surface layer
+    panel_bg: 0x1A1A2E,             // Surface layer
+    hud_score_value: 0xFFD166,      // Gold
+    hud_level_value: 0x00D1FF,      // Cyan
+    hud_alt: 0xFFD166,              // Gold
+    hud_spd: 0x00D1FF,              // Cyan
+    hud_vocal_label: 0x00D1FF,      // Cyan
 };
 
 /**
- * Font Configuration
- * Primary: Kenney Future — game-native typeface from Kenney UI Pack (CC0)
- * Narrow variant for HUD chips where horizontal space is constrained
+ * Font Configuration (AAA-Quality Mobile Game UI)
+ * Display: Orbitron (28-32pt, screen titles, hero text)
+ * Functional UI: Exo 2 (all body text, buttons, cards, navigation)
+ * Numerical Data: Oxanium (currency, stats, timers, HUD values)
+ *
+ * All fonts from Google Fonts (OFL License - commercial use OK)
  */
 export const GAME_FONTS = {
-    /** Kenney Future — primary game typeface. Falls back to Orbitron → system. */
-    arcade: "'Kenney Future', 'Kenney Future Narrow', Orbitron, 'Arial Narrow', Arial, sans-serif",
-    /** Kenney Future Narrow — compact HUD / chip labels. */
-    narrow: "'Kenney Future Narrow', 'Kenney Future', Orbitron, 'Arial Narrow', Arial, sans-serif",
-    standard: "'Kenney Future', Orbitron, Arial, sans-serif",
-    monospace: "'Kenney Future Narrow', 'Courier New', monospace",
+    /** Display font for screen titles and hero text */
+    display: "'Orbitron', sans-serif",
+    /** Primary functional UI font - body text, buttons, cards, nav */
+    functional: "'Exo 2', sans-serif",
+    /** Numerical data font - currency, stats, timers */
+    numerical: "'Oxanium', monospace",
+
+    // Backwards compatibility aliases
+    arcade: "'Exo 2', sans-serif",
+    narrow: "'Exo 2', sans-serif",
+    standard: "'Exo 2', sans-serif",
+    monospace: "'Oxanium', monospace",
 };
 
 /**
@@ -129,97 +177,117 @@ export const GAME_SIZES = {
 };
 
 /**
- * Button Style Configuration
+ * Button Style Configuration (AAA-Quality Standard)
+ *
+ * Four-state button system:
+ * - Default: Base state
+ * - Hover/Focus: Elevated with drop shadow
+ * - Pressed: Compressed with scale 0.97
+ * - Disabled: Grayed out, no interaction
+ *
+ * All buttons use touch target minimum 48×48px
  */
 export const GAME_BUTTON_STYLES = {
-    // Primary action (cyan)
+    // PRIMARY CTA (Gold - "FLY NOW" style)
+    // 56px height, full width minus margins, gradient background
     primary: {
-        bg: GAME_COLORS.hud_bg,
-        text: GAME_COLORS.primary,
-        border: GAME_COLORS.primary,
-        hover_bg: GAME_COLORS.bg_medium,
-        hover_border: GAME_COLORS.primary,
-        font_size: GAME_SIZES.font.lg,
+        bg: GAME_COLORS.primary_cta,  // #FFD166 gold
+        text: GAME_COLORS.bg_base,    // Dark text on light background
+        border: GAME_COLORS.primary_cta,
+        hover_bg: GAME_COLORS.bg_elevated,
+        hover_border: GAME_COLORS.primary_cta,
+        font_size: 18,
         font_weight: 'bold',
+        height: 56,
     },
 
-    // Secondary action (gray)
+    // SECONDARY ACTION (Cyan - interactive/info)
     secondary: {
-        bg: GAME_COLORS.hud_bg,
-        text: GAME_COLORS.text_secondary,
-        border: GAME_COLORS.border_secondary,
-        hover_bg: GAME_COLORS.bg_medium,
-        hover_border: GAME_COLORS.border_secondary,
+        bg: GAME_COLORS.bg_surface,
+        text: GAME_COLORS.accent_cyan,
+        border: GAME_COLORS.accent_cyan,
+        hover_bg: GAME_COLORS.bg_elevated,
+        hover_border: GAME_COLORS.accent_cyan,
         font_size: GAME_SIZES.font.base,
         font_weight: 'normal',
     },
 
-    // Danger action (red)
+    // DANGER ACTION (Red - warnings/alerts)
     danger: {
-        bg: GAME_COLORS.hud_bg,
-        text: GAME_COLORS.accent_red,
-        border: GAME_COLORS.accent_red,
-        hover_bg: GAME_COLORS.bg_medium,
-        hover_border: GAME_COLORS.accent_red,
+        bg: GAME_COLORS.bg_surface,
+        text: GAME_COLORS.danger,
+        border: GAME_COLORS.danger,
+        hover_bg: GAME_COLORS.bg_elevated,
+        hover_border: GAME_COLORS.danger,
         font_size: GAME_SIZES.font.lg,
         font_weight: 'bold',
     },
 
-    // Success action (green)
+    // SUCCESS ACTION (Green - claims/completion)
     success: {
-        bg: GAME_COLORS.hud_bg,
-        text: GAME_COLORS.accent_green,
-        border: GAME_COLORS.accent_green,
-        hover_bg: GAME_COLORS.bg_medium,
-        hover_border: GAME_COLORS.accent_green,
+        bg: GAME_COLORS.bg_surface,
+        text: GAME_COLORS.success,
+        border: GAME_COLORS.success,
+        hover_bg: GAME_COLORS.bg_elevated,
+        hover_border: GAME_COLORS.success,
         font_size: GAME_SIZES.font.lg,
         font_weight: 'bold',
     },
 
-    // Accent action (gold)
+    // ACCENT ACTION (Gold - rewards/premium)
     accent: {
-        bg: GAME_COLORS.hud_bg,
-        text: GAME_COLORS.accent_gold,
-        border: GAME_COLORS.accent_gold,
-        hover_bg: GAME_COLORS.bg_medium,
-        hover_border: GAME_COLORS.accent_gold,
+        bg: GAME_COLORS.bg_surface,
+        text: GAME_COLORS.primary_cta,
+        border: GAME_COLORS.primary_cta,
+        hover_bg: GAME_COLORS.bg_elevated,
+        hover_border: GAME_COLORS.primary_cta,
         font_size: GAME_SIZES.font.lg,
         font_weight: 'bold',
     },
 };
 
 /**
- * Panel Style Configuration
+ * Panel Style Configuration (Glassmorphism Design System)
+ *
+ * Three elevation levels with corresponding background colors and opacity:
+ * - Standard: Surface layer (#1A1A2E)
+ * - HUD: Surface with reduced opacity for transparency effect
+ * - Modal: Elevated layer (#252540) with highest prominence
+ *
+ * Glassmorphism specs:
+ * - Cyan border at 15% opacity for subtle accent
+ * - Drop shadow for depth
+ * - Blur effect (handled in rendering layer)
  */
 export const GAME_PANEL_STYLES = {
-    // Standard game panel
+    // Standard game panel (1st elevation)
     default: {
-        bg: GAME_COLORS.panel_bg,
-        border: GAME_COLORS.primary,
-        border_width: GAME_SIZES.border.normal,
-        corner_radius: GAME_SIZES.radius.medium,
-        padding: GAME_SIZES.spacing.lg,
-        bg_alpha: 0.95,
-    },
-
-    // HUD panel (always visible)
-    hud: {
-        bg: GAME_COLORS.hud_bg,
-        border: GAME_COLORS.primary,
+        bg: GAME_COLORS.bg_surface,         // #1A1A2E
+        border: GAME_COLORS.accent_cyan,    // #00D1FF at 15% opacity
         border_width: GAME_SIZES.border.thin,
-        corner_radius: GAME_SIZES.radius.small,
-        padding: GAME_SIZES.spacing.md,
-        bg_alpha: 0.8,
+        corner_radius: 12,                  // 12px per spec
+        padding: 16,                        // 16px per spec
+        bg_alpha: 0.85,                     // 85% opacity for glassmorphism
     },
 
-    // Modal/overlay panel
+    // HUD panel (always visible, 1st elevation)
+    hud: {
+        bg: GAME_COLORS.bg_surface,         // #1A1A2E
+        border: GAME_COLORS.accent_cyan,    // #00D1FF
+        border_width: GAME_SIZES.border.thin,
+        corner_radius: 12,
+        padding: 16,
+        bg_alpha: 0.80,                     // 80% opacity for nav bars
+    },
+
+    // Modal/overlay panel (2nd elevation)
     modal: {
-        bg: GAME_COLORS.bg_dark,
-        border: GAME_COLORS.primary,
-        border_width: GAME_SIZES.border.thick,
-        corner_radius: GAME_SIZES.radius.large,
-        padding: GAME_SIZES.spacing.xl,
-        bg_alpha: 0.98,
+        bg: GAME_COLORS.bg_elevated,        // #252540
+        border: GAME_COLORS.accent_cyan,    // #00D1FF at 25% opacity
+        border_width: GAME_SIZES.border.thin,
+        corner_radius: 16,                  // 16px for modals per spec
+        padding: 24,                        // 24px per spec
+        bg_alpha: 0.90,                     // 90% opacity for elevated elevation
     },
 };
 
