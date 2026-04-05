@@ -149,50 +149,73 @@ export class HangarScreen extends Container {
    * Setup layout - Two panel design
    */
   private setupLayout(): void {
-    // Title
+    // Title with glow effect
     const title = new Text('HANGAR', {
-      fontSize: 28,
+      fontSize: 32,
       fontWeight: 'bold',
       fontFamily: 'Orbitron, Arial',
       fill: ColorTheme.get('brand.primary'),
+      dropShadow: {
+        color: ColorTheme.get('brand.primary'),
+        blur: 10,
+        distance: 0,
+        alpha: 0.6,
+      },
     });
     title.position.set(16, 12);
     this.addChild(title);
 
     const padding = 12;
-    const panelWidth = 188;
+    const panelWidth = 170;
     const leftX = padding;
-    const rightX = padding + panelWidth + 8;
+    const rightX = padding + panelWidth + 12;
 
-    // LEFT PANEL - Planes List
+    // LEFT PANEL - Planes List with AAA styling
     this.planesList = new Container();
-    this.planesList.position.set(leftX, 50);
+    this.planesList.position.set(leftX, 55);
     this.addChild(this.planesList);
 
     const leftBg = new Graphics();
-    leftBg.lineStyle(2, ColorTheme.get('brand.primary'), 0.6);
-    leftBg.drawRoundedRect(0, 0, panelWidth, 680, 6);
+    // Glowing cyan border - AAA style
+    leftBg.lineStyle(3, ColorTheme.get('brand.primary'), 1);
+    leftBg.drawRoundedRect(0, 0, panelWidth, 640, 8);
+    leftBg.endFill();
+
+    // Fill with dark semi-transparent background
+    leftBg.beginFill(ColorTheme.get('background.secondary'), 0.4);
+    leftBg.drawRoundedRect(1, 1, panelWidth - 2, 638, 7);
     leftBg.endFill();
     this.planesList.addChildAt(leftBg, 0);
 
     let yPos = 8;
     this.planesData.forEach((plane, index) => {
       const planeItem = this.createPlaneListItem(plane, index + 1);
-      planeItem.position.set(0, yPos);
+      planeItem.position.set(4, yPos);
       this.planesList.addChild(planeItem);
-      yPos += 104;
+      yPos += 100;
     });
 
-    // RIGHT PANEL - Details
+    // RIGHT PANEL - Details with AAA styling
     this.detailsPanel = new Container();
-    this.detailsPanel.position.set(rightX, 50);
+    this.detailsPanel.position.set(rightX, 55);
     this.addChild(this.detailsPanel);
+
+    const rightBg = new Graphics();
+    // Glowing green border - AAA style
+    rightBg.lineStyle(3, ColorTheme.get('brand.secondary'), 1);
+    rightBg.drawRoundedRect(0, 0, panelWidth, 640, 8);
+    rightBg.endFill();
+
+    rightBg.beginFill(ColorTheme.get('background.secondary'), 0.4);
+    rightBg.drawRoundedRect(1, 1, panelWidth - 2, 638, 7);
+    rightBg.endFill();
+    this.detailsPanel.addChildAt(rightBg, 0);
 
     this.updateDetailsPanel();
 
-    // Navigation bar at bottom
+    // Navigation bar at bottom - VISIBLE with proper styling
     this.navigation = this.createNavigation();
-    this.navigation.position.set(padding, 750);
+    this.navigation.position.set(padding, 710);
     this.addChild(this.navigation);
   }
 
@@ -202,14 +225,24 @@ export class HangarScreen extends Container {
   private createPlaneListItem(plane: PlaneData, index: number): Container {
     const item = new Container();
 
-    // Item background - highlight if selected
-    const bg = new Graphics();
+    // Item background with AAA styling - glowing border on selection
     const isSelected = this.selectedPlaneId === plane.id;
+
+    // Border for selected
+    if (isSelected) {
+      const border = new Graphics();
+      border.lineStyle(2, ColorTheme.get('brand.primary'), 0.8);
+      border.drawRoundedRect(0, 0, 162, 96, 4);
+      border.endFill();
+      item.addChild(border);
+    }
+
+    const bg = new Graphics();
     bg.beginFill(
       isSelected ? ColorTheme.get('brand.primary') : ColorTheme.get('background.secondary'),
-      isSelected ? 0.4 : 0.3
+      isSelected ? 0.3 : 0.2
     );
-    bg.drawRoundedRect(0, 0, 176, 100, 4);
+    bg.drawRoundedRect(1, 1, 160, 94, 3);
     bg.endFill();
     item.addChild(bg);
 
@@ -317,117 +350,167 @@ export class HangarScreen extends Container {
 
     let yPos = 12;
 
-    // Plane name - big
+    // Plane name with highlight background - AAA style
+    const nameHiBg = new Graphics();
+    nameHiBg.beginFill(ColorTheme.get('brand.primary'), 0.2);
+    nameHiBg.drawRoundedRect(8, yPos - 2, 156, 32, 3);
+    nameHiBg.endFill();
+    this.detailsPanel.addChild(nameHiBg);
+
     const nameText = new Text(selected.name, {
-      fontSize: 18,
+      fontSize: 16,
       fontWeight: 'bold',
       fontFamily: 'Exo 2, Arial',
       fill: ColorTheme.get('brand.primary'),
       wordWrap: true,
-      wordWrapWidth: 160,
+      wordWrapWidth: 148,
     });
     nameText.position.set(12, yPos);
     this.detailsPanel.addChild(nameText);
-    yPos += 40;
+    yPos += 36;
 
-    // Description
+    // Description with separator
+    const sepLine = new Graphics();
+    sepLine.lineStyle(1, ColorTheme.get('brand.primary'), 0.3);
+    sepLine.moveTo(12, yPos);
+    sepLine.lineTo(160, yPos);
+    this.detailsPanel.addChild(sepLine);
+    yPos += 8;
+
     const descText = new Text(selected.description, {
-      fontSize: 10,
+      fontSize: 9,
       fontFamily: 'Arial',
       fill: ColorTheme.get('text.secondary'),
       wordWrap: true,
-      wordWrapWidth: 160,
+      wordWrapWidth: 148,
     });
     descText.position.set(12, yPos);
     this.detailsPanel.addChild(descText);
-    yPos += 48;
+    yPos += 44;
 
-    // Stats bars
+    // Stats header
+    const statsTitle = new Text('⚡ STATS', {
+      fontSize: 11,
+      fontWeight: 'bold',
+      fontFamily: 'Oxanium, Arial',
+      fill: ColorTheme.get('brand.primary'),
+    });
+    statsTitle.position.set(12, yPos);
+    this.detailsPanel.addChild(statsTitle);
+    yPos += 18;
+
+    // Stats bars with AAA styling
     const stats = [
-      { label: 'POWER', value: selected.stats.power },
-      { label: 'ATTACK', value: selected.stats.attack },
-      { label: 'DEFENSE', value: selected.stats.defense },
-      { label: 'SPEED', value: selected.stats.speed },
+      { label: 'PWR', value: selected.stats.power, color: 0xff6b35 },
+      { label: 'ATK', value: selected.stats.attack, color: 0xff2d00 },
+      { label: 'DEF', value: selected.stats.defense, color: 0x00d4ff },
+      { label: 'SPD', value: selected.stats.speed, color: 0x06ffa5 },
     ];
 
     stats.forEach((stat) => {
       const label = new Text(stat.label, {
-        fontSize: 9,
+        fontSize: 8,
         fontWeight: 'bold',
         fontFamily: 'Oxanium, Arial',
-        fill: ColorTheme.get('text.tertiary'),
+        fill: 0xffffff,
       });
-      label.position.set(12, yPos);
+      label.position.set(12, yPos + 1);
       this.detailsPanel.addChild(label);
 
+      // Stat value on right
+      const valueBg = new Graphics();
+      valueBg.beginFill(stat.color, 0.3);
+      valueBg.drawRoundedRect(138, yPos - 2, 20, 14, 2);
+      valueBg.endFill();
+      this.detailsPanel.addChild(valueBg);
+
+      const valueText = new Text(String(stat.value), {
+        fontSize: 8,
+        fontWeight: 'bold',
+        fontFamily: 'Oxanium, Arial',
+        fill: stat.color,
+      });
+      valueText.position.set(140, yPos);
+      this.detailsPanel.addChild(valueText);
+
       const bar = new StatsBar({
-        width: 156,
-        height: 8,
+        width: 124,
+        height: 6,
         showValue: false,
         showLabel: false,
         showPercentage: false,
       });
-      bar.position.set(12, yPos + 12);
+      bar.position.set(12, yPos + 10);
       bar.setValue(stat.value, 100);
       this.detailsPanel.addChild(bar);
 
-      yPos += 28;
+      yPos += 22;
     });
 
     // Flight stats if owned
     if (selected.owned && selected.flightHours) {
+      yPos += 6;
+
+      const sepLine2 = new Graphics();
+      sepLine2.lineStyle(1, ColorTheme.get('brand.secondary'), 0.3);
+      sepLine2.moveTo(12, yPos);
+      sepLine2.lineTo(160, yPos);
+      this.detailsPanel.addChild(sepLine2);
       yPos += 8;
 
-      const hoursText = new Text(`✈ ${selected.flightHours}h Flight Time`, {
-        fontSize: 10,
+      const hoursText = new Text(`✈ ${selected.flightHours}h`, {
+        fontSize: 9,
         fontFamily: 'Oxanium, Arial',
-        fill: ColorTheme.get('text.secondary'),
+        fill: ColorTheme.get('brand.secondary'),
+        fontWeight: 'bold',
       });
       hoursText.position.set(12, yPos);
       this.detailsPanel.addChild(hoursText);
-      yPos += 20;
 
-      const winsText = new Text(`⭐ ${selected.wins} Wins`, {
-        fontSize: 10,
+      const winsText = new Text(`⭐ ${selected.wins}`, {
+        fontSize: 9,
         fontFamily: 'Oxanium, Arial',
-        fill: ColorTheme.get('text.secondary'),
+        fill: ColorTheme.get('semantic.success'),
+        fontWeight: 'bold',
       });
-      winsText.position.set(12, yPos);
+      winsText.position.set(100, yPos);
       this.detailsPanel.addChild(winsText);
       yPos += 20;
     }
 
-    // Upgrades section
+    // Upgrades section - AAA style
     if (selected.upgrades && selected.upgrades.length > 0) {
-      yPos += 8;
+      yPos += 4;
 
-      const upgradesTitle = new Text('UPGRADES', {
+      const upgradesTitle = new Text('🔧 UPGRADES', {
         fontSize: 9,
         fontWeight: 'bold',
         fontFamily: 'Oxanium, Arial',
-        fill: ColorTheme.get('brand.primary'),
+        fill: ColorTheme.get('semantic.warning'),
       });
       upgradesTitle.position.set(12, yPos);
       this.detailsPanel.addChild(upgradesTitle);
-      yPos += 16;
+      yPos += 14;
 
       selected.upgrades.forEach((upgrade) => {
         const upgradeBg = new Graphics();
-        upgradeBg.beginFill(ColorTheme.get('brand.secondary'), 0.5);
-        upgradeBg.drawRoundedRect(0, 0, 156, 18, 2);
+        upgradeBg.lineStyle(1, ColorTheme.get('semantic.warning'), 0.5);
+        upgradeBg.beginFill(ColorTheme.get('semantic.warning'), 0.15);
+        upgradeBg.drawRoundedRect(0, 0, 148, 16, 2);
         upgradeBg.endFill();
         upgradeBg.position.set(12, yPos);
         this.detailsPanel.addChild(upgradeBg);
 
-        const upgradeText = new Text(`• ${upgrade}`, {
-          fontSize: 9,
-          fontFamily: 'Arial',
-          fill: ColorTheme.get('text.primary'),
+        const upgradeText = new Text(upgrade, {
+          fontSize: 8,
+          fontFamily: 'Oxanium, Arial',
+          fill: ColorTheme.get('semantic.warning'),
+          fontWeight: 'bold',
         });
-        upgradeText.position.set(14, yPos + 3);
+        upgradeText.position.set(14, yPos + 2);
         this.detailsPanel.addChild(upgradeText);
 
-        yPos += 22;
+        yPos += 18;
       });
     }
   }
