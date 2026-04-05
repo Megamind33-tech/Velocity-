@@ -13,11 +13,13 @@ import { createVelocityGameButton } from '../velocityUiButtons';
 import { resetLocalProgress } from '../../../data/localProgress';
 import { animateModalEntrance } from '../modalAnimations';
 import { AnimationManager } from '../AnimationManager';
+import { createShimmer } from '../polishEffects';
 
 export class SettingsScreen extends BaseGameScreen {
     private layout!: VelocityModalLayout;
     private animManager = AnimationManager.getInstance();
     private cancelEntrance: (() => void) | null = null;
+    private cancelPolish: (() => void) | null = null;
 
     constructor(app: Application) {
         super(app);
@@ -81,6 +83,11 @@ export class SettingsScreen extends BaseGameScreen {
         this.container.scale.set(0.95, 0.95);
         this.cancelEntrance = animateModalEntrance(this.container, {
             duration: 300,
+            onComplete: () => {
+                // Apply shimmer effect after entrance for polish
+                this.cancelPolish?.();
+                this.cancelPolish = createShimmer(this.container, { loop: true });
+            },
         });
     }
 
@@ -96,7 +103,9 @@ export class SettingsScreen extends BaseGameScreen {
 
     hide(): void {
         this.cancelEntrance?.();
+        this.cancelPolish?.();
         this.animManager.cancelGroup('modal-entrance');
+        this.animManager.cancelGroup('polish-shimmer');
         super.hide();
     }
 }

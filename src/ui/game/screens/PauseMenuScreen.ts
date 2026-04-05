@@ -10,6 +10,7 @@ import { createVelocityGameButton } from '../velocityUiButtons';
 import { velocityUiArtReady } from '../velocityUiArt';
 import { animateModalEntrance } from '../modalAnimations';
 import { AnimationManager } from '../AnimationManager';
+import { createShimmer } from '../polishEffects';
 
 /**
  * Pause: same shell as other modals + Kenney panel + uniform buttons.
@@ -22,6 +23,7 @@ export class PauseMenuScreen extends BaseGameScreen {
     private content!: Container;
     private animManager = AnimationManager.getInstance();
     private cancelEntrance: (() => void) | null = null;
+    private cancelPolish: (() => void) | null = null;
 
     constructor(app: Application) {
         super(app);
@@ -215,6 +217,11 @@ export class PauseMenuScreen extends BaseGameScreen {
         this.panel.scale.set(0.95, 0.95);
         this.cancelEntrance = animateModalEntrance(this.panel, {
             duration: 300,
+            onComplete: () => {
+                // Apply shimmer effect after entrance for polish
+                this.cancelPolish?.();
+                this.cancelPolish = createShimmer(this.panel, { loop: true });
+            },
         });
     }
 
@@ -224,7 +231,9 @@ export class PauseMenuScreen extends BaseGameScreen {
 
     hide(): void {
         this.cancelEntrance?.();
+        this.cancelPolish?.();
         this.animManager.cancelGroup('modal-entrance');
+        this.animManager.cancelGroup('polish-shimmer');
         super.hide();
     }
 }
