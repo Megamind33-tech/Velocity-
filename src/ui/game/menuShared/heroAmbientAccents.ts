@@ -161,7 +161,10 @@ export function buildHeroAmbientParts(p: HeroAmbientPartsParams): HeroAmbientPar
     return { rim, motifRoot, routeRoot, rewardSpr, tick };
 }
 
-/** Class chip outer rim — Kenney frame (preferred) or vector stroke. Inserts behind first child. */
+/**
+ * Class chip Kenney frame rim — must render **above** the opaque chip fill or it is invisible.
+ * Call after the solid face + content are mounted; appends on top for a readable gold frame.
+ */
 export function mountClassChipKenneyRim(
     cls: Container,
     clsW: number,
@@ -180,13 +183,15 @@ export function mountClassChipKenneyRim(
             height: useBtnH,
         });
         rim.tint = gold;
-        rim.alpha = 0.28;
-        cls.addChildAt(rim, 0);
+        rim.alpha = 0.36;
+        rim.eventMode = 'none';
+        cls.addChild(rim);
         return rim;
     }
     const g = new Graphics();
     g.roundRect(0, 0, clsW, useBtnH, 12);
     g.stroke({ color: gold, width: 2, alpha: 0.28 });
+    g.eventMode = 'none';
     cls.addChild(g);
     return g;
 }

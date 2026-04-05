@@ -260,7 +260,6 @@ export function mountHeroCommandLayout(
     }
 
     const cls = new Container();
-    const rankRim = mountClassChipKenneyRim(cls, clsW, useBtnH, colors.gold);
     const cb = new Graphics();
     cb.roundRect(0, 0, clsW, useBtnH, 12);
     cb.fill({ color: 0x080e16, alpha: 1 });
@@ -306,6 +305,8 @@ export function mountHeroCommandLayout(
     }
     clab.position.set(textX, Math.floor((useBtnH - 13) / 2));
     cls.addChild(clab);
+
+    const rankRim = mountClassChipKenneyRim(cls, clsW, useBtnH, colors.gold);
 
     cls.position.set(ox, rowY);
     content.addChild(cls);
