@@ -1,16 +1,15 @@
 /**
  * ScreenManager
  * Professional screen lifecycle management for Velocity's AAA game screens
- * Handles Shop, Hangar, and Plane Store screens with smooth transitions
+ * Handles Shop (unified with planes, powerups, fuel, tokens) and Hangar screens
  */
 
 import { Container, Application } from 'pixi.js';
 import { ShopScreen } from './ShopScreen';
 import { HangarScreen } from './HangarScreen';
-import { PlaneStoreScreen } from './PlaneStoreScreen';
 
 // Game screen types
-export type VelocityScreenType = 'shop' | 'hangar' | 'plane-store' | 'main-menu';
+export type VelocityScreenType = 'shop' | 'hangar' | 'main-menu';
 
 /**
  * Screen interface compatible with game UI system
@@ -74,31 +73,6 @@ class HangarScreenWrapper implements IVelocityScreen {
   }
 }
 
-/**
- * Screen wrapper for PlaneStoreScreen
- */
-class PlaneStoreScreenWrapper implements IVelocityScreen {
-  container: Container;
-  private screen: PlaneStoreScreen;
-
-  constructor() {
-    this.screen = new PlaneStoreScreen();
-    this.container = this.screen;
-  }
-
-  show(): void {
-    this.container.visible = true;
-    this.screen.fadeIn(300).catch(console.error);
-  }
-
-  hide(): void {
-    this.container.visible = false;
-  }
-
-  dispose(): void {
-    this.screen.destroyScreen();
-  }
-}
 
 /**
  * ScreenManager - Centralized screen management for Velocity AAA screens
@@ -151,12 +125,10 @@ export class ScreenManager {
     // Create screen wrappers
     const shopScreen = new ShopScreenWrapper();
     const hangarScreen = new HangarScreenWrapper();
-    const planeStoreScreen = new PlaneStoreScreenWrapper();
 
     // Register screens
     this.registerScreen('shop', shopScreen);
     this.registerScreen('hangar', hangarScreen);
-    this.registerScreen('plane-store', planeStoreScreen);
 
     console.log('✓ All game screens created and registered');
   }

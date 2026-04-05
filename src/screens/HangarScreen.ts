@@ -1,15 +1,15 @@
 /**
  * HangarScreen
- * Mobile card-based plane management interface
- * Clean, minimal design for mobile phones
+ * Garage/Workshop where player manages acquired planes
+ * Two-panel design: plane list (left) + details (right)
  */
 
-import { Container, Sprite, Graphics, Text } from 'pixi.js';
+import { Container, Sprite, Graphics, Text, FederatedPointerEvent } from 'pixi.js';
 import { UIButton } from '../components/UIButton';
+import { StatsBar } from '../components/StatsBar';
 import { ColorTheme } from '../utils/ColorTheme';
 import { navigationEvents } from './NavigationEvents';
 
-// Game data structures
 interface PlaneStats {
   power: number;
   attack: number;
@@ -35,8 +35,10 @@ interface PlaneData {
 export class HangarScreen extends Container {
   private selectedPlaneId: string | null = null;
   private planesData: PlaneData[] = [];
-  private scrollContainer: Container;
+  private planesList: Container;
+  private detailsPanel: Container;
   private navigation: Container;
+  private scrollOffset: number = 0;
 
   constructor() {
     super();
@@ -126,7 +128,6 @@ export class HangarScreen extends Container {
       },
     ];
 
-    // Set first owned plane as selected
     const firstOwned = this.planesData.find((p) => p.owned);
     if (firstOwned) {
       this.selectedPlaneId = firstOwned.id;
@@ -145,129 +146,290 @@ export class HangarScreen extends Container {
   }
 
   /**
-   * Setup layout - MOBILE CARD-BASED DESIGN
-   * Clean, minimal cards stacked vertically
+   * Setup layout - Two panel design
    */
   private setupLayout(): void {
     // Title
     const title = new Text('HANGAR', {
-      fontSize: 32,
+      fontSize: 28,
       fontWeight: 'bold',
       fontFamily: 'Orbitron, Arial',
       fill: ColorTheme.get('brand.primary'),
     });
-    title.position.set(16, 16);
+    title.position.set(16, 12);
     this.addChild(title);
 
-    // Scroll container for cards
-    this.scrollContainer = new Container();
-    this.scrollContainer.position.set(0, 60);
-    this.addChild(this.scrollContainer);
-
-    let yPos = 0;
     const padding = 12;
+    const panelWidth = 188;
+    const leftX = padding;
+    const rightX = padding + panelWidth + 8;
 
-    // Create plane cards
-    this.planesData.forEach((plane) => {
-      const card = this.createPlaneCard(plane);
-      card.position.set(padding, yPos);
-      this.scrollContainer.addChild(card);
-      yPos += 100 + 12; // Card height + gap
+    // LEFT PANEL - Planes List
+    this.planesList = new Container();
+    this.planesList.position.set(leftX, 50);
+    this.addChild(this.planesList);
+
+    const leftBg = new Graphics();
+    leftBg.lineStyle(2, ColorTheme.get('brand.primary'), 0.6);
+    leftBg.drawRoundedRect(0, 0, panelWidth, 680, 6);
+    leftBg.endFill();
+    this.planesList.addChildAt(leftBg, 0);
+
+    let yPos = 8;
+    this.planesData.forEach((plane, index) => {
+      const planeItem = this.createPlaneListItem(plane, index + 1);
+      planeItem.position.set(0, yPos);
+      this.planesList.addChild(planeItem);
+      yPos += 104;
     });
+
+    // RIGHT PANEL - Details
+    this.detailsPanel = new Container();
+    this.detailsPanel.position.set(rightX, 50);
+    this.addChild(this.detailsPanel);
+
+    this.updateDetailsPanel();
 
     // Navigation bar at bottom
     this.navigation = this.createNavigation();
-    this.navigation.position.set(12, 800);
+    this.navigation.position.set(padding, 750);
     this.addChild(this.navigation);
   }
 
   /**
-   * Create a simple plane card
+   * Create plane list item with icon and info
    */
-  private createPlaneCard(plane: PlaneData): Container {
-    const card = new Container();
+  private createPlaneListItem(plane: PlaneData, index: number): Container {
+    const item = new Container();
 
-    // Card background - simple rounded rect
+    // Item background - highlight if selected
     const bg = new Graphics();
-    bg.beginFill(ColorTheme.get('background.secondary'), 0.7);
-    bg.drawRoundedRect(0, 0, 352, 88, 8);
+    const isSelected = this.selectedPlaneId === plane.id;
+    bg.beginFill(
+      isSelected ? ColorTheme.get('brand.primary') : ColorTheme.get('background.secondary'),
+      isSelected ? 0.4 : 0.3
+    );
+    bg.drawRoundedRect(0, 0, 176, 100, 4);
     bg.endFill();
-    card.addChild(bg);
+    item.addChild(bg);
+
+    // Number badge
+    const numBg = new Graphics();
+    numBg.beginFill(ColorTheme.get('brand.primary'), 0.8);
+    numBg.drawCircle(0, 0, 12);
+    numBg.endFill();
+    numBg.position.set(14, 14);
+    item.addChild(numBg);
+
+    const numText = new Text(String(index), {
+      fontSize: 14,
+      fontWeight: 'bold',
+      fontFamily: 'Oxanium, Arial',
+      fill: 0xffffff,
+    });
+    numText.anchor.set(0.5);
+    numText.position.set(14, 14);
+    item.addChild(numText);
+
+    // Plane icon placeholder
+    const iconBg = new Graphics();
+    iconBg.beginFill(ColorTheme.get('brand.secondary'), 0.5);
+    iconBg.drawRoundedRect(0, 0, 40, 40, 3);
+    iconBg.endFill();
+    iconBg.position.set(34, 8);
+    item.addChild(iconBg);
 
     // Plane name
     const nameText = new Text(plane.name, {
-      fontSize: 16,
+      fontSize: 12,
       fontWeight: 'bold',
       fontFamily: 'Exo 2, Arial',
       fill: ColorTheme.get('text.primary'),
+      wordWrap: true,
+      wordWrapWidth: 130,
     });
-    nameText.position.set(12, 8);
-    card.addChild(nameText);
+    nameText.position.set(8, 52);
+    item.addChild(nameText);
 
-    // Type badge
+    // Type and level on same line
     const typeBg = new Graphics();
     const typeColor = plane.type === 'FIGHTER' ? 0x7c3aed : plane.type === 'BOMBER' ? 0xdc2626 : 0x06b6d4;
-    typeBg.beginFill(typeColor, 0.8);
-    typeBg.drawRoundedRect(0, 0, 64, 24, 4);
+    typeBg.beginFill(typeColor, 0.7);
+    typeBg.drawRoundedRect(0, 0, 48, 18, 2);
     typeBg.endFill();
-    typeBg.position.set(12, 28);
-    card.addChild(typeBg);
+    typeBg.position.set(8, 76);
+    item.addChild(typeBg);
 
     const typeText = new Text(plane.type, {
-      fontSize: 11,
+      fontSize: 9,
       fontWeight: 'bold',
       fontFamily: 'Oxanium, Arial',
       fill: 0xffffff,
     });
-    typeText.position.set(16, 32);
-    card.addChild(typeText);
+    typeText.position.set(10, 78);
+    item.addChild(typeText);
 
-    // Level badge
     const levelBg = new Graphics();
-    levelBg.beginFill(ColorTheme.get('brand.secondary'), 0.8);
-    levelBg.drawRoundedRect(0, 0, 56, 24, 4);
+    levelBg.beginFill(ColorTheme.get('brand.secondary'), 0.7);
+    levelBg.drawRoundedRect(0, 0, 44, 18, 2);
     levelBg.endFill();
-    levelBg.position.set(280, 28);
-    card.addChild(levelBg);
+    levelBg.position.set(130, 76);
+    item.addChild(levelBg);
 
     const levelText = new Text(`LVL ${plane.level}`, {
-      fontSize: 11,
+      fontSize: 9,
       fontWeight: 'bold',
       fontFamily: 'Oxanium, Arial',
       fill: 0xffffff,
     });
-    levelText.position.set(284, 32);
-    card.addChild(levelText);
+    levelText.position.set(132, 78);
+    item.addChild(levelText);
 
-    // Stats row - Power, Speed
-    const statsText = new Text(`⚡ ${plane.stats.power}  ⬆ ${plane.stats.speed}`, {
-      fontSize: 12,
-      fontFamily: 'Oxanium, Arial',
-      fill: ColorTheme.get('text.secondary'),
+    // Clickable
+    item.eventMode = 'static';
+    item.cursor = 'pointer';
+    item.on('pointerdown', () => {
+      this.selectedPlaneId = plane.id;
+      this.setupLayout(); // Refresh to show selection
+      this.updateDetailsPanel();
     });
-    statsText.position.set(12, 60);
-    card.addChild(statsText);
 
-    // Status indicator
-    if (!plane.owned) {
-      const lockText = new Text('LOCKED', {
-        fontSize: 10,
+    return item;
+  }
+
+  /**
+   * Update details panel on the right
+   */
+  private updateDetailsPanel(): void {
+    this.detailsPanel.removeChildren();
+
+    const selected = this.planesData.find((p) => p.id === this.selectedPlaneId);
+    if (!selected) return;
+
+    const panelWidth = 180;
+
+    // Panel background
+    const bg = new Graphics();
+    bg.lineStyle(2, ColorTheme.get('brand.primary'), 0.6);
+    bg.drawRoundedRect(0, 0, panelWidth, 680, 6);
+    bg.endFill();
+    this.detailsPanel.addChild(bg);
+
+    let yPos = 12;
+
+    // Plane name - big
+    const nameText = new Text(selected.name, {
+      fontSize: 18,
+      fontWeight: 'bold',
+      fontFamily: 'Exo 2, Arial',
+      fill: ColorTheme.get('brand.primary'),
+      wordWrap: true,
+      wordWrapWidth: 160,
+    });
+    nameText.position.set(12, yPos);
+    this.detailsPanel.addChild(nameText);
+    yPos += 40;
+
+    // Description
+    const descText = new Text(selected.description, {
+      fontSize: 10,
+      fontFamily: 'Arial',
+      fill: ColorTheme.get('text.secondary'),
+      wordWrap: true,
+      wordWrapWidth: 160,
+    });
+    descText.position.set(12, yPos);
+    this.detailsPanel.addChild(descText);
+    yPos += 48;
+
+    // Stats bars
+    const stats = [
+      { label: 'POWER', value: selected.stats.power },
+      { label: 'ATTACK', value: selected.stats.attack },
+      { label: 'DEFENSE', value: selected.stats.defense },
+      { label: 'SPEED', value: selected.stats.speed },
+    ];
+
+    stats.forEach((stat) => {
+      const label = new Text(stat.label, {
+        fontSize: 9,
         fontWeight: 'bold',
         fontFamily: 'Oxanium, Arial',
-        fill: ColorTheme.get('semantic.warning'),
+        fill: ColorTheme.get('text.tertiary'),
       });
-      lockText.position.set(280, 62);
-      card.addChild(lockText);
-    }
+      label.position.set(12, yPos);
+      this.detailsPanel.addChild(label);
 
-    // Click to select
-    card.eventMode = 'static';
-    card.cursor = 'pointer';
-    card.on('pointerdown', () => {
-      this.selectedPlaneId = plane.id;
+      const bar = new StatsBar({
+        width: 156,
+        height: 8,
+        showValue: false,
+        showLabel: false,
+        showPercentage: false,
+      });
+      bar.position.set(12, yPos + 12);
+      bar.setValue(stat.value, 100);
+      this.detailsPanel.addChild(bar);
+
+      yPos += 28;
     });
 
-    return card;
+    // Flight stats if owned
+    if (selected.owned && selected.flightHours) {
+      yPos += 8;
+
+      const hoursText = new Text(`✈ ${selected.flightHours}h Flight Time`, {
+        fontSize: 10,
+        fontFamily: 'Oxanium, Arial',
+        fill: ColorTheme.get('text.secondary'),
+      });
+      hoursText.position.set(12, yPos);
+      this.detailsPanel.addChild(hoursText);
+      yPos += 20;
+
+      const winsText = new Text(`⭐ ${selected.wins} Wins`, {
+        fontSize: 10,
+        fontFamily: 'Oxanium, Arial',
+        fill: ColorTheme.get('text.secondary'),
+      });
+      winsText.position.set(12, yPos);
+      this.detailsPanel.addChild(winsText);
+      yPos += 20;
+    }
+
+    // Upgrades section
+    if (selected.upgrades && selected.upgrades.length > 0) {
+      yPos += 8;
+
+      const upgradesTitle = new Text('UPGRADES', {
+        fontSize: 9,
+        fontWeight: 'bold',
+        fontFamily: 'Oxanium, Arial',
+        fill: ColorTheme.get('brand.primary'),
+      });
+      upgradesTitle.position.set(12, yPos);
+      this.detailsPanel.addChild(upgradesTitle);
+      yPos += 16;
+
+      selected.upgrades.forEach((upgrade) => {
+        const upgradeBg = new Graphics();
+        upgradeBg.beginFill(ColorTheme.get('brand.secondary'), 0.5);
+        upgradeBg.drawRoundedRect(0, 0, 156, 18, 2);
+        upgradeBg.endFill();
+        upgradeBg.position.set(12, yPos);
+        this.detailsPanel.addChild(upgradeBg);
+
+        const upgradeText = new Text(`• ${upgrade}`, {
+          fontSize: 9,
+          fontFamily: 'Arial',
+          fill: ColorTheme.get('text.primary'),
+        });
+        upgradeText.position.set(14, yPos + 3);
+        this.detailsPanel.addChild(upgradeText);
+
+        yPos += 22;
+      });
+    }
   }
 
   /**
@@ -278,21 +440,20 @@ export class HangarScreen extends Container {
 
     const navButtons = [
       { label: 'SHOP', variant: 'primary' as const, action: 'shop' },
-      { label: 'STORE', variant: 'primary' as const, action: 'plane-store' },
-      { label: 'UPGRADE', variant: 'warning' as const, action: 'upgrade' },
-      { label: 'BACK', variant: 'secondary' as const, action: 'back' },
+      { label: 'PLAY', variant: 'success' as const, action: 'play' },
+      { label: 'EXIT', variant: 'danger' as const, action: 'exit' },
     ];
 
     navButtons.forEach((btnConfig, index) => {
       const button = new UIButton({
         text: btnConfig.label,
-        width: 85,
+        width: 120,
         height: 40,
         variant: btnConfig.variant,
         onClick: () => this.handleNavigation(btnConfig.action),
       });
 
-      button.position.set(index * 92, 0);
+      button.position.set(index * 128, 0);
       nav.addChild(button);
     });
 
@@ -307,7 +468,7 @@ export class HangarScreen extends Container {
   }
 
   /**
-   * Screen lifecycle - fadeIn animation
+   * Screen lifecycle - fadeIn
    */
   async fadeIn(duration: number = 300): Promise<void> {
     this.alpha = 0;
@@ -317,7 +478,6 @@ export class HangarScreen extends Container {
       const animate = () => {
         const elapsed = Date.now() - startTime;
         const progress = Math.min(elapsed / duration, 1);
-
         this.alpha = progress;
 
         if (progress < 1) {
@@ -333,7 +493,7 @@ export class HangarScreen extends Container {
   }
 
   /**
-   * Screen lifecycle - fadeOut animation
+   * Screen lifecycle - fadeOut
    */
   async fadeOut(duration: number = 300): Promise<void> {
     const startTime = Date.now();
@@ -342,7 +502,6 @@ export class HangarScreen extends Container {
       const animate = () => {
         const elapsed = Date.now() - startTime;
         const progress = Math.min(elapsed / duration, 1);
-
         this.alpha = 1 - progress;
 
         if (progress < 1) {
