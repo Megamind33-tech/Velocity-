@@ -31,6 +31,10 @@ Normalized **128×128** PNGs (cropped + scaled from originals). Dock code uses *
 
 All listed OGA entries are CC0 per their pages.
 
+## World map background (`public/oga-map/`)
+
+Seamless-style **ocean / islands** art for the level-select map (`WorldMapScene`). Source: [Shootem Up Background](https://opengameart.org/content/shootem-up-background) (CC0, OldAccount29) — flattened from `IslandsMap.xcf` to `world_map_islands.png`. See `public/oga-map/SOURCES.md`.
+
 ## Player planes (`public/oga-players/`)
 
 2D sprites for the **hangar + in-run player ship** (see `src/game/playerPlanes.ts`). Provenance and licenses: **`public/oga-players/SOURCES.md`** and **`LICENSE-fighters-CC-BY-3.0.txt`**.

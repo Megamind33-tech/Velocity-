@@ -1,4 +1,15 @@
-import { Application, Container, FederatedPointerEvent, Graphics, Rectangle, Text, TextStyle } from 'pixi.js';
+import {
+    Application,
+    Assets,
+    Container,
+    FederatedPointerEvent,
+    Graphics,
+    Rectangle,
+    Text,
+    TextStyle,
+    Texture,
+    TilingSprite,
+} from 'pixi.js';
 import { getUnlockedLevelIds } from '../data/localProgress';
 import { GAME_COLORS, GAME_SIZES } from '../ui/game/GameUITheme';
 import { ResponsiveUIManager } from '../ui/ResponsiveUIManager';
@@ -12,6 +23,17 @@ interface LevelNode {
 }
 
 const NODE_RADIUS = 32;
+
+const MAP_BG_URL = `${import.meta.env.BASE_URL}oga-map/world_map_islands.png`;
+
+let mapBgTextureReady = false;
+
+/** Call from bootstrap so first open avoids sync decode hitch. */
+export async function preloadWorldMapBackground(): Promise<void> {
+    if (mapBgTextureReady) return;
+    await Assets.load(MAP_BG_URL);
+    mapBgTextureReady = true;
+}
 
 /**
  * Scrollable world map: drag to pan, tap an unlocked level to start.
@@ -66,10 +88,9 @@ export class WorldMapScene {
         levelCount: number = 20
     ) {
         this.root = new Container();
-        this.shell = mountVelocityShell(this.root, app, 0.42);
+        this.shell = mountVelocityShell(this.root, app, 0.3);
         this.scrollLayer = new Container();
         this.pathGraphics = new Graphics();
-        this.scrollLayer.addChild(this.pathGraphics);
         this.root.addChild(this.scrollLayer);
         app.stage.addChild(this.root);
 
@@ -104,6 +125,8 @@ export class WorldMapScene {
 
         const unlocked = getUnlockedLevelIds();
         this.generateMap(levelCount, unlocked);
+        this.mountScrollBackground();
+        this.scrollLayer.addChild(this.pathGraphics);
         this.drawPaths();
         this.drawNodes();
 
@@ -124,6 +147,28 @@ export class WorldMapScene {
         this.root.on('pointerupoutside', this.onPointerUp);
 
         window.addEventListener('wheel', this.onWheel, { passive: false });
+    }
+
+    private mountScrollBackground(): void {
+        const texture = Texture.from(MAP_BG_URL);
+
+        const tw = texture.width || 640;
+        const th = texture.height || 1200;
+        const tileW = Math.max(this.app.screen.width, tw);
+        const yPad = 480;
+        const ys = this.nodes.map((n) => n.y);
+        const yMin = Math.min(...ys) - yPad;
+        const yMax = Math.max(...ys) + yPad;
+        const mapH = Math.max(this.app.screen.height + 200, yMax - yMin);
+
+        const bg = new TilingSprite({
+            texture,
+            width: tileW,
+            height: mapH,
+        });
+        bg.position.set((this.app.screen.width - tileW) / 2, yMin);
+        bg.alpha = 0.92;
+        this.scrollLayer.addChildAt(bg, 0);
     }
 
     private generateMap(count: number, unlocked: Set<number>): void {

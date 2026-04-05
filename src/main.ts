@@ -52,6 +52,7 @@ import {
 } from './ui/game/gameFlowBridge';
 import { getVelocityUiTexture, preloadVelocityUiTextures } from './ui/game/velocityUiArt';
 import { applyPlayerPlaneVisual, preloadPlayerPlaneTextures } from './game/playerPlanes';
+import { preloadWorldMapBackground } from './scenes/WorldMapScene';
 
 /** Log init failure and show a safe, user-visible alert (no innerHTML interpolation). */
 function showInitFailure(message: string, detail?: string): void {
@@ -100,6 +101,7 @@ async function init() {
 
     await preloadVelocityUiTextures();
     await preloadPlayerPlaneTextures();
+    await preloadWorldMapBackground();
 
     const uiManager = GameUIManager.init(app);
     uiManager.registerScreen('main-menu', new MainMenuScreen(app));
