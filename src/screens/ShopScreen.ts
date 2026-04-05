@@ -446,6 +446,9 @@ export class ShopScreen extends Container {
     bg.lineStyle(1.5, isSelected ? C.cyan : C.textMuted, isSelected ? 0.9 : 0.45);
     bg.drawRoundedRect(0, 0, 176, 94, 4);
     bg.endFill();
+    bg.lineStyle(1.5, isSelected ? C.cyan : C.textMuted, isSelected ? 0.9 : 0.45);
+    bg.drawRoundedRect(0, 0, 176, 120, 4);
+    bg.endFill();
     card.addChild(bg);
 
     const iconBg = new Graphics();
