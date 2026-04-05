@@ -94,6 +94,7 @@ export class GameUIManager {
 
     /**
      * Show a screen and hide the current one with professional transition animation.
+     * ASYNC VERSION - Returns Promise that resolves when transition completes
      * @param type Screen type to show
      * @param hideCurrentScreen Whether to hide the current screen (default: true)
      * @param transitionType Type of transition (default: 'crossfade')
@@ -131,6 +132,23 @@ export class GameUIManager {
         }
 
         console.log(`→ Screen shown: ${type} (transition: ${transitionType})`);
+    }
+
+    /**
+     * Synchronous wrapper for backwards compatibility.
+     * Use for code that doesn't support async/await.
+     * Transitions happen in background, not blocking.
+     * @deprecated Use await showScreen() instead for proper async handling
+     */
+    public showScreenSync(
+        type: ScreenType,
+        hideCurrentScreen: boolean = true,
+        transitionType: 'crossfade' | 'slide' | 'zoom' | 'none' = 'none',
+    ): void {
+        // Start async transition in background (fire and forget)
+        this.showScreen(type, hideCurrentScreen, transitionType).catch((error) => {
+            console.error(`Error showing screen ${type}:`, error);
+        });
     }
 
     /**

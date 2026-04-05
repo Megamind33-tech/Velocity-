@@ -82,6 +82,7 @@ export class AnimationManager {
     cancel(id: string): boolean {
         const anim = this.animations.get(id);
         if (!anim) return false;
+        this.pausedAnimations.delete(id); // Clean up paused set
         anim.cancel();
         return true;
     }
@@ -124,6 +125,7 @@ export class AnimationManager {
         }
         this.animations.clear();
         this.pausedAnimations.clear();
+        this.paused = false;
         return count;
     }
 

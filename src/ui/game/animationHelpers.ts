@@ -39,7 +39,9 @@ export function easeIn(t: number): number {
  * Formula: t < 0.5 ? 2t² : 1 - (-2t+2)²/2
  */
 export function easeInOut(t: number): number {
-    return t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
+    // Clamp t to 0-1 range for safety
+    const clampedT = Math.max(0, Math.min(1, t));
+    return clampedT < 0.5 ? 2 * clampedT * clampedT : 1 - Math.pow(-2 * clampedT + 2, 2) / 2;
 }
 
 /**
@@ -96,22 +98,42 @@ export function animateValue(
     easing: (t: number) => number = linear,
     onComplete?: () => void,
 ): () => void {
+    // Input validation
+    const safeDuration = Math.max(1, duration); // Minimum 1ms to avoid division issues
     let startTime: number | null = null;
     let animationId: number | null = null;
+    let isCancelled = false;
 
     const animate = (currentTime: number) => {
+        if (isCancelled) return;
+
         if (startTime === null) startTime = currentTime;
         const elapsed = currentTime - startTime;
-        const progress = Math.min(elapsed / duration, 1);
+        const progress = Math.min(elapsed / safeDuration, 1);
         const value = interpolateNumber(startValue, endValue, progress, easing);
 
-        onUpdate(value);
+        try {
+            onUpdate(value);
+        } catch (error) {
+            console.error('Animation update error:', error);
+            // Continue animation despite callback error
+        }
 
         if (progress < 1) {
             animationId = requestAnimationFrame(animate);
         } else {
-            onUpdate(endValue);
-            onComplete?.();
+            if (!isCancelled) {
+                try {
+                    onUpdate(endValue);
+                } catch (error) {
+                    console.error('Animation final update error:', error);
+                }
+                try {
+                    onComplete?.();
+                } catch (error) {
+                    console.error('Animation completion error:', error);
+                }
+            }
             animationId = null;
         }
     };
@@ -119,6 +141,7 @@ export function animateValue(
     animationId = requestAnimationFrame(animate);
 
     return () => {
+        isCancelled = true;
         if (animationId !== null) {
             cancelAnimationFrame(animationId);
             animationId = null;
@@ -182,6 +205,7 @@ export function animateScale(
 
     let cancelAlpha: (() => void) | null = null;
     let cancelBeta: (() => void) | null = null;
+    let isCompleted = false;
 
     cancelAlpha = animateValue(startX, endX, duration, (value) => {
         obj.scale.x = value;
@@ -190,10 +214,14 @@ export function animateScale(
     cancelBeta = animateValue(startY, endY, duration, (value) => {
         obj.scale.y = value;
     }, easing, () => {
-        onComplete?.();
+        if (!isCompleted) {
+            isCompleted = true;
+            onComplete?.();
+        }
     });
 
     return () => {
+        isCompleted = true;
         cancelAlpha?.();
         cancelBeta?.();
     };
@@ -223,6 +251,7 @@ export function animatePosition(
 
     let cancelX: (() => void) | null = null;
     let cancelY: (() => void) | null = null;
+    let isCompleted = false;
 
     cancelX = animateValue(startX, endX, duration, (value) => {
         obj.position.x = value;
@@ -231,10 +260,14 @@ export function animatePosition(
     cancelY = animateValue(startY, endY, duration, (value) => {
         obj.position.y = value;
     }, easing, () => {
-        onComplete?.();
+        if (!isCompleted) {
+            isCompleted = true;
+            onComplete?.();
+        }
     });
 
     return () => {
+        isCompleted = true;
         cancelX?.();
         cancelY?.();
     };
