@@ -12,7 +12,7 @@
  *   - Everything edge-safe, no center overlap with gameplay field
  */
 
-import { Application, Container, Graphics, NineSliceSprite, Sprite, Text, TextStyle } from 'pixi.js';
+import { Application, Container, FederatedPointerEvent, Graphics, NineSliceSprite, Sprite, Text, TextStyle } from 'pixi.js';
 import { BaseGameScreen } from '../GameUIManager';
 import { GAME_COLORS, GAME_FONTS, GAME_SIZES } from '../GameUITheme';
 import { getHudDataSource, requestGamePause } from '../gameFlowBridge';
@@ -58,7 +58,9 @@ function majorStyle(fill: number): TextStyle {
         fontFamily: GAME_FONTS.numerical,
         fontWeight: 'bold',
         letterSpacing: 0,
-        dropShadow: { alpha: 0.6, blur: 2, color: GAME_COLORS.bg_base, distance: 1 },
+        stroke: { color: 0x000000, width: 4, alpha: 0.88 },
+        padding: 4,
+        dropShadow: { alpha: 0.55, blur: 2, color: GAME_COLORS.bg_base, distance: 1 },
     });
 }
 
@@ -69,7 +71,9 @@ function secondaryStyle(fill: number): TextStyle {
         fontFamily: GAME_FONTS.numerical,
         fontWeight: 'bold',
         letterSpacing: 0,
-        dropShadow: { alpha: 0.4, blur: 1, color: GAME_COLORS.bg_base, distance: 1 },
+        stroke: { color: 0x000000, width: 3, alpha: 0.82 },
+        padding: 3,
+        dropShadow: { alpha: 0.45, blur: 2, color: GAME_COLORS.bg_base, distance: 1 },
     });
 }
 
@@ -80,6 +84,8 @@ function detailStyle(fill: number): TextStyle {
         fontFamily: GAME_FONTS.functional,
         fontWeight: 'bold',
         letterSpacing: 0.5,
+        stroke: { color: 0x000000, width: 2, alpha: 0.78 },
+        padding: 2,
         dropShadow: { alpha: 0.4, blur: 1, color: GAME_COLORS.bg_base, distance: 1 },
     });
 }
@@ -207,32 +213,42 @@ export class InGameHUDScreen extends BaseGameScreen {
 
         root.eventMode = 'static';
         root.cursor = 'pointer';
+        root.accessible = true;
+        root.accessibleTitle = 'Pause';
+        root.accessibleType = 'button';
 
-        // Enhanced press feedback with animation
-        let pressCancel: (() => void) | null = null;
-        root.on('pointerdown', () => {
-            pressCancel?.();
-            pressCancel = animateScale(root, { x: 1, y: 1 }, { x: 0.92, y: 0.92 }, {
+        const stop = (e: FederatedPointerEvent) => e.stopPropagation();
+
+        root.on('pointerdown', (e) => {
+            stop(e);
+            this.cancelPausePress?.();
+            this.cancelPausePress = animateScale(root, { x: 1, y: 1 }, { x: 0.92, y: 0.92 }, {
                 duration: 80,
             });
         });
 
-        root.on('pointerup', () => {
-            pressCancel?.();
-            pressCancel = animateScale(root, { x: 0.92, y: 0.92 }, { x: 1, y: 1 }, {
+        root.on('pointerup', (e) => {
+            stop(e);
+            this.cancelPausePress?.();
+            this.cancelPausePress = animateScale(root, { x: 0.92, y: 0.92 }, { x: 1, y: 1 }, {
                 duration: 100,
-                onComplete: () => requestGamePause(),
+                onComplete: () => {
+                    this.cancelPausePress = null;
+                    requestGamePause();
+                },
             });
         });
 
-        root.on('pointerupoutside', () => {
-            pressCancel?.();
-            animateScale(root, root.scale, { x: 1, y: 1 }, { duration: 100 });
+        root.on('pointerupoutside', (e) => {
+            stop(e);
+            this.cancelPausePress?.();
+            this.cancelPausePress = animateScale(root, root.scale, { x: 1, y: 1 }, { duration: 100 });
         });
 
-        root.on('pointercancel', () => {
-            pressCancel?.();
-            animateScale(root, root.scale, { x: 1, y: 1 }, { duration: 100 });
+        root.on('pointercancel', (e) => {
+            stop(e);
+            this.cancelPausePress?.();
+            this.cancelPausePress = animateScale(root, root.scale, { x: 1, y: 1 }, { duration: 100 });
         });
 
         return root;

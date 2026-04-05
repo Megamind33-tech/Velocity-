@@ -8,8 +8,6 @@
  *   - More predictable frame timing
  */
 
-import { AnimationManager } from './AnimationManager';
-
 interface BatchedAnimation {
     id: string;
     update: (progress: number) => void;
@@ -25,7 +23,6 @@ interface BatchedAnimation {
  * Processes all animations in the batch with a single requestAnimationFrame.
  */
 export class AnimationBatch {
-    private animManager = AnimationManager.getInstance();
     private animations: Map<string, BatchedAnimation> = new Map();
     private animationCounter = 0;
     private rafId: number | null = null;
@@ -180,17 +177,6 @@ export class GlobalAnimationBatcher {
         batchName: string = 'default',
         onComplete?: () => void,
     ): string {
-        if (!this.enabled) {
-            // Fallback to individual animation if batching disabled
-            const animManager = AnimationManager.getInstance();
-            let animId: string | null = null;
-            const cancel = () => {
-                if (animId) animManager.cancel(animId);
-            };
-            animId = animManager.register(cancel, { group: batchName });
-            return animId;
-        }
-
         return this.getBatch(batchName).add(update, duration, easing, onComplete);
     }
 

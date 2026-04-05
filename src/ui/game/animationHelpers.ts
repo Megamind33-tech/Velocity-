@@ -151,7 +151,8 @@ export function animateValue(
 
 // ─── Pixi-Specific Animation Helpers ──────────────────────────────────────────
 
-import { DisplayObject, Container } from 'pixi.js';
+import { Container } from 'pixi.js';
+import type { PixiDisplayObject } from './pixiDisplayTypes';
 
 interface AnimationOptions {
     duration?: number;
@@ -168,7 +169,7 @@ interface AnimationOptions {
  * @returns Cancel function
  */
 export function animateAlpha(
-    obj: DisplayObject,
+    obj: PixiDisplayObject,
     from: number,
     to: number,
     options: AnimationOptions = {},
@@ -190,7 +191,7 @@ export function animateAlpha(
  * @returns Cancel function
  */
 export function animateScale(
-    obj: DisplayObject,
+    obj: PixiDisplayObject,
     from: number | { x: number; y: number },
     to: number | { x: number; y: number },
     options: AnimationOptions = {},
@@ -236,7 +237,7 @@ export function animateScale(
  * @returns Cancel function
  */
 export function animatePosition(
-    obj: DisplayObject,
+    obj: PixiDisplayObject,
     from: { x?: number; y?: number },
     to: { x?: number; y?: number },
     options: AnimationOptions = {},
@@ -356,8 +357,8 @@ export function clamp(value: number, min: number, max: number): number {
  * @returns Cancel function for all animations
  */
 export function animateStaggered(
-    objects: DisplayObject[],
-    animateObject: (obj: DisplayObject, delay: number) => () => void,
+    objects: PixiDisplayObject[],
+    animateObject: (obj: PixiDisplayObject, delay: number) => () => void,
     staggerDelay: number = 50,
 ): () => void {
     const cancels = objects.map((obj, index) =>

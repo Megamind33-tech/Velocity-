@@ -8,7 +8,8 @@
  *   - All animations maintain visual hierarchy
  */
 
-import { Text, Container, DisplayObject } from 'pixi.js';
+import { Color, Text, Container } from 'pixi.js';
+import type { PixiDisplayObject } from './pixiDisplayTypes';
 import {
     easeOut,
     linear,
@@ -105,7 +106,7 @@ export function animateTextReveal(
  * @returns Cancel function
  */
 export function animateListReveal(
-    items: DisplayObject[],
+    items: PixiDisplayObject[],
     options: ContentAnimationOptions & { itemDelay?: number } = {},
 ): () => void {
     const { duration = 300, itemDelay = 50, onComplete } = options;
@@ -160,7 +161,7 @@ export function animateListReveal(
  * @returns Cancel function
  */
 export function animateStatPop(
-    statObj: DisplayObject,
+    statObj: PixiDisplayObject,
     options: ContentAnimationOptions = {},
 ): () => void {
     const { duration = 400, onComplete } = options;
@@ -169,6 +170,7 @@ export function animateStatPop(
     statObj.alpha = 0;
     statObj.scale.set(0.5, 0.5);
 
+    const cancels: Array<() => void> = [];
     let cancelCount = 0;
     let fade: (() => void) | null = null;
     let scale: (() => void) | null = null;
@@ -182,13 +184,11 @@ export function animateStatPop(
         }
     };
 
-    // Fade in
     fade = animateAlpha(statObj, 0, 1, {
         duration: duration * 0.6,
         easing: easeOut,
     });
 
-    // Pop scale (overshoot slightly then settle)
     const cancel2 = animateValue(0.5, 1.15, duration * 0.6, (value) => {
         statObj.scale.set(value, value);
     }, easeOut, () => {
@@ -205,8 +205,6 @@ export function animateStatPop(
         cancels.forEach((c) => c?.());
     };
 
-    const cancels: Array<() => void> = [];
-
     return animManager.register(cancel, {
         priority: 'normal',
         group: 'content-pop',
@@ -222,7 +220,7 @@ export function animateStatPop(
  * @returns Cancel function
  */
 export function animateStarReveal(
-    starObjects: DisplayObject[],
+    starObjects: PixiDisplayObject[],
     options: ContentAnimationOptions & { starDelay?: number } = {},
 ): () => void {
     const { duration = 300, starDelay = 150, onComplete } = options;
@@ -308,9 +306,11 @@ export function animateCurrencyUpdate(
     const { duration = 800, onComplete } = options;
     const animManager = AnimationManager.getInstance();
 
-    const originalColor = currencyText.style.fill || 0xffffff;
     const isPositive = toValue > fromValue;
-    const flashColor = isPositive ? 0x4ade80 : 0xef4444; // green or red
+    const fillSrc = currencyText.style.fill;
+    const origNum = typeof fillSrc === 'number' ? fillSrc : 0xf0f0f0;
+    const orig = new Color(origNum);
+    const flash = new Color(isPositive ? 0x4ade80 : 0xef4444);
 
     let cancelCount = 0;
     let textCancel: (() => void) | null = null;
@@ -319,7 +319,7 @@ export function animateCurrencyUpdate(
     const checkComplete = () => {
         cancelCount++;
         if (cancelCount === 2) {
-            currencyText.style.fill = originalColor;
+            currencyText.style.fill = orig;
             onComplete?.();
         }
     };
@@ -332,12 +332,12 @@ export function animateCurrencyUpdate(
     // Flash color: original → flash → original
     colorCancel = animateValue(0, 1, duration * 0.4, (t) => {
         const blend = Math.sin(t * Math.PI) * 0.7;
-        const r = ((originalColor >> 16) & 0xff) * (1 - blend) + ((flashColor >> 16) & 0xff) * blend;
-        const g = ((originalColor >> 8) & 0xff) * (1 - blend) + ((flashColor >> 8) & 0xff) * blend;
-        const b = (originalColor & 0xff) * (1 - blend) + (flashColor & 0xff) * blend;
-        currencyText.style.fill = (Math.floor(r) << 16) | (Math.floor(g) << 8) | Math.floor(b);
+        const r = orig.red * (1 - blend) + flash.red * blend;
+        const g = orig.green * (1 - blend) + flash.green * blend;
+        const b = orig.blue * (1 - blend) + flash.blue * blend;
+        currencyText.style.fill = new Color({ r, g, b });
     }, easeOut, () => {
-        currencyText.style.fill = originalColor;
+        currencyText.style.fill = orig;
         checkComplete();
     });
 

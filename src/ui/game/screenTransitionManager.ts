@@ -131,7 +131,6 @@ export class ScreenTransitionManager {
                     });
                     break;
 
-                case 'none':
                 default:
                     currentScreen.visible = false;
                     nextScreen.visible = true;

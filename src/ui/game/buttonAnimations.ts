@@ -8,7 +8,8 @@
  *   - All interactions are non-blocking, stack properly
  */
 
-import { Container, DisplayObject } from 'pixi.js';
+import { Container } from 'pixi.js';
+import type { PixiDisplayObject } from './pixiDisplayTypes';
 import {
     easeOut,
     easeIn,
@@ -31,7 +32,7 @@ interface ButtonAnimationOptions {
  * @returns Cancel function
  */
 export function animateButtonHover(
-    button: DisplayObject,
+    button: PixiDisplayObject,
     options: ButtonAnimationOptions = {},
 ): () => void {
     const { duration = 200, onComplete } = options;
@@ -57,7 +58,7 @@ export function animateButtonHover(
  * @returns Cancel function
  */
 export function animateButtonHoverExit(
-    button: DisplayObject,
+    button: PixiDisplayObject,
     options: ButtonAnimationOptions = {},
 ): () => void {
     const { duration = 150, onComplete } = options;
@@ -84,7 +85,7 @@ export function animateButtonHoverExit(
  * @returns Cancel function
  */
 export function animateButtonPress(
-    button: DisplayObject,
+    button: PixiDisplayObject,
     options: ButtonAnimationOptions = {},
 ): () => void {
     const { duration = 100, onComplete } = options;
@@ -130,8 +131,8 @@ export function animateButtonPress(
  * @returns Cancel function
  */
 export function animateButtonFocus(
-    button: DisplayObject,
-    glowObject: DisplayObject | null = null,
+    button: PixiDisplayObject,
+    glowObject: PixiDisplayObject | null = null,
     options: ButtonAnimationOptions = {},
 ): () => void {
     const { duration = 200, onComplete } = options;
@@ -157,7 +158,7 @@ export function animateButtonFocus(
  * @returns Cancel function
  */
 export function animateButtonDisable(
-    button: DisplayObject,
+    button: PixiDisplayObject,
     options: ButtonAnimationOptions = {},
 ): () => void {
     const { duration = 200, onComplete } = options;
@@ -205,7 +206,7 @@ export function animateButtonDisable(
  * @returns Cancel function
  */
 export function animateButtonEnable(
-    button: DisplayObject,
+    button: PixiDisplayObject,
     options: ButtonAnimationOptions = {},
 ): () => void {
     const { duration = 200, onComplete } = options;
@@ -251,11 +252,11 @@ export function animateButtonEnable(
  * Use this for complete button animation management.
  */
 export class InteractiveButton {
-    private button: DisplayObject;
+    private button: PixiDisplayObject;
     private animManager = AnimationManager.getInstance();
     private activeAnimations = new Map<string, () => void>();
 
-    constructor(button: DisplayObject) {
+    constructor(button: PixiDisplayObject) {
         this.button = button;
     }
 

@@ -221,7 +221,7 @@ function buildRewardCard(
     // Dim entire card if claimed (past) and not active
     if (claimed && !isActive) root.alpha = 0.68;
 
-    return { root, valueText, unitLabel };
+    return { root, valueText: valText, unitLabel };
 }
 
 // ─── Screen ───────────────────────────────────────────────────────────────────

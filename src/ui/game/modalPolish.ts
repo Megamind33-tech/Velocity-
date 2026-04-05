@@ -7,7 +7,8 @@
  *   - Success indicators: Celebratory pulse animations
  */
 
-import { DisplayObject, Text, Graphics, Container } from 'pixi.js';
+import { Text, Graphics, Container } from 'pixi.js';
+import type { PixiDisplayObject } from './pixiDisplayTypes';
 import { createGlowPulse, createShimmer, createPulseScale } from './polishEffects';
 import { AnimationManager } from './AnimationManager';
 
@@ -24,13 +25,6 @@ export function applyModalTitleGlow(
     minAlpha: number = 0.3,
     maxAlpha: number = 0.6,
 ): () => void {
-    // Add a shadow/glow layer behind the text if it doesn't have one
-    if (!titleText.shadow) {
-        // Pixi Text has built-in shadow via dropShadow style
-        // We'll apply the pulse to the existing drop shadow alpha if possible
-        // by creating a glow effect through opacity variation
-    }
-
     const animManager = AnimationManager.getInstance();
     let isCancelled = false;
 
@@ -107,7 +101,7 @@ function animateTextAlpha(
  * @returns Cancel function
  */
 export function applyCelebratoryPulse(
-    element: DisplayObject,
+    element: PixiDisplayObject,
     minScale: number = 0.95,
     maxScale: number = 1.08,
     duration: number = 1200,
@@ -121,7 +115,7 @@ export function applyCelebratoryPulse(
  * @param element Element to shimmer
  * @returns Cancel function
  */
-export function applyShimmerEffect(element: DisplayObject): () => void {
+export function applyShimmerEffect(element: PixiDisplayObject): () => void {
     return createShimmer(element, { loop: true });
 }
 
@@ -176,7 +170,7 @@ export function createModalGlowFrame(
  * @param element Element to enhance
  * @returns Cancel function
  */
-export function applySuccessEnhancement(element: DisplayObject): () => void {
+export function applySuccessEnhancement(element: PixiDisplayObject): () => void {
     const animManager = AnimationManager.getInstance();
 
     // Combine flash + pulse for celebration feel

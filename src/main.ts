@@ -51,14 +51,31 @@ import {
 } from './ui/game/gameFlowBridge';
 import { getVelocityUiTexture, preloadVelocityUiTextures } from './ui/game/velocityUiArt';
 
-/** Display initialization failure message in console (game-native approach) */
+/** Log init failure and show a safe, user-visible alert (no innerHTML interpolation). */
 function showInitFailure(message: string, detail?: string): void {
-    console.error('🎮 VELOCITY INIT FAILURE:', message);
+    console.error('Velocity init failure:', message);
     if (detail) {
         console.error('Details:', detail);
     }
-    // Optionally display in-game error message using Pixi if app is partially initialized
-    // For now, console provides sufficient feedback for development/debugging
+    const el = document.createElement('div');
+    el.setAttribute('role', 'alert');
+    el.style.cssText =
+        'position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px;background:#0a0a1a;color:#00ffcc;font-family:system-ui,sans-serif;text-align:center;z-index:99999;';
+    const h1 = document.createElement('h1');
+    h1.style.cssText = 'margin:0 0 12px;font-size:1.1rem';
+    h1.textContent = 'Velocity';
+    const p = document.createElement('p');
+    p.style.cssText = 'margin:0;opacity:.9;max-width:320px';
+    p.textContent = message;
+    el.appendChild(h1);
+    el.appendChild(p);
+    if (detail) {
+        const pre = document.createElement('pre');
+        pre.style.cssText = 'margin-top:16px;font-size:11px;opacity:.6;white-space:pre-wrap;max-width:100%';
+        pre.textContent = detail;
+        el.appendChild(pre);
+    }
+    document.body.appendChild(el);
 }
 
 async function init() {

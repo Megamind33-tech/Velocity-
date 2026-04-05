@@ -1,4 +1,5 @@
-import { Application, DisplayObject } from 'pixi.js';
+import { Application } from 'pixi.js';
+import type { PixiDisplayObject } from '../pixiDisplayTypes';
 import { BaseGameScreen } from '../GameUIManager';
 import { createGameLabel } from '../GameUIComponents';
 import { GAME_COLORS, GAME_SIZES } from '../GameUITheme';
@@ -22,7 +23,7 @@ export class AchievementsScreen extends BaseGameScreen {
     private cancelEntrance: (() => void) | null = null;
     private cancelPolish: (() => void) | null = null;
     private cancelExit: (() => void) | null = null;
-    private achievementItems: Array<DisplayObject> = [];
+    private achievementItems: Array<PixiDisplayObject> = [];
 
     constructor(app: Application) {
         super(app);

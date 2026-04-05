@@ -17,6 +17,8 @@ import { createKenneyFramedPanelWithContent, createKenneyHProgressBar } from '..
 import { VELOCITY_UI_SLICE } from '../velocityUiSlice';
 import { CHIP_TEXT_X, chipLabelMaxW, chipValueMaxW } from '../menuShared/topStatusStripLayout';
 import { drawIconProfile } from '../menuPortrait/missionPortraitIcons';
+import { getMainMenuProgress } from '../../../data/localProgress';
+import { computeTopStripLayout } from '../menuShared/topStatusStripLayout';
 
 const PS = VELOCITY_UI_SLICE.panel;
 const BS = VELOCITY_UI_SLICE.button;
@@ -651,85 +653,47 @@ export function spriteIcon(key: VelocityUiTextureKey, size: number, tint?: numbe
     if (tint !== undefined) s.tint = tint;
     return s;
 }
-export function buildTopUtilityBar(
-    cw: number,
-    onProfile: () => void,
-    prog: ReturnType<typeof getMainMenuProgress>,
-    bestScore: number,
-    onPremiumTap?: () => void,
-): { root: Container; refs: TopBarRefs } {
-    const H = 64;
-    const root = new Container();
-    const rail = new Graphics();
-    rail.roundRect(0, 2, cw, H - 2, 14);
-    rail.fill({ color: 0x09121d, alpha: 0.68 });
-    rail.stroke({ color: 0x2c3f58, width: 1, alpha: 0.52 });
-    rail.roundRect(10, 4, cw - 20, 2, 1);
-    rail.fill({ color: C.cyan, alpha: 0.16 });
-    root.addChild(rail);
 
-    const lay = computeTopStripLayout(cw);
-    const chipW = lay.chipW;
-    const gap = lay.gap;
-    const chipH = H - 4;
-
-    const av = kenneyAvatarPlate(lay.avatarW, onProfile);
-    av.position.set(0, 5 + Math.max(0, (chipH - lay.avatarW) / 2));
-    root.addChild(av);
-
-    const x0 = lay.chip0X;
-    const CYAN = GAME_COLORS.primary;
-    const GOLD = GAME_COLORS.accent_gold;
-    const PURPLE = 0xbb88ff;
-
-    const c1 =
-        kenneyStatChip(icoBarsSignal, 'SIGNAL', `${prog.maxUnlocked}`, chipW, chipH, CYAN, 'none', 'menu_status_led') ??
-        vectorStatChip(icoBarsSignal, 'SIGNAL', `${prog.maxUnlocked}`, chipW, chipH, CYAN, 'none', 'menu_status_led');
-    c1.position.set(x0, 5);
-    root.addChild(c1);
-
-    const c2 =
-        kenneyStatChip(icoStarBadge, 'BEST', String(bestScore), chipW, chipH, GOLD, 'none', 'menu_best_star') ??
-        vectorStatChip(icoStarBadge, 'BEST', String(bestScore), chipW, chipH, GOLD, 'none', 'menu_best_star');
-    c2.position.set(x0 + chipW + gap, 5);
-    root.addChild(c2);
-
-    const c3 =
-        kenneyStatChip(icoGemPremium, 'PREMIUM', `${prog.unlockedCount}`, chipW, chipH, PURPLE, 'none', 'menu_rewards_star_outline') ??
-        vectorStatChip(icoGemPremium, 'PREMIUM', `${prog.unlockedCount}`, chipW, chipH, PURPLE, 'none', 'menu_rewards_star_outline');
-    c3.position.set(x0 + (chipW + gap) * 2, 5);
-    if (onPremiumTap) {
-        c3.eventMode = 'static';
-        c3.cursor = 'pointer';
-        pressable(c3, onPremiumTap);
+function chipIconSignalBars(g: Graphics, cx: number, cy: number, s: number): void {
+    const c = GAME_COLORS.primary;
+    const hs = [s * 0.22, s * 0.34, s * 0.46];
+    for (let i = 0; i < 3; i++) {
+        const bw = Math.max(2, s * 0.12);
+        const x = cx - s * 0.28 + i * (bw + 2);
+        const h = hs[i];
+        g.rect(x, cy + s * 0.12 - h, bw, h);
+        g.fill({ color: c, alpha: 0.78 });
     }
-    root.addChild(c3);
-
-    function chipValueText(chip: Container): Text {
-        let best: Text | null = null;
-        let bestFs = 0;
-        for (const ch of chip.children) {
-            if (ch instanceof Text) {
-                const fs = typeof ch.style.fontSize === 'number' ? ch.style.fontSize : 0;
-                if (fs > bestFs) {
-                    bestFs = fs;
-                    best = ch;
-                }
-            }
-        }
-        return best ?? (chip.children[chip.children.length - 1] as Text);
-    }
-
-    return {
-        root,
-        refs: {
-            energyText: chipValueText(c1),
-            bestText: chipValueText(c2),
-            premiumText: chipValueText(c3),
-        },
-    };
 }
 
+function chipIconStarBadge(g: Graphics, cx: number, cy: number, s: number): void {
+    for (let k = 0; k < 5; k++) {
+        const a = -Math.PI / 2 + (k * Math.PI * 2) / 5;
+        const x = cx + Math.cos(a) * s * 0.26;
+        const y = cy + Math.sin(a) * s * 0.26;
+        if (k === 0) g.moveTo(x, y);
+        else g.lineTo(x, y);
+    }
+    g.closePath();
+    g.fill({ color: GAME_COLORS.accent_gold, alpha: 0.9 });
+}
+
+function chipIconGemPremium(g: Graphics, cx: number, cy: number, s: number): void {
+    g.moveTo(cx, cy - s * 0.24);
+    g.lineTo(cx + s * 0.2, cy);
+    g.lineTo(cx, cy + s * 0.26);
+    g.lineTo(cx - s * 0.2, cy);
+    g.closePath();
+    g.fill({ color: 0xbb88ff, alpha: 0.88 });
+}
+
+export type TopBarRefs = {
+    energyText: Text;
+    bestText: Text;
+    premiumText: Text;
+};
+
+const R_CHIP_VEC = 10;
 type VectorChipBadge = 'none' | 'prestige' | 'elite';
 
 function vectorStatChip(
@@ -738,22 +702,22 @@ function vectorStatChip(
     val: string,
     w: number,
     h: number,
-    accentColor = C.text,
+    accentColor = GAME_COLORS.text_primary,
     cornerBadge: VectorChipBadge = 'none',
     menuIconKey?: VelocityUiTextureKey,
 ): Container {
     const root = new Container();
     const bg = new Graphics();
-    bg.roundRect(0, 0, w, h, R_CHIP);
-    bg.fill({ color: C.surface2, alpha: 1 });
-    bg.stroke({ color: C.border, width: 1.5, alpha: 0.55 });
+    bg.roundRect(0, 0, w, h, R_CHIP_VEC);
+    bg.fill({ color: GAME_COLORS.bg_surface, alpha: 1 });
+    bg.stroke({ color: GAME_COLORS.border_secondary, width: 1.5, alpha: 0.55 });
     root.addChild(bg);
     const lower = new Graphics();
-    lower.roundRect(4, Math.floor(h * 0.5), w - 8, Math.floor(h * 0.42), R_CHIP - 4);
+    lower.roundRect(4, Math.floor(h * 0.5), w - 8, Math.floor(h * 0.42), R_CHIP_VEC - 4);
     lower.fill({ color: 0x0a121c, alpha: 0.78 });
     root.addChild(lower);
     const bevel = new Graphics();
-    bevel.roundRect(2, 2, w - 4, Math.floor(h * 0.42), R_CHIP - 2);
+    bevel.roundRect(2, 2, w - 4, Math.floor(h * 0.42), R_CHIP_VEC - 2);
     bevel.fill({ color: 0xffffff, alpha: 0.04 });
     root.addChild(bevel);
     const strip = new Graphics();
@@ -787,7 +751,13 @@ function vectorStatChip(
     let labelStr = label.toUpperCase();
     const lb = new Text({
         text: labelStr,
-        style: style(9, '600', 0xa8b8c8, 0.8),
+        style: new TextStyle({
+            fill: 0xa8b8c8,
+            fontSize: 9,
+            fontWeight: '600',
+            fontFamily: GAME_FONTS.standard,
+            letterSpacing: 0.8,
+        }),
     });
     if (lb.width > labelMaxW) {
         while (labelStr.length > 3 && lb.width > labelMaxW) {
@@ -803,4 +773,101 @@ function vectorStatChip(
     root.addChild(vt);
 
     return root;
+}
+
+export function buildTopUtilityBar(
+    cw: number,
+    onProfile: () => void,
+    prog: ReturnType<typeof getMainMenuProgress>,
+    bestScore: number,
+    onPremiumTap?: () => void,
+): { root: Container; refs: TopBarRefs } {
+    const H = 64;
+    const root = new Container();
+    const rail = new Graphics();
+    rail.roundRect(0, 2, cw, H - 2, 14);
+    rail.fill({ color: 0x09121d, alpha: 0.68 });
+    rail.stroke({ color: 0x2c3f58, width: 1, alpha: 0.52 });
+    rail.roundRect(10, 4, cw - 20, 2, 1);
+    rail.fill({ color: GAME_COLORS.primary, alpha: 0.16 });
+    root.addChild(rail);
+
+    const lay = computeTopStripLayout(cw);
+    const chipW = lay.chipW;
+    const gap = lay.gap;
+    const chipH = H - 4;
+
+    const av = kenneyAvatarPlate(lay.avatarW, onProfile);
+    av.position.set(0, 5 + Math.max(0, (chipH - lay.avatarW) / 2));
+    root.addChild(av);
+
+    const x0 = lay.chip0X;
+    const CYAN = GAME_COLORS.primary;
+    const GOLD = GAME_COLORS.accent_gold;
+    const PURPLE = 0xbb88ff;
+
+    const c1 =
+        kenneyStatChip(chipIconSignalBars, 'SIGNAL', `${prog.maxUnlocked}`, chipW, chipH, CYAN, 'none', 'menu_status_led') ??
+        vectorStatChip(chipIconSignalBars, 'SIGNAL', `${prog.maxUnlocked}`, chipW, chipH, CYAN, 'none', 'menu_status_led');
+    c1.position.set(x0, 5);
+    root.addChild(c1);
+
+    const c2 =
+        kenneyStatChip(chipIconStarBadge, 'BEST', String(bestScore), chipW, chipH, GOLD, 'none', 'menu_best_star') ??
+        vectorStatChip(chipIconStarBadge, 'BEST', String(bestScore), chipW, chipH, GOLD, 'none', 'menu_best_star');
+    c2.position.set(x0 + chipW + gap, 5);
+    root.addChild(c2);
+
+    const c3 =
+        kenneyStatChip(
+            chipIconGemPremium,
+            'PREMIUM',
+            `${prog.unlockedCount}`,
+            chipW,
+            chipH,
+            PURPLE,
+            'none',
+            'menu_rewards_star_outline',
+        ) ??
+        vectorStatChip(
+            chipIconGemPremium,
+            'PREMIUM',
+            `${prog.unlockedCount}`,
+            chipW,
+            chipH,
+            PURPLE,
+            'none',
+            'menu_rewards_star_outline',
+        );
+    c3.position.set(x0 + (chipW + gap) * 2, 5);
+    if (onPremiumTap) {
+        c3.eventMode = 'static';
+        c3.cursor = 'pointer';
+        press(c3, onPremiumTap);
+    }
+    root.addChild(c3);
+
+    function chipValueText(chip: Container): Text {
+        let best: Text | null = null;
+        let bestFs = 0;
+        for (const ch of chip.children) {
+            if (ch instanceof Text) {
+                const fs = typeof ch.style.fontSize === 'number' ? ch.style.fontSize : 0;
+                if (fs > bestFs) {
+                    bestFs = fs;
+                    best = ch;
+                }
+            }
+        }
+        return best ?? (chip.children[chip.children.length - 1] as Text);
+    }
+
+    return {
+        root,
+        refs: {
+            energyText: chipValueText(c1),
+            bestText: chipValueText(c2),
+            premiumText: chipValueText(c3),
+        },
+    };
 }

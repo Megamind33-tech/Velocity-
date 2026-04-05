@@ -9,7 +9,7 @@
  *   - Animation lifecycle hooks
  */
 
-import { DisplayObject } from 'pixi.js';
+import type { PixiDisplayObject } from './pixiDisplayTypes';
 
 interface AnimationRecord {
     id: string;
@@ -17,7 +17,7 @@ interface AnimationRecord {
     priority: 'low' | 'normal' | 'high';
     group?: string;
     createdAt: number;
-    target?: DisplayObject;
+    target?: PixiDisplayObject;
 }
 
 interface AnimationConfig {
@@ -48,17 +48,18 @@ export class AnimationManager {
 
     /**
      * Register and track a new animation.
-     * @param cancel Cancel function for the animation
+     * @param cancel Cancel function for the animation (stops RAF / timers)
      * @param config Animation configuration
-     * @returns Animation ID for later reference
+     * @returns Dispose function — call to cancel and unregister (same as cancel(id) ergonomics for callers)
      */
-    register(cancel: () => void, config: AnimationConfig = {}): string {
+    register(cancel: () => void, config: AnimationConfig = {}): () => void {
         const id = `anim_${++this.animationCounter}`;
         const { priority = 'normal', group, onStart, onComplete } = config;
 
         onStart?.();
 
         const wrappedCancel = () => {
+            if (!this.animations.has(id)) return;
             this.animations.delete(id);
             this.pausedAnimations.delete(id);
             cancel();
@@ -73,7 +74,7 @@ export class AnimationManager {
             createdAt: Date.now(),
         });
 
-        return id;
+        return wrappedCancel;
     }
 
     /**
@@ -104,7 +105,7 @@ export class AnimationManager {
     /**
      * Cancel all animations for a specific object.
      */
-    cancelObject(target: DisplayObject): number {
+    cancelObject(target: PixiDisplayObject): number {
         let count = 0;
         for (const [id, anim] of this.animations.entries()) {
             if (anim.target === target) {

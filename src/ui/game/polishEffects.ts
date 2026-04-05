@@ -9,7 +9,8 @@
  *   - All effects are non-blocking and can run continuously
  */
 
-import { DisplayObject, Graphics, Container } from 'pixi.js';
+import { Graphics, Container } from 'pixi.js';
+import type { PixiDisplayObject } from './pixiDisplayTypes';
 import {
     sine,
     linear,
@@ -32,7 +33,7 @@ interface PolishEffectOptions {
  * @returns Cancel function
  */
 export function createGlowPulse(
-    glowObj: DisplayObject,
+    glowObj: PixiDisplayObject,
     minAlpha: number = 0.2,
     maxAlpha: number = 0.5,
     options: PolishEffectOptions = {},
@@ -79,7 +80,7 @@ export function createGlowPulse(
  * @returns Cancel function
  */
 export function createShimmer(
-    targetObj: DisplayObject,
+    targetObj: PixiDisplayObject,
     options: PolishEffectOptions = {},
 ): () => void {
     const { loop = true } = options;
@@ -128,7 +129,7 @@ export function createShimmer(
  * @returns Cancel function
  */
 export function createSuccessFlash(
-    targetObj: DisplayObject,
+    targetObj: PixiDisplayObject,
     duration: number = 400,
     options: PolishEffectOptions = {},
 ): () => void {
@@ -163,7 +164,7 @@ export function createSuccessFlash(
  * @returns Cancel function
  */
 export function createErrorShake(
-    targetObj: DisplayObject,
+    targetObj: PixiDisplayObject,
     intensity: number = 2,
     duration: number = 200,
     options: PolishEffectOptions = {},
@@ -221,7 +222,7 @@ export function createErrorShake(
  * @returns Cancel function
  */
 export function createBounce(
-    targetObj: DisplayObject,
+    targetObj: PixiDisplayObject,
     bounceDistance: number = 8,
     duration: number = 300,
     options: PolishEffectOptions = {},
@@ -277,7 +278,7 @@ export function createBounce(
  * @returns Cancel function
  */
 export function createPulseScale(
-    targetObj: DisplayObject,
+    targetObj: PixiDisplayObject,
     minScale: number = 0.95,
     maxScale: number = 1.05,
     duration: number = 1200,
@@ -328,7 +329,7 @@ export function createPulseScale(
  * @returns Cancel function
  */
 export function createRotation(
-    targetObj: DisplayObject,
+    targetObj: PixiDisplayObject,
     duration: number = 2000,
     options: PolishEffectOptions = {},
 ): () => void {

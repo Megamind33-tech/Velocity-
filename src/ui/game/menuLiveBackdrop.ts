@@ -1,9 +1,9 @@
 /**
- * Main menu backdrop — depth planes + Kenney sci-fi glass blobs (no vector ellipses/lines for glow).
+ * Main menu backdrop — depth planes + soft Kenney sci-fi glass blobs (no BlurFilter: GPU cost + “fake quality”).
  * Stars use Texture.WHITE sprites. Call tick(timeSeconds) from the screen loop.
  */
 
-import { BlurFilter, Container, Graphics, Sprite, Texture } from 'pixi.js';
+import { Container, Graphics, Sprite, Texture } from 'pixi.js';
 import { GAME_COLORS } from './GameUITheme';
 import { getVelocityUiTexture } from './velocityUiArt';
 
@@ -56,22 +56,16 @@ export function createLiveMenuBackdrop(screenW: number, screenH: number): MenuLi
 
     const gr = Math.min(screenW, screenH) * 0.55;
     if (glassTex) {
-        glow = makeGlassBlob(glassTex, screenW * 0.5, screenH * 0.28, gr * 2, gr * 2, GAME_COLORS.primary, 0.12);
+        glow = makeGlassBlob(glassTex, screenW * 0.5, screenH * 0.28, gr * 2.2, gr * 2.2, GAME_COLORS.primary, 0.14);
         glow2 = makeGlassBlob(
             glassTex,
             screenW * 0.85,
             screenH * 0.55,
-            screenW * 0.7,
-            screenH * 0.5,
+            screenW * 0.78,
+            screenH * 0.55,
             0x6644aa,
-            0.08,
+            0.095,
         );
-        try {
-            glow.filters = [new BlurFilter({ strength: 8 })];
-            glow2.filters = [new BlurFilter({ strength: 10 })];
-        } catch {
-            /* no blur in headless */
-        }
     } else {
         const g = new Graphics();
         g.circle(screenW * 0.5, screenH * 0.28, gr);
@@ -86,16 +80,10 @@ export function createLiveMenuBackdrop(screenW: number, screenH: number): MenuLi
 
     const aurora = new Container();
     if (glassTex) {
-        a1 = makeGlassBlob(glassTex, 0, 0, screenW * 0.8, screenH * 0.36, GAME_COLORS.primary, 0.1);
+        a1 = makeGlassBlob(glassTex, 0, 0, screenW * 0.88, screenH * 0.4, GAME_COLORS.primary, 0.11);
         a1.position.set(screenW * 0.2, screenH * 0.52);
-        a2 = makeGlassBlob(glassTex, 0, 0, screenW * 0.7, screenH * 0.28, 0x4488cc, 0.09);
+        a2 = makeGlassBlob(glassTex, 0, 0, screenW * 0.78, screenH * 0.32, 0x4488cc, 0.1);
         a2.position.set(screenW * 0.65, screenH * 0.48);
-        try {
-            a1.filters = [new BlurFilter({ strength: 6 })];
-            a2.filters = [new BlurFilter({ strength: 6 })];
-        } catch {
-            /* noop */
-        }
     } else {
         const g = new Graphics();
         g.ellipse(0, 0, screenW * 0.4, screenH * 0.18);

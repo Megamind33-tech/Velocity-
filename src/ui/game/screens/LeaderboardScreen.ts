@@ -1,4 +1,5 @@
-import { Application, Text, TextStyle, DisplayObject } from 'pixi.js';
+import { Application, Text, TextStyle } from 'pixi.js';
+import type { PixiDisplayObject } from '../pixiDisplayTypes';
 import { BaseGameScreen } from '../GameUIManager';
 import { createGameLabel } from '../GameUIComponents';
 import { GAME_COLORS, GAME_FONTS, GAME_SIZES } from '../GameUITheme';
@@ -22,7 +23,7 @@ export class LeaderboardScreen extends BaseGameScreen {
     private cancelEntrance: (() => void) | null = null;
     private cancelPolish: (() => void) | null = null;
     private cancelExit: (() => void) | null = null;
-    private leaderboardItems: Array<DisplayObject> = [];
+    private leaderboardItems: Array<PixiDisplayObject> = [];
 
     constructor(app: Application) {
         super(app);

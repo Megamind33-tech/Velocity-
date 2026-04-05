@@ -11,7 +11,7 @@
  *   - No data list. No stat dashboard. Celebration + action.
  */
 
-import { Application, Container, DisplayObject, Graphics, Sprite, Text, TextStyle } from 'pixi.js';
+import { Application, Container, Graphics, Sprite, Text, TextStyle } from 'pixi.js';
 import { BaseGameScreen } from '../GameUIManager';
 import { GAME_COLORS, GAME_FONTS, GAME_SIZES } from '../GameUITheme';
 import { gameFlow, getLastRunSummary, runEndActions } from '../gameFlowBridge';
@@ -256,7 +256,7 @@ export class LevelCompleteScreen extends BaseGameScreen {
         body.addChild(this.starRow);
 
         // Animate star reveal with stagger
-        const starSprites = this.starRow.children as DisplayObject[];
+        const starSprites = this.starRow.children as Container[];
         animateStarReveal(starSprites, {
             duration: 300,
             starDelay: 150,

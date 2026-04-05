@@ -29,7 +29,7 @@ function pressDockSlot(root: Container, onUp: () => void): void {
     const stop = (e: FederatedPointerEvent) => e.stopPropagation();
     root.on('pointerdown', (e) => {
         stop(e);
-        root.scale.set(0.97);
+        root.scale.set(0.96);
     });
     root.on('pointerup', (e) => {
         stop(e);

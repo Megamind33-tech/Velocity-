@@ -12,7 +12,8 @@
  *   - Touch: pressure feedback
  */
 
-import { Container, DisplayObject } from 'pixi.js';
+import { Container } from 'pixi.js';
+import type { PixiDisplayObject } from './pixiDisplayTypes';
 import {
     animateButtonHover,
     animateButtonHoverExit,
@@ -35,7 +36,7 @@ interface ButtonEnhancerOptions {
  * @param options Enhancement options
  */
 export function enhanceButtonInteraction(
-    button: DisplayObject,
+    button: PixiDisplayObject,
     options: ButtonEnhancerOptions = {},
 ): void {
     const {
@@ -83,7 +84,7 @@ export function enhanceButtonInteraction(
  * @returns InteractiveButton instance with full control
  */
 export function createInteractiveButton(
-    button: DisplayObject,
+    button: PixiDisplayObject,
 ): InteractiveButton {
     button.eventMode = 'static';
     button.cursor = 'pointer';
@@ -104,7 +105,7 @@ export function createInteractiveButton(
  * @param options Enhancement options (applied to all)
  */
 export function enhanceButtonsInteraction(
-    buttons: DisplayObject[],
+    buttons: PixiDisplayObject[],
     options: ButtonEnhancerOptions = {},
 ): void {
     buttons.forEach((button) => enhanceButtonInteraction(button, options));
@@ -122,7 +123,7 @@ export class ButtonEnhancementGroup {
      * Add a button to the enhancement group.
      */
     addButton(
-        button: DisplayObject,
+        button: PixiDisplayObject,
         options: ButtonEnhancerOptions = {},
     ): InteractiveButton {
         button.eventMode = 'static';
@@ -143,7 +144,7 @@ export class ButtonEnhancementGroup {
      * Add multiple buttons at once.
      */
     addButtons(
-        buttons: DisplayObject[],
+        buttons: PixiDisplayObject[],
         options: ButtonEnhancerOptions = {},
     ): void {
         buttons.forEach((btn) => this.addButton(btn, options));
