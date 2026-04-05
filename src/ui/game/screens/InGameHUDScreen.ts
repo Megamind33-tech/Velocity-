@@ -21,6 +21,9 @@ import { ResponsiveUIManager } from '../../ResponsiveUIManager';
 import { createKenneyHProgressBar, createKenneyPanelNineSlice } from '../kenneyNineSlice';
 import { getVelocityUiTexture, velocityUiArtReady } from '../velocityUiArt';
 import { VELOCITY_UI_SLICE } from '../velocityUiSlice';
+import { AnimationManager } from '../AnimationManager';
+import { createPulseScale, createBounce } from '../polishEffects';
+import { animateScale } from '../animationHelpers';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -116,6 +119,14 @@ export class InGameHUDScreen extends BaseGameScreen {
     private lastStatsKey = '';
     private lastVocalW   = -1;
 
+    // Animation tracking
+    private animManager = AnimationManager.getInstance();
+    private cancelScorePulse: (() => void) | null = null;
+    private cancelLevelPulse: (() => void) | null = null;
+    private cancelPausePress: (() => void) | null = null;
+    private lastScore = -1;
+    private lastLevel = -1;
+
     constructor(app: Application) {
         super(app);
         this.setupUI();
@@ -196,10 +207,33 @@ export class InGameHUDScreen extends BaseGameScreen {
 
         root.eventMode = 'static';
         root.cursor = 'pointer';
-        root.on('pointerdown', () => root.scale.set(0.95));
-        root.on('pointerup', () => { root.scale.set(1); requestGamePause(); });
-        root.on('pointerupoutside', () => root.scale.set(1));
-        root.on('pointercancel',    () => root.scale.set(1));
+
+        // Enhanced press feedback with animation
+        let pressCancel: (() => void) | null = null;
+        root.on('pointerdown', () => {
+            pressCancel?.();
+            pressCancel = animateScale(root, { x: 1, y: 1 }, { x: 0.92, y: 0.92 }, {
+                duration: 80,
+            });
+        });
+
+        root.on('pointerup', () => {
+            pressCancel?.();
+            pressCancel = animateScale(root, { x: 0.92, y: 0.92 }, { x: 1, y: 1 }, {
+                duration: 100,
+                onComplete: () => requestGamePause(),
+            });
+        });
+
+        root.on('pointerupoutside', () => {
+            pressCancel?.();
+            animateScale(root, root.scale, { x: 1, y: 1 }, { duration: 100 });
+        });
+
+        root.on('pointercancel', () => {
+            pressCancel?.();
+            animateScale(root, root.scale, { x: 1, y: 1 }, { duration: 100 });
+        });
 
         return root;
     }
@@ -381,8 +415,29 @@ export class InGameHUDScreen extends BaseGameScreen {
         const score  = h.getScore();
         const levelId = h.getLevelId();
 
-        this.scoreVal.text = String(score);
-        this.levelVal.text = String(levelId);
+        // Animate score on change — pulse effect to draw attention
+        if (score !== this.lastScore) {
+            this.lastScore = score;
+            this.scoreVal.text = String(score);
+
+            // Cancel previous pulse
+            this.cancelScorePulse?.();
+
+            // Pulse scale on score update (1.0 → 1.05 → 1.0)
+            this.cancelScorePulse = createPulseScale(this.scoreVal, 1.0, 1.08, 300, { loop: false });
+        }
+
+        // Animate level on change — subtle pulse
+        if (levelId !== this.lastLevel) {
+            this.lastLevel = levelId;
+            this.levelVal.text = String(levelId);
+
+            // Cancel previous pulse
+            this.cancelLevelPulse?.();
+
+            // Quick pulse on level up
+            this.cancelLevelPulse = createBounce(this.levelVal, 4, 200, {});
+        }
 
         // Re-align detail row after score value width change
         this.spdText.position.set(
@@ -400,6 +455,16 @@ export class InGameHUDScreen extends BaseGameScreen {
 
     show(): void {
         super.show();
+    }
+
+    hide(): void {
+        // Clean up all animations
+        this.cancelScorePulse?.();
+        this.cancelLevelPulse?.();
+        this.cancelPausePress?.();
+        this.animManager.cancelGroup('polish-pulse');
+        this.animManager.cancelGroup('polish-bounce');
+        super.hide();
     }
 
     resize(_width: number, _height: number): void {
