@@ -15,6 +15,7 @@ import { ColorTheme } from '../utils/ColorTheme';
 import { TEXT_STYLES } from '../config/typography';
 import { SPACING, LayoutHelper } from '../config/spacing';
 import { COLORS } from '../config/colors';
+import { navigationEvents } from './NavigationEvents';
 
 // Game data structures
 interface PlaneStats {
@@ -46,6 +47,7 @@ export class HangarScreen extends Container {
   private customizationPanel: UIPanel;
   private planesData: PlaneData[] = [];
   private planesGridContainer: Container;
+  private navigation: Container;
 
   constructor() {
     super();
@@ -197,10 +199,51 @@ export class HangarScreen extends Container {
     this.customizationPanel.position.set(720, 960);
     this.addChild(this.customizationPanel);
 
+    // Navigation bar
+    this.navigation = this.createNavigation();
+    this.navigation.position.set(40, 1680);
+    this.addChild(this.navigation);
+
     // Initial selection
     if (this.selectedPlaneId) {
       this.updateDetailsPanels(this.selectedPlaneId);
     }
+  }
+
+  /**
+   * Create navigation bar
+   */
+  private createNavigation(): Container {
+    const nav = new Container();
+
+    const navButtons = [
+      { label: 'SHOP', variant: 'primary' as const, action: 'shop' },
+      { label: 'STORE', variant: 'primary' as const, action: 'plane-store' },
+      { label: 'UPGRADE', variant: 'warning' as const, action: 'upgrade' },
+      { label: 'BACK', variant: 'secondary' as const, action: 'back' },
+    ];
+
+    navButtons.forEach((btnConfig, index) => {
+      const button = new UIButton({
+        text: btnConfig.label,
+        width: 220,
+        height: 50,
+        variant: btnConfig.variant,
+        onClick: () => this.handleNavigation(btnConfig.action),
+      });
+
+      button.position.set(index * 240 + 10, 0);
+      nav.addChild(button);
+    });
+
+    return nav;
+  }
+
+  /**
+   * Handle navigation
+   */
+  private handleNavigation(action: string): void {
+    navigationEvents.navigate(action as any);
   }
 
   /**

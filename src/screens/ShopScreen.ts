@@ -14,6 +14,7 @@ import { ColorTheme } from '../utils/ColorTheme';
 import { TEXT_STYLES } from '../config/typography';
 import { SPACING, LayoutHelper } from '../config/spacing';
 import { COLORS } from '../config/colors';
+import { navigationEvents } from './NavigationEvents';
 
 // Game data structures
 interface TreasureData {
@@ -577,8 +578,7 @@ export class ShopScreen extends Container {
    * Handle navigation actions
    */
   private handleNavigation(action: string): void {
-    console.log('Navigation action:', action);
-    // Emit event or navigate to screen
+    navigationEvents.navigate(action as any);
   }
 
   /**
