@@ -53,41 +53,41 @@ const GRID = 8;
 const TAB_BS = VELOCITY_UI_SLICE.button;
 const R_CHIP = 12;
 
-const FONT_UI = GAME_FONTS.standard;
+const FONT_UI = GAME_FONTS.functional;
 
 const C = {
-    surface:  0x0f1624,
-    surface2: 0x141c2e,
-    border:   0x243044,
-    text:     0xf0f4fa,
-    muted:    0x9aa8bc,
-    cyan:     GAME_COLORS.primary,
-    gold:     GAME_COLORS.accent_gold,
-    lockedFace: 0x070a12,
-    lockedFaceElite: 0x0c0a10,
-    lockedPlaque: 0x050810,
-    lockedPlaqueElite: 0x100c08,
-    lockedRim: 0x2a3d4a,
-    lockedRimElite: 0x6a5228,
-    dockDeck: 0x060912,
-    dockDeckTop: 0x0d1522,
-    dockDeckRim: 0x1e2f44,
-    dockChannel: 0x020408,
-    dockCellIdle: 0x080c14,
-    dockCellIdleRim: 0x141c2a,
-    dockCellActive: 0x0e1624,
-    dockCellActiveRim: 0x00c4a8,
-    dockBolt: 0x3d4f62,
+    surface:  GAME_COLORS.bg_surface,
+    surface2: GAME_COLORS.bg_elevated,
+    border:   GAME_COLORS.bg_elevated,
+    text:     GAME_COLORS.text_primary,
+    muted:    GAME_COLORS.text_secondary,
+    cyan:     GAME_COLORS.accent_cyan,
+    gold:     GAME_COLORS.primary_cta,
+    lockedFace: GAME_COLORS.bg_base,
+    lockedFaceElite: GAME_COLORS.bg_base,
+    lockedPlaque: GAME_COLORS.bg_base,
+    lockedPlaqueElite: GAME_COLORS.bg_base,
+    lockedRim: GAME_COLORS.bg_elevated,
+    lockedRimElite: GAME_COLORS.primary_cta,
+    dockDeck: GAME_COLORS.bg_base,
+    dockDeckTop: GAME_COLORS.bg_surface,
+    dockDeckRim: GAME_COLORS.bg_elevated,
+    dockChannel: GAME_COLORS.bg_base,
+    dockCellIdle: GAME_COLORS.bg_surface,
+    dockCellIdleRim: GAME_COLORS.bg_elevated,
+    dockCellActive: GAME_COLORS.bg_surface,
+    dockCellActiveRim: GAME_COLORS.accent_cyan,
+    dockBolt: GAME_COLORS.text_disabled,
 };
 
 const SURFACE_ROLE = {
-    tabActive: { tint: 0xc5efff, text: 0xf8fbff, face: 0x19384a, rim: 0x79d9ff, cue: 0x9fe8ff },
-    tabIdle: { tint: 0xd3deea, text: 0xa6b4c8, face: 0x0d1521, rim: 0x2b3a52 },
-    missionPlayable: { rim: C.cyan, accent: 0x2df0d0 },
-    missionCompleted: { rim: 0x62b9ff, accent: 0x8fd9ff },
-    missionClaimable: { rim: C.gold, accent: 0xffef9d },
-    missionLocked: { accent: 0x8194ac },
-    missionEliteLocked: { accent: 0xf0c96a },
+    tabActive: { tint: C.cyan, text: C.text, face: C.surface2, rim: C.cyan, cue: C.cyan },
+    tabIdle: { tint: C.muted, text: C.muted, face: C.surface, rim: C.border },
+    missionPlayable: { rim: C.cyan, accent: C.cyan },
+    missionCompleted: { rim: C.cyan, accent: C.cyan },
+    missionClaimable: { rim: C.gold, accent: C.gold },
+    missionLocked: { accent: C.muted },
+    missionEliteLocked: { accent: C.gold },
 } as const;
 
 function style(

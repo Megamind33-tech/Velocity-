@@ -1,55 +1,72 @@
 /**
- * SECTION A — DESIGN TOKENS (Velocity portrait mission console)
- * PixiJS: colors are 0xRRGGBB. Motion: seconds + easing names for tick() usage.
+ * DESIGN TOKENS (Velocity portrait mission console)
+ * Maps to AAA spec colors in GameUITheme.ts
  */
 
+import { GAME_COLORS } from '../GameUITheme';
+
 export const P_COLORS = {
-    bgBase: 0x030509,
-    bgElevated: 0x08101a,
-    bgPanel: 0x0b1220,
-    bgPanelActive: 0x0f1a28,
-    bgPanelLocked: 0x06080f,
-    /** Locked card — withheld face (not “dimmed playable”) */
-    lockedFace: 0x070a12,
-    lockedFaceElite: 0x0c0a10,
-    lockedPlaque: 0x050810,
-    lockedPlaqueElite: 0x100c08,
-    lockedPlaqueRim: 0x2a3d4a,
-    lockedPlaqueRimElite: 0x6a5228,
-    lockedGateWell: 0x04060c,
-    lockedGateWellElite: 0x0a0806,
-    /** Command dock — deck plate (not app bar) */
-    dockDeck: 0x060912,
-    dockDeckTop: 0x0d1522,
-    dockDeckRim: 0x1e2f44,
-    dockChannel: 0x020408,
-    dockCellIdle: 0x080c14,
-    dockCellIdleRim: 0x141c2a,
-    dockCellActive: 0x0e1624,
-    dockCellActiveRim: 0x00c4a8,
-    dockBolt: 0x3d4f62,
-    bgPanelLit: 0x131e2e,     // hover/active highlight surface
-    strokeSubtle: 0x1a2638,
-    strokeActive: 0x00d4b4,
-    strokeGold: 0xc8a020,
-    textPrimary: 0xf4f8fd,
-    textSecondary: 0xb0c0d2,
-    textMuted: 0x58687c,
-    accentCyan: 0x00e8c8,
-    accentCyanSoft: 0x009880,
-    accentGold: 0xeaba28,
-    accentGoldSoft: 0x806218,
-    accentPurple: 0xb888ff,   // PREMIUM chip
-    accentPurpleSoft: 0x6840a8,
-    stateLive: 0x28e880,
-    stateLocked: 0x48565e,
-    statePressed: 0x001410,
-    navActive: 0x00e8c8,
-    navActivePill: 0x00b89a,   // active indicator pill fill
-    navInactive: 0x607080,
-    shadowDeep: 0x000000,
-    shadowGlowCyan: 0x00e8c8,
-    shadowGlowGold: 0xeaba28,
+    // Base elevation layers
+    bgBase: GAME_COLORS.bg_base,           // #0D1117
+    bgElevated: GAME_COLORS.bg_surface,    // #1A1A2E
+    bgPanel: GAME_COLORS.bg_surface,       // #1A1A2E
+    bgPanelActive: GAME_COLORS.bg_elevated, // #252540
+    bgPanelLocked: GAME_COLORS.bg_base,    // #0D1117
+
+    // Locked card styling
+    lockedFace: GAME_COLORS.bg_base,
+    lockedFaceElite: GAME_COLORS.bg_base,
+    lockedPlaque: GAME_COLORS.bg_base,
+    lockedPlaqueElite: GAME_COLORS.bg_base,
+    lockedPlaqueRim: GAME_COLORS.bg_elevated,
+    lockedPlaqueRimElite: GAME_COLORS.primary_cta,
+    lockedGateWell: GAME_COLORS.bg_base,
+    lockedGateWellElite: GAME_COLORS.bg_base,
+
+    // Dock styling
+    dockDeck: GAME_COLORS.bg_base,
+    dockDeckTop: GAME_COLORS.bg_surface,
+    dockDeckRim: GAME_COLORS.bg_elevated,
+    dockChannel: GAME_COLORS.bg_base,
+    dockCellIdle: GAME_COLORS.bg_surface,
+    dockCellIdleRim: GAME_COLORS.bg_elevated,
+    dockCellActive: GAME_COLORS.bg_surface,
+    dockCellActiveRim: GAME_COLORS.accent_cyan,
+    dockBolt: GAME_COLORS.text_disabled,
+
+    // Panel lighting
+    bgPanelLit: GAME_COLORS.bg_elevated,
+    strokeSubtle: GAME_COLORS.bg_elevated,
+    strokeActive: GAME_COLORS.accent_cyan,
+    strokeGold: GAME_COLORS.primary_cta,
+
+    // Text colors (spec system)
+    textPrimary: GAME_COLORS.text_primary,
+    textSecondary: GAME_COLORS.text_secondary,
+    textMuted: GAME_COLORS.text_disabled,
+
+    // Accent colors (spec system)
+    accentCyan: GAME_COLORS.accent_cyan,
+    accentCyanSoft: GAME_COLORS.accent_cyan,
+    accentGold: GAME_COLORS.primary_cta,
+    accentGoldSoft: GAME_COLORS.primary_cta,
+    accentPurple: GAME_COLORS.accent_purple,
+    accentPurpleSoft: GAME_COLORS.accent_purple,
+
+    // States
+    stateLive: GAME_COLORS.success,
+    stateLocked: GAME_COLORS.text_disabled,
+    statePressed: GAME_COLORS.bg_base,
+
+    // Navigation
+    navActive: GAME_COLORS.accent_cyan,
+    navActivePill: GAME_COLORS.accent_cyan,
+    navInactive: GAME_COLORS.text_disabled,
+
+    // Shadows
+    shadowDeep: GAME_COLORS.bg_base,
+    shadowGlowCyan: GAME_COLORS.accent_cyan,
+    shadowGlowGold: GAME_COLORS.primary_cta,
 } as const;
 
 export const P_TYPO = {
