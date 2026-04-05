@@ -48,7 +48,7 @@ export class LeaderboardScreen extends BaseGameScreen {
             style: new TextStyle({
                 fill: GAME_COLORS.text_muted,
                 fontSize: GAME_SIZES.font.sm,
-                fontFamily: GAME_FONTS.standard,
+                fontFamily: GAME_FONTS.functional,
             }),
         });
         hint.position.set(0, y + 4);
@@ -56,7 +56,7 @@ export class LeaderboardScreen extends BaseGameScreen {
         y += GAME_SIZES.spacing.xl * 2;
 
         const btnW = Math.min(260, innerW);
-        const btnH = 46;
+        const btnH = 48;
         const backBtn = createVelocityGameButton('BACK', 'secondary', () => this.uiManager.goBack(), {
             width: btnW,
             height: btnH,

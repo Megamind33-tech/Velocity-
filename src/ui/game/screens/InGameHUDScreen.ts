@@ -148,7 +148,7 @@ export class InGameHUDScreen extends BaseGameScreen {
                 fill.fill({ color: GAME_COLORS.primary, alpha: p > 0.85 ? 1.0 : 0.82 });
                 // Bright leading edge
                 fill.rect((w - 2) * p - 2, 1, 2, VOCAL_H - 2);
-                fill.fill({ color: 0xffffff, alpha: 0.4 * p });
+                fill.fill({ color: GAME_COLORS.text_primary, alpha: 0.4 * p });
             }
         };
         return root;

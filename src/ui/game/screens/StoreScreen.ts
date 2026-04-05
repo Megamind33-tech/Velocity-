@@ -33,7 +33,7 @@ export class StoreScreen extends BaseGameScreen {
             innerW - 16,
             (fs) =>
                 new TextStyle({
-                    fontFamily: GAME_FONTS.arcade,
+                    fontFamily: GAME_FONTS.functional,
                     fontSize: fs,
                     fontWeight: 'bold',
                     fill: GAME_COLORS.accent_gold,
@@ -46,7 +46,7 @@ export class StoreScreen extends BaseGameScreen {
         body.addChild(balFit);
 
         const btnW = Math.min(280, innerW);
-        const btnH = 46;
+        const btnH = 48;
         const gap = 12;
         let y = GAME_SIZES.spacing.xxl;
 
@@ -63,10 +63,10 @@ export class StoreScreen extends BaseGameScreen {
                 btnW - 28,
                 (fs) =>
                     new TextStyle({
-                        fontFamily: GAME_FONTS.arcade,
+                        fontFamily: GAME_FONTS.functional,
                         fontSize: fs,
                         fontWeight: 'bold',
-                        fill: 0xffffff,
+                        fill: GAME_COLORS.text_primary,
                     }),
                 15,
                 10,

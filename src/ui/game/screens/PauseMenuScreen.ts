@@ -41,7 +41,7 @@ export class PauseMenuScreen extends BaseGameScreen {
                 fill: modal.border,
                 fontSize: GAME_SIZES.font.xl,
                 fontWeight: 'bold',
-                fontFamily: GAME_FONTS.arcade,
+                fontFamily: GAME_FONTS.functional,
                 dropShadow: {
                     alpha: 0.6,
                     blur: 2,

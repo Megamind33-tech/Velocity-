@@ -48,7 +48,7 @@ function ts(fill: number, size: number, weight: '400'|'600'|'700'|'800' = '700',
         fill,
         fontSize: size,
         fontWeight: weight,
-        fontFamily: GAME_FONTS.arcade,
+        fontFamily: GAME_FONTS.functional,
         letterSpacing: spacing,
         dropShadow: size >= 18
             ? { alpha: 0.55, blur: 2, color: 0x000000, distance: 1 }

@@ -46,7 +46,7 @@ export class SettingsScreen extends BaseGameScreen {
         y += GAME_SIZES.spacing.xl * 2;
 
         const btnW = Math.min(260, innerW);
-        const btnH = 46;
+        const btnH = 48;
         const resetBtn = createVelocityGameButton(
             'RESET PROGRESS',
             'danger',

@@ -48,7 +48,7 @@ export class AchievementsScreen extends BaseGameScreen {
         });
 
         const btnW = Math.min(260, innerW);
-        const btnH = 46;
+        const btnH = 48;
         const backBtn = createVelocityGameButton('BACK', 'secondary', () => this.uiManager.goBack(), {
             width: btnW,
             height: btnH,
