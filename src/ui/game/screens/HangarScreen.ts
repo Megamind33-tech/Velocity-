@@ -10,12 +10,23 @@ import {
     type VelocityModalLayout,
 } from '../velocityModalLayout';
 import { createVelocityGameButton } from '../velocityUiButtons';
-import { animateModalEntrance } from '../modalAnimations';
+import { animateModalEntrance, animateModalExit } from '../modalAnimations';
 import { AnimationManager } from '../AnimationManager';
 import { createShimmer } from '../polishEffects';
-import { animateModalExit } from '../modalAnimations';
+import {
+    getMainMenuProgress,
+    getSelectedPlaneId,
+    getUnlockedPlaneIds,
+    setSelectedPlaneId,
+} from '../../../data/localProgress';
 
-export class StoreScreen extends BaseGameScreen {
+const PLANES: { id: string; label: string; tier: string }[] = [
+    { id: 'cadet', label: 'CADET MK-I', tier: 'Starter' },
+    { id: 'scout', label: 'SCOUT RAPTOR', tier: 'Unlock L5+' },
+    { id: 'interceptor', label: 'INTERCEPTOR', tier: 'Unlock L10+' },
+];
+
+export class HangarScreen extends BaseGameScreen {
     private layout!: VelocityModalLayout;
     private animManager = AnimationManager.getInstance();
     private cancelEntrance: (() => void) | null = null;
@@ -33,62 +44,73 @@ export class StoreScreen extends BaseGameScreen {
         const panelW = Math.min(500, sw - 24);
         const panelH = Math.min(520, sh - 48);
 
-        this.layout = buildVelocityModal(this.container, this.app, 'STORE', panelW, panelH);
-        const { body, innerW } = this.layout;
+        this.layout = buildVelocityModal(this.container, this.app, 'HANGAR', panelW, panelH);
+    }
 
-        const balFit = fitLabelToWidth(
-            'BALANCE: 1000 TOKENS',
+    private rebuildBody(): void {
+        const { body, innerW } = this.layout;
+        body.removeChildren();
+
+        const prog = getMainMenuProgress();
+        const unlocked = new Set(getUnlockedPlaneIds(prog.maxUnlocked));
+        const selected = getSelectedPlaneId();
+
+        const sub = fitLabelToWidth(
+            'Select your craft. Unlocks follow route progress.',
             innerW - 16,
             (fs) =>
                 new TextStyle({
                     fontFamily: GAME_FONTS.functional,
                     fontSize: fs,
-                    fontWeight: 'bold',
-                    fill: GAME_COLORS.accent_gold,
+                    fontWeight: '600',
+                    fill: GAME_COLORS.text_secondary,
                 }),
-            GAME_SIZES.font.base,
-            11,
+            13,
+            10,
         );
-        balFit.anchor.set(0.5, 0);
-        balFit.position.set(innerW / 2, 0);
-        body.addChild(balFit);
+        sub.anchor.set(0.5, 0);
+        sub.position.set(innerW / 2, 0);
+        body.addChild(sub);
 
         const btnW = Math.min(280, innerW);
         const btnH = 48;
         const gap = 12;
         let y = GAME_SIZES.spacing.xxl;
 
-        const items = [
-            { name: 'POWER-UP', price: 100 },
-            { name: 'VOICE BOOST', price: 250 },
-            { name: 'SHIELD', price: 500 },
-        ];
-
-        items.forEach((item) => {
-            const full = `${item.name} (${item.price})`;
+        PLANES.forEach((plane) => {
+            const ok = unlocked.has(plane.id);
+            const line = ok
+                ? `${plane.label}  ·  ${plane.tier}${plane.id === selected ? '  [ACTIVE]' : ''}`
+                : `${plane.label}  ·  LOCKED`;
             const fitT = fitLabelToWidth(
-                full,
+                line,
                 btnW - 28,
                 (fs) =>
                     new TextStyle({
                         fontFamily: GAME_FONTS.functional,
                         fontSize: fs,
                         fontWeight: 'bold',
-                        fill: GAME_COLORS.text_primary,
+                        fill: ok ? GAME_COLORS.text_primary : GAME_COLORS.text_muted,
                     }),
-                15,
+                14,
                 10,
             );
-            const line = fitT.text;
+            const t = fitT.text;
             fitT.destroy();
+
             const itemBtn = createVelocityGameButton(
-                line,
-                'accent',
+                t,
+                ok ? (plane.id === selected ? 'accent' : 'secondary') : 'secondary',
                 () => {
-                    /* Purchase: wire token balance + inventory when economy exists */
+                    if (!ok) return;
+                    setSelectedPlaneId(plane.id);
+                    this.rebuildBody();
                 },
                 { width: btnW, height: btnH },
             );
+            if (!ok) {
+                itemBtn.alpha = 0.55;
+            }
             itemBtn.position.set((innerW - btnW) / 2, y);
             body.addChild(itemBtn);
             y += btnH + gap;
@@ -104,15 +126,14 @@ export class StoreScreen extends BaseGameScreen {
 
     show(): void {
         super.show();
+        this.rebuildBody();
 
-        // Animate modal entrance
         this.cancelEntrance?.();
         this.container.alpha = 0;
         this.container.scale.set(0.95, 0.95);
         this.cancelEntrance = animateModalEntrance(this.container, {
             duration: 300,
             onComplete: () => {
-                // Apply shimmer effect after entrance for polish
                 this.cancelPolish?.();
                 this.cancelPolish = createShimmer(this.container, { loop: true });
             },
@@ -136,7 +157,6 @@ export class StoreScreen extends BaseGameScreen {
         this.animManager.cancelGroup('modal-entrance');
         this.animManager.cancelGroup('polish-shimmer');
 
-        // Smooth exit animation before hiding
         this.cancelExit = animateModalExit(this.container, {
             duration: 200,
             onComplete: () => super.hide(),

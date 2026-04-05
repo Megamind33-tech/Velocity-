@@ -1072,7 +1072,7 @@ function buildBottomDockPortrait(
                 label: 'HANGAR',
                 onTap: () => {
                     navIndexBySlot?.(2);
-                    ui.showScreen('store', true);
+                    ui.showScreen('hangar', true);
                 },
                 draw: drawIconHangar,
                 menuIconKey: 'dock_nav_hangar',

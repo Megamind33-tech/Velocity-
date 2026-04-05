@@ -60,12 +60,71 @@ export function getMainMenuProgress(): { maxUnlocked: number; unlockedCount: num
     return { maxUnlocked, unlockedCount: s.size, totalLevels: 20 };
 }
 
+const HANGAR_PLANE_KEY = 'velocity_hangar_plane_v1';
+const HANGAR_UNLOCKS_KEY = 'velocity_hangar_unlocks_v1';
+
+/** Hangar: selected craft id (persisted). */
+export function getSelectedPlaneId(): string {
+    try {
+        const v = localStorage.getItem(HANGAR_PLANE_KEY);
+        if (v && typeof v === 'string' && v.length > 0) return v;
+    } catch {
+        /* ignore */
+    }
+    return 'cadet';
+}
+
+export function setSelectedPlaneId(id: string): void {
+    try {
+        localStorage.setItem(HANGAR_PLANE_KEY, id);
+    } catch {
+        /* ignore */
+    }
+}
+
+/** Plane ids the player may equip (cadet always; others unlock with level progress). */
+export function getUnlockedPlaneIds(maxUnlockedLevel: number): string[] {
+    const base = new Set<string>(['cadet']);
+    try {
+        const raw = localStorage.getItem(HANGAR_UNLOCKS_KEY);
+        if (raw) {
+            const arr = JSON.parse(raw) as unknown;
+            if (Array.isArray(arr)) {
+                for (const x of arr) {
+                    if (typeof x === 'string' && x.length > 0) base.add(x);
+                }
+            }
+        }
+    } catch {
+        /* ignore */
+    }
+    if (maxUnlockedLevel >= 5) base.add('scout');
+    if (maxUnlockedLevel >= 10) base.add('interceptor');
+    return [...base];
+}
+
+export function unlockHangarPlane(id: string): void {
+    try {
+        const raw = localStorage.getItem(HANGAR_UNLOCKS_KEY);
+        const parsed = raw ? (JSON.parse(raw) as unknown) : [];
+        const arr = Array.isArray(parsed) ? parsed.filter((x): x is string => typeof x === 'string') : [];
+        const set = new Set(arr);
+        set.add(id);
+        localStorage.setItem(HANGAR_UNLOCKS_KEY, JSON.stringify([...set]));
+    } catch {
+        /* ignore */
+    }
+}
+
 /** Clear unlocks and menu high score (settings “reset progress”). */
 export function resetLocalProgress(): void {
     try {
         localStorage.removeItem(STORAGE_KEY);
         localStorage.removeItem(HIGH_SCORE_KEY);
+        localStorage.removeItem(HANGAR_PLANE_KEY);
+        localStorage.removeItem(HANGAR_UNLOCKS_KEY);
     } catch {
         /* ignore */
     }
 }
+

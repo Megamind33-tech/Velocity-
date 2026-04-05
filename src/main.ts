@@ -40,6 +40,7 @@ import { SettingsScreen } from './ui/game/screens/SettingsScreen';
 import { LeaderboardScreen } from './ui/game/screens/LeaderboardScreen';
 import { AchievementsScreen } from './ui/game/screens/AchievementsScreen';
 import { StoreScreen } from './ui/game/screens/StoreScreen';
+import { HangarScreen } from './ui/game/screens/HangarScreen';
 import { RewardsScreen } from './ui/game/screens/RewardsScreen';
 import {
     registerGameFlowCallbacks,
@@ -108,6 +109,7 @@ async function init() {
     uiManager.registerScreen('leaderboard', new LeaderboardScreen(app));
     uiManager.registerScreen('achievements', new AchievementsScreen(app));
     uiManager.registerScreen('store', new StoreScreen(app));
+    uiManager.registerScreen('hangar', new HangarScreen(app));
     uiManager.registerScreen('rewards', new RewardsScreen(app));
 
     const world = new World();
