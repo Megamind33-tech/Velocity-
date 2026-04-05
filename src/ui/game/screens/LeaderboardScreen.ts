@@ -1,4 +1,5 @@
 import { Application, Text, TextStyle } from 'pixi.js';
+import type { PixiDisplayObject } from '../pixiDisplayTypes';
 import { BaseGameScreen } from '../GameUIManager';
 import { createGameLabel } from '../GameUIComponents';
 import { GAME_COLORS, GAME_FONTS, GAME_SIZES } from '../GameUITheme';
@@ -10,9 +11,19 @@ import {
     type VelocityModalLayout,
 } from '../velocityModalLayout';
 import { createVelocityGameButton } from '../velocityUiButtons';
+import { animateModalEntrance } from '../modalAnimations';
+import { AnimationManager } from '../AnimationManager';
+import { createShimmer } from '../polishEffects';
+import { animateListReveal } from '../contentAnimations';
+import { animateModalExit } from '../modalAnimations';
 
 export class LeaderboardScreen extends BaseGameScreen {
     private layout!: VelocityModalLayout;
+    private animManager = AnimationManager.getInstance();
+    private cancelEntrance: (() => void) | null = null;
+    private cancelPolish: (() => void) | null = null;
+    private cancelExit: (() => void) | null = null;
+    private leaderboardItems: Array<PixiDisplayObject> = [];
 
     constructor(app: Application) {
         super(app);
@@ -35,11 +46,14 @@ export class LeaderboardScreen extends BaseGameScreen {
         ];
 
         let y = 0;
+        this.leaderboardItems = [];
         scores.forEach((entry) => {
             const entryText = `${entry.rank}. ${entry.name}  ·  ${entry.score}`;
             const label = createGameLabel(entryText, GAME_SIZES.font.lg, GAME_COLORS.primary, true);
             label.position.y = y;
+            label.alpha = 0; // Start invisible for reveal
             body.addChild(label);
+            this.leaderboardItems.push(label);
             y += GAME_SIZES.spacing.lg;
         });
 
@@ -48,7 +62,7 @@ export class LeaderboardScreen extends BaseGameScreen {
             style: new TextStyle({
                 fill: GAME_COLORS.text_muted,
                 fontSize: GAME_SIZES.font.sm,
-                fontFamily: GAME_FONTS.standard,
+                fontFamily: GAME_FONTS.functional,
             }),
         });
         hint.position.set(0, y + 4);
@@ -56,7 +70,7 @@ export class LeaderboardScreen extends BaseGameScreen {
         y += GAME_SIZES.spacing.xl * 2;
 
         const btnW = Math.min(260, innerW);
-        const btnH = 46;
+        const btnH = 48;
         const backBtn = createVelocityGameButton('BACK', 'secondary', () => this.uiManager.goBack(), {
             width: btnW,
             height: btnH,
@@ -67,6 +81,27 @@ export class LeaderboardScreen extends BaseGameScreen {
 
     show(): void {
         super.show();
+
+        // Animate modal entrance
+        this.cancelEntrance?.();
+        this.container.alpha = 0;
+        this.container.scale.set(0.95, 0.95);
+        this.cancelEntrance = animateModalEntrance(this.container, {
+            duration: 300,
+            onComplete: () => {
+                // Apply shimmer effect after entrance for polish
+                this.cancelPolish?.();
+                this.cancelPolish = createShimmer(this.container, { loop: true });
+
+                // Reveal leaderboard entries with stagger animation
+                if (this.leaderboardItems.length > 0) {
+                    animateListReveal(this.leaderboardItems, {
+                        duration: 300,
+                        itemDelay: 100,
+                    });
+                }
+            },
+        });
     }
 
     resize(width: number, height: number): void {
@@ -77,5 +112,20 @@ export class LeaderboardScreen extends BaseGameScreen {
         this.layout.panelH = panelH;
         this.layout.innerW = velocityModalInnerWidth(panelW);
         repositionVelocityModal(this.layout, width, height);
+    }
+
+    hide(): void {
+        this.cancelEntrance?.();
+        this.cancelPolish?.();
+        this.cancelExit?.();
+        this.animManager.cancelGroup('modal-entrance');
+        this.animManager.cancelGroup('polish-shimmer');
+        this.animManager.cancelGroup('content-list');
+
+        // Smooth exit animation before hiding
+        this.cancelExit = animateModalExit(this.container, {
+            duration: 200,
+            onComplete: () => super.hide(),
+        });
     }
 }

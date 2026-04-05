@@ -1,5 +1,6 @@
 /**
  * Daily Rewards screen — Kenney UI Pack chrome with rich reward card hierarchy.
+ * Includes professional popup animations and celebration effects.
  *
  * DESIGN RULES (Reward Richness):
  *   - Each reward day is a Kenney-framed card, not a stat row
@@ -26,6 +27,11 @@ import {
 import { createKenneyFramedPanelWithContent } from '../kenneyNineSlice';
 import { createVelocityGameButton } from '../velocityUiButtons';
 import { VELOCITY_UI_SLICE } from '../velocityUiSlice';
+import { animateModalEntrance, animateModalExit } from '../modalAnimations';
+import { AnimationManager } from '../AnimationManager';
+import { createShimmer, createSuccessFlash, createPulseScale } from '../polishEffects';
+import { animateScoreCountUp, animateTextReveal } from '../contentAnimations';
+import { animateAlpha } from '../animationHelpers';
 
 // ─── Token data ───────────────────────────────────────────────────────────────
 
@@ -48,12 +54,21 @@ function ts(fill: number, size: number, weight: '400'|'600'|'700'|'800' = '700',
         fill,
         fontSize: size,
         fontWeight: weight,
-        fontFamily: GAME_FONTS.arcade,
+        fontFamily: GAME_FONTS.functional,
         letterSpacing: spacing,
         dropShadow: size >= 18
             ? { alpha: 0.55, blur: 2, color: 0x000000, distance: 1 }
             : undefined,
     });
+}
+
+/**
+ * Reward card element references for animation.
+ */
+interface RewardCardElements {
+    root: Container;
+    valueText: Text;
+    unitLabel: Text;
 }
 
 /**
@@ -74,7 +89,7 @@ function buildRewardCard(
     stars: number,
     claimed: boolean,
     isActive: boolean,
-): Container {
+): RewardCardElements {
     const root = new Container();
 
     // ── Card chrome ─────────────────────────────────────────────────────────
@@ -206,13 +221,21 @@ function buildRewardCard(
     // Dim entire card if claimed (past) and not active
     if (claimed && !isActive) root.alpha = 0.68;
 
-    return root;
+    return { root, valueText: valText, unitLabel };
 }
 
 // ─── Screen ───────────────────────────────────────────────────────────────────
 
 export class RewardsScreen extends BaseGameScreen {
     private layout!: VelocityModalLayout;
+    private animManager = AnimationManager.getInstance();
+    private cancelEntrance: (() => void) | null = null;
+    private cancelPolish: (() => void) | null = null;
+    private cancelExit: (() => void) | null = null;
+    private cardAnimations: Array<() => void> = [];
+    private cardRefs: Array<{ root: Container; delay: number }> = [];
+    private calloutText: Text | null = null;
+    private activeCardElements: RewardCardElements | null = null;
 
     constructor(app: Application) {
         super(app);
@@ -258,9 +281,10 @@ export class RewardsScreen extends BaseGameScreen {
         const cardGap = 8;
         const cardH   = 72;
 
-        REWARD_DAYS.forEach((r) => {
+        this.cardRefs = [];
+        REWARD_DAYS.forEach((r, index) => {
             const isActive = r.day === ACTIVE_DAY;
-            const card = buildRewardCard(
+            const cardEl = buildRewardCard(
                 innerW,
                 isActive ? cardH + 8 : cardH,
                 r.day,
@@ -270,8 +294,17 @@ export class RewardsScreen extends BaseGameScreen {
                 r.claimed,
                 isActive,
             );
-            card.position.set(0, y);
-            body.addChild(card);
+            cardEl.root.position.set(0, y);
+            body.addChild(cardEl.root);
+
+            // Store card reference for staggered reveal animation
+            this.cardRefs.push({ root: cardEl.root, delay: index * 100 });
+
+            // Store active card for celebration animations
+            if (isActive) {
+                this.activeCardElements = cardEl;
+            }
+
             y += (isActive ? cardH + 8 : cardH) + cardGap;
         });
 
@@ -284,7 +317,9 @@ export class RewardsScreen extends BaseGameScreen {
         });
         callout.anchor.set(0.5, 0);
         callout.position.set(innerW / 2, y);
+        callout.alpha = 0; // Start invisible for reveal animation
         body.addChild(callout);
+        this.calloutText = callout;
         y += 18;
 
         // ── Claim button — gold accent, dominant CTA ────────────────────────
@@ -315,6 +350,97 @@ export class RewardsScreen extends BaseGameScreen {
 
     show(): void {
         super.show();
+
+        // Animate modal entrance with celebration feel
+        this.cancelEntrance?.();
+        this.container.alpha = 0;
+        this.container.scale.set(0.95, 0.95);
+
+        this.cancelEntrance = animateModalEntrance(this.container, {
+            duration: 300,
+            onComplete: () => {
+                // Apply shimmer effect to modal after entrance (attention-drawing)
+                this.cancelPolish?.();
+                this.cancelPolish = createShimmer(this.container, { loop: true });
+
+                // Animate reward card and token values after entrance
+                this.animateRewardCards();
+            },
+        });
+    }
+
+    private animateRewardCards(): void {
+        // Clean up any previous animations
+        this.cardAnimations.forEach((cancel) => cancel?.());
+        this.cardAnimations = [];
+
+        // Staggered reveal animation for all reward cards
+        this.cardRefs.forEach(({ root, delay }) => {
+            const timeout = setTimeout(() => {
+                root.alpha = 0;
+                const fadeIn = animateAlpha(root, 0, 1, {
+                    duration: 300,
+                });
+                this.cardAnimations.push(fadeIn);
+            }, delay);
+            this.cardAnimations.push(() => clearTimeout(timeout));
+        });
+
+        // Text reveal animation for callout
+        if (this.calloutText) {
+            const timeout = setTimeout(() => {
+                this.calloutText!.alpha = 1;
+                const reveal = animateTextReveal(this.calloutText!, 'Return tomorrow to keep your streak!', {
+                    duration: 500,
+                    letterDelay: 15,
+                });
+                this.cardAnimations.push(reveal);
+            }, this.cardRefs.length * 100 + 100);
+            this.cardAnimations.push(() => clearTimeout(timeout));
+        }
+
+        if (this.activeCardElements) {
+            const { valueText, unitLabel, root } = this.activeCardElements;
+
+            // Celebrate active card with scale pulse (after stagger completes)
+            const timeout = setTimeout(() => {
+                const cardPulse = createPulseScale(root, 0.98, 1.02, 1200, { loop: true });
+                this.cardAnimations.push(cardPulse);
+            }, 500);
+            this.cardAnimations.push(() => clearTimeout(timeout));
+
+            // Token count-up animation: 0 → value over 800ms (after stagger)
+            const fromTokens = 0;
+            const toTokens = parseInt(valueText.text.replace('+', ''), 10) || 0;
+
+            // Store original token text
+            const originalTokenText = valueText.text;
+            valueText.text = '+0';
+
+            const countTimeout = setTimeout(() => {
+                const countUp = animateScoreCountUp(
+                    valueText as any,
+                    fromTokens,
+                    toTokens,
+                    {
+                        duration: 800,
+                        onComplete: () => {
+                            // Restore proper format after count-up
+                            valueText.text = originalTokenText;
+                        },
+                    }
+                );
+                this.cardAnimations.push(countUp);
+            }, 500);
+            this.cardAnimations.push(() => clearTimeout(countTimeout));
+
+            // Success flash on the active card (subtle highlight)
+            const flashTimeout = setTimeout(() => {
+                const flash = createSuccessFlash(root, 400, {});
+                this.cardAnimations.push(flash);
+            }, 500);
+            this.cardAnimations.push(() => clearTimeout(flashTimeout));
+        }
     }
 
     resize(width: number, height: number): void {
@@ -325,5 +451,24 @@ export class RewardsScreen extends BaseGameScreen {
         this.layout.panelH = panelH;
         this.layout.innerW = velocityModalInnerWidth(panelW);
         repositionVelocityModal(this.layout, width, height);
+    }
+
+    hide(): void {
+        this.cancelEntrance?.();
+        this.cancelPolish?.();
+        this.cancelExit?.();
+        this.cardAnimations.forEach((cancel) => cancel?.());
+        this.cardAnimations = [];
+        this.animManager.cancelGroup('modal-entrance');
+        this.animManager.cancelGroup('polish-shimmer');
+        this.animManager.cancelGroup('content-score');
+        this.animManager.cancelGroup('polish-flash');
+        this.animManager.cancelGroup('polish-pulse');
+
+        // Smooth exit animation before hiding
+        this.cancelExit = animateModalExit(this.container, {
+            duration: 200,
+            onComplete: () => super.hide(),
+        });
     }
 }

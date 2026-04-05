@@ -20,7 +20,8 @@ export type GameButtonOptions = {
 export function createModalDimmer(screenW: number, screenH: number, alpha = 0.78): Graphics {
     const g = new Graphics();
     g.rect(0, 0, screenW, screenH);
-    g.fill({ color: 0x050510, alpha });
+    // Use base background color for dimmer - creates depth
+    g.fill({ color: GAME_COLORS.bg_base, alpha });
     g.eventMode = 'static';
     return g;
 }
@@ -29,10 +30,12 @@ export function createMenuBackdrop(screenW: number, screenH: number): Container 
     const root = new Container();
     const g = new Graphics();
     g.rect(0, 0, screenW, screenH);
-    g.fill({ color: GAME_COLORS.bg_darkest });
+    // Use spec base background for main backdrop
+    g.fill({ color: GAME_COLORS.bg_base });
     const band = new Graphics();
     band.rect(0, screenH * 0.35, screenW, screenH * 0.65);
-    band.fill({ color: 0x12122a, alpha: 0.85 });
+    // Slightly elevated surface band for depth effect
+    band.fill({ color: GAME_COLORS.bg_surface, alpha: 0.8 });
     root.addChild(g, band);
     const rng = (n: number) => {
         let s = n >>> 0;
@@ -48,7 +51,8 @@ export function createMenuBackdrop(screenW: number, screenH: number): Container 
         const y = rand() * screenH;
         const a = 0.15 + rand() * 0.55;
         const r = rand() < 0.85 ? 1 : 2;
-        stars.circle(x, y, r).fill({ color: 0xffffff, alpha: a });
+        // Use spec primary text color for stars (instead of pure white)
+        stars.circle(x, y, r).fill({ color: GAME_COLORS.text_primary, alpha: a });
     }
     root.addChild(stars);
     const glow = new Graphics();
@@ -95,14 +99,14 @@ export function createGameButton(
         fill: style.text,
         fontSize: style.font_size,
         fontWeight: style.font_weight as any,
-        fontFamily: GAME_FONTS.arcade,
+        fontFamily: GAME_FONTS.functional,  // Exo 2
         wordWrap: true,
         wordWrapWidth: Math.max(40, bw - 16),
         align: 'center',
         dropShadow: {
-            alpha: 0.6,
-            blur: 2,
-            color: GAME_COLORS.bg_darkest,
+            alpha: 0.5,
+            blur: 1,
+            color: GAME_COLORS.bg_base,
             distance: 1,
         },
     });
@@ -205,11 +209,11 @@ export function createGamePanel(
             fill: style.border,
             fontSize: GAME_SIZES.font.xl,
             fontWeight: 'bold',
-            fontFamily: GAME_FONTS.arcade,
+            fontFamily: GAME_FONTS.functional,  // Exo 2
             dropShadow: {
-                alpha: 0.6,
-                blur: 2,
-                color: GAME_COLORS.bg_darkest,
+                alpha: 0.5,
+                blur: 1,
+                color: GAME_COLORS.bg_base,
                 distance: 1,
             },
         });
@@ -245,11 +249,11 @@ export function createGameLabel(
         fill: color,
         fontSize: fontSize,
         fontWeight: bold ? 'bold' : 'normal',
-        fontFamily: GAME_FONTS.standard,
+        fontFamily: GAME_FONTS.functional,  // Exo 2
         dropShadow: {
-            alpha: 0.5,
-            blur: 2,
-            color: GAME_COLORS.bg_darkest,
+            alpha: 0.4,
+            blur: 1,
+            color: GAME_COLORS.bg_base,
             distance: 1,
         },
     });
@@ -260,13 +264,13 @@ export function createGameLabel(
 /**
  * Create a score/stat display
  */
-export function createStatDisplay(label: string, value: string | number, color: number = GAME_COLORS.primary): Container {
+export function createStatDisplay(label: string, value: string | number, color: number = GAME_COLORS.accent_cyan): Container {
     const container = new Container();
 
     const labelStyle = new TextStyle({
         fill: GAME_COLORS.text_secondary,
         fontSize: GAME_SIZES.font.sm,
-        fontFamily: GAME_FONTS.standard,
+        fontFamily: GAME_FONTS.functional,  // Exo 2
     });
 
     const labelText = new Text({ text: label, style: labelStyle });
@@ -277,12 +281,12 @@ export function createStatDisplay(label: string, value: string | number, color: 
         fill: color,
         fontSize: GAME_SIZES.font.xl,
         fontWeight: 'bold',
-        fontFamily: GAME_FONTS.monospace,
+        fontFamily: GAME_FONTS.numerical,  // Oxanium for numerical emphasis
         dropShadow: {
-            alpha: 0.6,
-            blur: 2,
-            color: color,
-            distance: 0,
+            alpha: 0.4,
+            blur: 1,
+            color: GAME_COLORS.bg_base,
+            distance: 1,
         },
     });
 

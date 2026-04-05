@@ -74,9 +74,7 @@ canvas {
   -webkit-touch-callout: none;
 }
 
-/* ============================================================================
-   Portrait Orientation (Mobile Vertical)
-   ============================================================================ */
+/* Portrait orientation is the only supported mode (see GameUIManager) */
 @media (orientation: portrait) {
   html, body, #game-root {
     width: 100%;
@@ -86,48 +84,6 @@ canvas {
   canvas {
     width: 100%;
     height: 100%;
-  }
-}
-
-/* ============================================================================
-   Landscape Orientation (Mobile Horizontal)
-   ============================================================================ */
-@media (orientation: landscape) {
-  html, body, #game-root {
-    width: 100%;
-    height: 100dvh;
-  }
-
-  canvas {
-    width: 100%;
-    height: 100%;
-  }
-}
-
-/* ============================================================================
-   Small Mobile Devices (< 360px width)
-   ============================================================================ */
-@media (max-width: 359px) {
-  body {
-    font-size: 12px;
-  }
-}
-
-/* ============================================================================
-   Standard Mobile Devices (360px - 767px width)
-   ============================================================================ */
-@media (min-width: 360px) and (max-width: 767px) {
-  html, body {
-    font-size: 14px;
-  }
-}
-
-/* ============================================================================
-   Tablets (768px and above) - iPad and larger tablets
-   ============================================================================ */
-@media (min-width: 768px) {
-  html, body {
-    font-size: 16px;
   }
 }
 

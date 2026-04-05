@@ -21,6 +21,9 @@ import { ResponsiveUIManager } from '../../ResponsiveUIManager';
 import { createKenneyHProgressBar, createKenneyPanelNineSlice } from '../kenneyNineSlice';
 import { getVelocityUiTexture, velocityUiArtReady } from '../velocityUiArt';
 import { VELOCITY_UI_SLICE } from '../velocityUiSlice';
+import { AnimationManager } from '../AnimationManager';
+import { createPulseScale, createBounce } from '../polishEffects';
+import { animateScale } from '../animationHelpers';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -42,9 +45,9 @@ function labelStyle(fill: number): TextStyle {
     return new TextStyle({
         fill,
         fontSize: SZ_LABEL,
-        fontFamily: GAME_FONTS.narrow,
+        fontFamily: GAME_FONTS.functional,
         fontWeight: 'bold',
-        letterSpacing: 2,
+        letterSpacing: 1,
     });
 }
 
@@ -52,12 +55,12 @@ function majorStyle(fill: number): TextStyle {
     return new TextStyle({
         fill,
         fontSize: SZ_MAJOR,
-        fontFamily: GAME_FONTS.arcade,
+        fontFamily: GAME_FONTS.numerical,
         fontWeight: 'bold',
-        letterSpacing: 1,
+        letterSpacing: 0,
         stroke: { color: 0x000000, width: 4, alpha: 0.88 },
         padding: 4,
-        dropShadow: { alpha: 0.55, blur: 2, color: 0x000000, distance: 1 },
+        dropShadow: { alpha: 0.55, blur: 2, color: GAME_COLORS.bg_base, distance: 1 },
     });
 }
 
@@ -65,12 +68,12 @@ function secondaryStyle(fill: number): TextStyle {
     return new TextStyle({
         fill,
         fontSize: SZ_SECOND,
-        fontFamily: GAME_FONTS.arcade,
+        fontFamily: GAME_FONTS.numerical,
         fontWeight: 'bold',
-        letterSpacing: 1,
+        letterSpacing: 0,
         stroke: { color: 0x000000, width: 3, alpha: 0.82 },
         padding: 3,
-        dropShadow: { alpha: 0.45, blur: 2, color: 0x000000, distance: 1 },
+        dropShadow: { alpha: 0.45, blur: 2, color: GAME_COLORS.bg_base, distance: 1 },
     });
 }
 
@@ -78,12 +81,12 @@ function detailStyle(fill: number): TextStyle {
     return new TextStyle({
         fill,
         fontSize: SZ_DETAIL,
-        fontFamily: GAME_FONTS.narrow,
+        fontFamily: GAME_FONTS.functional,
         fontWeight: 'bold',
         letterSpacing: 0.5,
         stroke: { color: 0x000000, width: 2, alpha: 0.78 },
         padding: 2,
-        dropShadow: { alpha: 0.4, blur: 1, color: 0x000000, distance: 1 },
+        dropShadow: { alpha: 0.4, blur: 1, color: GAME_COLORS.bg_base, distance: 1 },
     });
 }
 
@@ -122,6 +125,14 @@ export class InGameHUDScreen extends BaseGameScreen {
     private lastStatsKey = '';
     private lastVocalW   = -1;
 
+    // Animation tracking
+    private animManager = AnimationManager.getInstance();
+    private cancelScorePulse: (() => void) | null = null;
+    private cancelLevelPulse: (() => void) | null = null;
+    private cancelPausePress: (() => void) | null = null;
+    private lastScore = -1;
+    private lastLevel = -1;
+
     constructor(app: Application) {
         super(app);
         this.setupUI();
@@ -154,7 +165,7 @@ export class InGameHUDScreen extends BaseGameScreen {
                 fill.fill({ color: GAME_COLORS.primary, alpha: p > 0.85 ? 1.0 : 0.82 });
                 // Bright leading edge
                 fill.rect((w - 2) * p - 2, 1, 2, VOCAL_H - 2);
-                fill.fill({ color: 0xffffff, alpha: 0.4 * p });
+                fill.fill({ color: GAME_COLORS.text_primary, alpha: 0.4 * p });
             }
         };
         return root;
@@ -207,26 +218,37 @@ export class InGameHUDScreen extends BaseGameScreen {
         root.accessibleType = 'button';
 
         const stop = (e: FederatedPointerEvent) => e.stopPropagation();
-        const release = () => {
-            root.scale.set(1);
-        };
 
         root.on('pointerdown', (e) => {
             stop(e);
-            root.scale.set(0.96);
+            this.cancelPausePress?.();
+            this.cancelPausePress = animateScale(root, { x: 1, y: 1 }, { x: 0.92, y: 0.92 }, {
+                duration: 80,
+            });
         });
+
         root.on('pointerup', (e) => {
             stop(e);
-            release();
-            requestGamePause();
+            this.cancelPausePress?.();
+            this.cancelPausePress = animateScale(root, { x: 0.92, y: 0.92 }, { x: 1, y: 1 }, {
+                duration: 100,
+                onComplete: () => {
+                    this.cancelPausePress = null;
+                    requestGamePause();
+                },
+            });
         });
+
         root.on('pointerupoutside', (e) => {
             stop(e);
-            release();
+            this.cancelPausePress?.();
+            this.cancelPausePress = animateScale(root, root.scale, { x: 1, y: 1 }, { duration: 100 });
         });
+
         root.on('pointercancel', (e) => {
             stop(e);
-            release();
+            this.cancelPausePress?.();
+            this.cancelPausePress = animateScale(root, root.scale, { x: 1, y: 1 }, { duration: 100 });
         });
 
         return root;
@@ -409,8 +431,29 @@ export class InGameHUDScreen extends BaseGameScreen {
         const score  = h.getScore();
         const levelId = h.getLevelId();
 
-        this.scoreVal.text = String(score);
-        this.levelVal.text = String(levelId);
+        // Animate score on change — pulse effect to draw attention
+        if (score !== this.lastScore) {
+            this.lastScore = score;
+            this.scoreVal.text = String(score);
+
+            // Cancel previous pulse
+            this.cancelScorePulse?.();
+
+            // Pulse scale on score update (1.0 → 1.05 → 1.0)
+            this.cancelScorePulse = createPulseScale(this.scoreVal, 1.0, 1.08, 300, { loop: false });
+        }
+
+        // Animate level on change — subtle pulse
+        if (levelId !== this.lastLevel) {
+            this.lastLevel = levelId;
+            this.levelVal.text = String(levelId);
+
+            // Cancel previous pulse
+            this.cancelLevelPulse?.();
+
+            // Quick pulse on level up
+            this.cancelLevelPulse = createBounce(this.levelVal, 4, 200, {});
+        }
 
         // Re-align detail row after score value width change
         this.spdText.position.set(
@@ -428,6 +471,16 @@ export class InGameHUDScreen extends BaseGameScreen {
 
     show(): void {
         super.show();
+    }
+
+    hide(): void {
+        // Clean up all animations
+        this.cancelScorePulse?.();
+        this.cancelLevelPulse?.();
+        this.cancelPausePress?.();
+        this.animManager.cancelGroup('polish-pulse');
+        this.animManager.cancelGroup('polish-bounce');
+        super.hide();
     }
 
     resize(_width: number, _height: number): void {

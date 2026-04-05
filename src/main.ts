@@ -51,7 +51,12 @@ import {
 } from './ui/game/gameFlowBridge';
 import { getVelocityUiTexture, preloadVelocityUiTextures } from './ui/game/velocityUiArt';
 
+/** Log init failure and show a safe, user-visible alert (no innerHTML interpolation). */
 function showInitFailure(message: string, detail?: string): void {
+    console.error('Velocity init failure:', message);
+    if (detail) {
+        console.error('Details:', detail);
+    }
     const el = document.createElement('div');
     el.setAttribute('role', 'alert');
     el.style.cssText =
@@ -86,9 +91,7 @@ async function init() {
         preference: 'webgl',
     });
     const canvas = app.canvas as HTMLCanvasElement;
-    canvas.style.display = 'block';
-    canvas.style.width = '100%';
-    canvas.style.height = '100%';
+    // Canvas styling is handled by CSS (index.css) — no need to duplicate here
     gameRoot.appendChild(canvas);
 
     startAuthInBackground();

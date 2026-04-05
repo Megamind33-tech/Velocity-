@@ -4,7 +4,7 @@
 
 import { Container, Graphics, Sprite, Text, TextStyle } from 'pixi.js';
 import { getVelocityCustomTexture } from '../velocityUiArt';
-import { spriteIcon } from '../menuLandscape/kenneyLandscapeWidgets';
+import { spriteIcon } from '../menuPortrait/kenneyWidgets';
 import { buildHeroAmbientParts, mountClassChipKenneyRim } from './heroAmbientAccents';
 
 export type MainMenuProgressLite = {

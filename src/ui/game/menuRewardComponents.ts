@@ -12,7 +12,7 @@
  */
 
 import { Container, FederatedPointerEvent, Graphics, Sprite, Text } from 'pixi.js';
-import { GAME_FONTS } from './GameUITheme';
+import { GAME_FONTS, GAME_COLORS } from './GameUITheme';
 import { economyButtonLabelStyle, hudLabelStyle } from './menuTextStyles';
 import { createIconRewardsCachePod, createIconStoreModule } from './menuFrontMenuIcons';
 import { getVelocityUiTexture, velocityUiArtReady } from './velocityUiArt';
@@ -50,12 +50,13 @@ export function createRewardButton(
 
     const iconZoneW = height;          // square icon zone — full button height
     const r         = 8;              // corner radius
-    const borderCol = 0xffcc44;
+    const borderCol = GAME_COLORS.primary_cta;  // Gold accent
 
     // ── Base fill ──────────────────────────────────────────────────────────
     const base = new Graphics();
     base.roundRect(0, 0, width, height, r);
-    base.fill({ color: type === 'store' ? 0x150d00 : 0x110900, alpha: 0.97 });
+    // Subtle dark surface color for reward button background
+    base.fill({ color: GAME_COLORS.bg_surface, alpha: 0.85 });
     base.eventMode = 'none';
     root.addChild(base);
 
@@ -77,7 +78,8 @@ export function createRewardButton(
     if (!socketKenney) {
         const socketBg = new Graphics();
         socketBg.roundRect(0, 0, iconZoneW, height, r);
-        socketBg.fill({ color: type === 'store' ? 0x1e1100 : 0x180e00, alpha: 1.0 });
+        // Slightly elevated surface for socket distinction
+        socketBg.fill({ color: GAME_COLORS.bg_elevated, alpha: 0.8 });
         socketBg.eventMode = 'none';
         root.addChild(socketBg);
     }
@@ -101,14 +103,16 @@ export function createRewardButton(
     // ── Top shine strip ───────────────────────────────────────────────────
     const shine = new Graphics();
     shine.roundRect(6, 2, width - 12, 2, 1);
-    shine.fill({ color: 0xffe077, alpha: 0.46 });
+    // Gold accent shine for visual polish
+    shine.fill({ color: GAME_COLORS.primary_cta, alpha: 0.35 });
     shine.eventMode = 'none';
     root.addChild(shine);
 
     // ── Inner socket top-shine (icon zone only) ───────────────────────────
     const socketShine = new Graphics();
     socketShine.roundRect(4, 2, iconZoneW - 8, 1.5, 1);
-    socketShine.fill({ color: 0xffcc44, alpha: 0.28 });
+    // Subtle gold shine on socket
+    socketShine.fill({ color: GAME_COLORS.primary_cta, alpha: 0.2 });
     socketShine.eventMode = 'none';
     root.addChild(socketShine);
 
@@ -145,8 +149,8 @@ export function createRewardButton(
         style: {
             fill:          borderCol,
             fontSize:      6,
-            fontFamily:    GAME_FONTS.arcade,
-            letterSpacing: 1,
+            fontFamily:    GAME_FONTS.functional,  // Exo 2
+            letterSpacing: 0.5,
         },
     });
     tier.alpha = 0.55;

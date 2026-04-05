@@ -24,6 +24,10 @@ import {
 } from '../velocityModalLayout';
 import { createVelocityGameButton } from '../velocityUiButtons';
 import { getVelocityUiTexture } from '../velocityUiArt';
+import { animateModalEntrance } from '../modalAnimations';
+import { AnimationManager } from '../AnimationManager';
+import { animateScoreCountUp, animateStarReveal } from '../contentAnimations';
+import { applyCelebratoryPulse } from '../modalPolish';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -32,10 +36,10 @@ function ts(fill: number, size: number, weight: '400'|'600'|'700'|'800' = '700',
         fill,
         fontSize: size,
         fontWeight: weight,
-        fontFamily: GAME_FONTS.arcade,
+        fontFamily: GAME_FONTS.functional,
         letterSpacing: spacing,
         dropShadow: size >= 18
-            ? { alpha: 0.6, blur: 3, color: 0x000000, distance: 2 }
+            ? { alpha: 0.5, blur: 2, color: 0x000000, distance: 1 }
             : undefined,
     });
 }
@@ -108,6 +112,9 @@ export class LevelCompleteScreen extends BaseGameScreen {
     private scoreValText!: Text;
     private starRow!: Container;
     private starCount = 0;
+    private animManager = AnimationManager.getInstance();
+    private cancelEntrance: (() => void) | null = null;
+    private cancelPolish: (() => void) | null = null;
 
     constructor(app: Application) {
         super(app);
@@ -155,9 +162,9 @@ export class LevelCompleteScreen extends BaseGameScreen {
                 fill: GAME_COLORS.accent_gold,
                 fontSize: GAME_SIZES.font.score_hero,
                 fontWeight: '800',
-                fontFamily: GAME_FONTS.arcade,
+                fontFamily: GAME_FONTS.functional,
                 letterSpacing: 2,
-                dropShadow: { alpha: 0.8, blur: 8, color: GAME_COLORS.accent_gold, distance: 0 },
+                dropShadow: { alpha: 0.4, blur: 2, color: GAME_COLORS.accent_gold, distance: 0 },
                 stroke: { color: 0x000000, width: 1.5 },
             }),
         });
@@ -210,7 +217,7 @@ export class LevelCompleteScreen extends BaseGameScreen {
             'RETRY',
             'secondary',
             () => runEndActions().onRetryRun(),
-            { width: btnW, height: 44 },
+            { width: btnW, height: 40 },
         );
         retryBtn.position.set(0, y);
         body.addChild(retryBtn);
@@ -220,7 +227,7 @@ export class LevelCompleteScreen extends BaseGameScreen {
             'MISSION SELECT',
             'secondary',
             () => gameFlow().openMissionSelect(),
-            { width: btnW, height: 44 },
+            { width: btnW, height: 40 },
         );
         mapBtn.position.set(0, y);
         body.addChild(mapBtn);
@@ -228,7 +235,11 @@ export class LevelCompleteScreen extends BaseGameScreen {
 
     refreshRunSummary(): void {
         const s = getLastRunSummary();
-        this.scoreValText.text = String(s.score);
+
+        // Animate score count-up
+        animateScoreCountUp(this.scoreValText, 0, s.score, {
+            duration: 1000,
+        });
 
         // Rebuild stars with correct count
         const { body, innerW } = this.layout;
@@ -243,11 +254,31 @@ export class LevelCompleteScreen extends BaseGameScreen {
         const scoreY = 4 + 16 + GAME_SIZES.font.score_hero + 12 + 14;
         this.starRow.position.set(0, scoreY);
         body.addChild(this.starRow);
+
+        // Animate star reveal with stagger
+        const starSprites = this.starRow.children as Container[];
+        animateStarReveal(starSprites, {
+            duration: 300,
+            starDelay: 150,
+        });
     }
 
     show(): void {
         super.show();
         this.refreshRunSummary();
+
+        // Animate modal entrance
+        this.cancelEntrance?.();
+        this.container.alpha = 0;
+        this.container.scale.set(0.95, 0.95);
+        this.cancelEntrance = animateModalEntrance(this.container, {
+            duration: 300,
+            onComplete: () => {
+                // Apply celebratory polish after entrance completes
+                this.cancelPolish?.();
+                this.cancelPolish = applyCelebratoryPulse(this.container, 0.98, 1.02, 1200);
+            },
+        });
     }
 
     resize(width: number, height: number): void {
@@ -258,5 +289,13 @@ export class LevelCompleteScreen extends BaseGameScreen {
         this.layout.panelH = panelH;
         this.layout.innerW = velocityModalInnerWidth(panelW);
         repositionVelocityModal(this.layout, width, height);
+    }
+
+    hide(): void {
+        this.cancelEntrance?.();
+        this.cancelPolish?.();
+        this.animManager.cancelGroup('modal-entrance');
+        this.animManager.cancelGroup('polish-pulse-scale');
+        super.hide();
     }
 }
