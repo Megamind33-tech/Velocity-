@@ -1,4 +1,4 @@
-import { Application, Text, TextStyle } from 'pixi.js';
+import { Application, Text, TextStyle, DisplayObject } from 'pixi.js';
 import { BaseGameScreen } from '../GameUIManager';
 import { createGameLabel } from '../GameUIComponents';
 import { GAME_COLORS, GAME_FONTS, GAME_SIZES } from '../GameUITheme';
@@ -13,12 +13,16 @@ import { createVelocityGameButton } from '../velocityUiButtons';
 import { animateModalEntrance } from '../modalAnimations';
 import { AnimationManager } from '../AnimationManager';
 import { createShimmer } from '../polishEffects';
+import { animateListReveal } from '../contentAnimations';
+import { animateModalExit } from '../modalAnimations';
 
 export class LeaderboardScreen extends BaseGameScreen {
     private layout!: VelocityModalLayout;
     private animManager = AnimationManager.getInstance();
     private cancelEntrance: (() => void) | null = null;
     private cancelPolish: (() => void) | null = null;
+    private cancelExit: (() => void) | null = null;
+    private leaderboardItems: Array<DisplayObject> = [];
 
     constructor(app: Application) {
         super(app);
@@ -41,11 +45,14 @@ export class LeaderboardScreen extends BaseGameScreen {
         ];
 
         let y = 0;
+        this.leaderboardItems = [];
         scores.forEach((entry) => {
             const entryText = `${entry.rank}. ${entry.name}  ·  ${entry.score}`;
             const label = createGameLabel(entryText, GAME_SIZES.font.lg, GAME_COLORS.primary, true);
             label.position.y = y;
+            label.alpha = 0; // Start invisible for reveal
             body.addChild(label);
+            this.leaderboardItems.push(label);
             y += GAME_SIZES.spacing.lg;
         });
 
@@ -84,6 +91,14 @@ export class LeaderboardScreen extends BaseGameScreen {
                 // Apply shimmer effect after entrance for polish
                 this.cancelPolish?.();
                 this.cancelPolish = createShimmer(this.container, { loop: true });
+
+                // Reveal leaderboard entries with stagger animation
+                if (this.leaderboardItems.length > 0) {
+                    animateListReveal(this.leaderboardItems, {
+                        duration: 300,
+                        itemDelay: 100,
+                    });
+                }
             },
         });
     }
@@ -101,8 +116,15 @@ export class LeaderboardScreen extends BaseGameScreen {
     hide(): void {
         this.cancelEntrance?.();
         this.cancelPolish?.();
+        this.cancelExit?.();
         this.animManager.cancelGroup('modal-entrance');
         this.animManager.cancelGroup('polish-shimmer');
-        super.hide();
+        this.animManager.cancelGroup('content-list');
+
+        // Smooth exit animation before hiding
+        this.cancelExit = animateModalExit(this.container, {
+            duration: 200,
+            onComplete: () => super.hide(),
+        });
     }
 }

@@ -11,6 +11,7 @@ import { velocityUiArtReady } from '../velocityUiArt';
 import { animateModalEntrance } from '../modalAnimations';
 import { AnimationManager } from '../AnimationManager';
 import { createShimmer } from '../polishEffects';
+import { animateModalExit } from '../modalAnimations';
 
 /**
  * Pause: same shell as other modals + Kenney panel + uniform buttons.
@@ -24,6 +25,7 @@ export class PauseMenuScreen extends BaseGameScreen {
     private animManager = AnimationManager.getInstance();
     private cancelEntrance: (() => void) | null = null;
     private cancelPolish: (() => void) | null = null;
+    private cancelExit: (() => void) | null = null;
 
     constructor(app: Application) {
         super(app);
@@ -232,8 +234,14 @@ export class PauseMenuScreen extends BaseGameScreen {
     hide(): void {
         this.cancelEntrance?.();
         this.cancelPolish?.();
+        this.cancelExit?.();
         this.animManager.cancelGroup('modal-entrance');
         this.animManager.cancelGroup('polish-shimmer');
-        super.hide();
+
+        // Smooth exit animation before hiding (animate panel)
+        this.cancelExit = animateModalExit(this.panel, {
+            duration: 200,
+            onComplete: () => super.hide(),
+        });
     }
 }

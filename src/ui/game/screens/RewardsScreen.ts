@@ -27,10 +27,11 @@ import {
 import { createKenneyFramedPanelWithContent } from '../kenneyNineSlice';
 import { createVelocityGameButton } from '../velocityUiButtons';
 import { VELOCITY_UI_SLICE } from '../velocityUiSlice';
-import { animateModalEntrance } from '../modalAnimations';
+import { animateModalEntrance, animateModalExit } from '../modalAnimations';
 import { AnimationManager } from '../AnimationManager';
 import { createShimmer, createSuccessFlash, createPulseScale } from '../polishEffects';
-import { animateScoreCountUp } from '../contentAnimations';
+import { animateScoreCountUp, animateTextReveal } from '../contentAnimations';
+import { animateAlpha } from '../animationHelpers';
 
 // ─── Token data ───────────────────────────────────────────────────────────────
 
@@ -230,7 +231,10 @@ export class RewardsScreen extends BaseGameScreen {
     private animManager = AnimationManager.getInstance();
     private cancelEntrance: (() => void) | null = null;
     private cancelPolish: (() => void) | null = null;
+    private cancelExit: (() => void) | null = null;
     private cardAnimations: Array<() => void> = [];
+    private cardRefs: Array<{ root: Container; delay: number }> = [];
+    private calloutText: Text | null = null;
     private activeCardElements: RewardCardElements | null = null;
 
     constructor(app: Application) {
@@ -277,7 +281,8 @@ export class RewardsScreen extends BaseGameScreen {
         const cardGap = 8;
         const cardH   = 72;
 
-        REWARD_DAYS.forEach((r) => {
+        this.cardRefs = [];
+        REWARD_DAYS.forEach((r, index) => {
             const isActive = r.day === ACTIVE_DAY;
             const cardEl = buildRewardCard(
                 innerW,
@@ -291,6 +296,9 @@ export class RewardsScreen extends BaseGameScreen {
             );
             cardEl.root.position.set(0, y);
             body.addChild(cardEl.root);
+
+            // Store card reference for staggered reveal animation
+            this.cardRefs.push({ root: cardEl.root, delay: index * 100 });
 
             // Store active card for celebration animations
             if (isActive) {
@@ -309,7 +317,9 @@ export class RewardsScreen extends BaseGameScreen {
         });
         callout.anchor.set(0.5, 0);
         callout.position.set(innerW / 2, y);
+        callout.alpha = 0; // Start invisible for reveal animation
         body.addChild(callout);
+        this.calloutText = callout;
         y += 18;
 
         // ── Claim button — gold accent, dominant CTA ────────────────────────
@@ -364,14 +374,42 @@ export class RewardsScreen extends BaseGameScreen {
         this.cardAnimations.forEach((cancel) => cancel?.());
         this.cardAnimations = [];
 
+        // Staggered reveal animation for all reward cards
+        this.cardRefs.forEach(({ root, delay }) => {
+            const timeout = setTimeout(() => {
+                root.alpha = 0;
+                const fadeIn = animateAlpha(root, 0, 1, {
+                    duration: 300,
+                });
+                this.cardAnimations.push(fadeIn);
+            }, delay);
+            this.cardAnimations.push(() => clearTimeout(timeout));
+        });
+
+        // Text reveal animation for callout
+        if (this.calloutText) {
+            const timeout = setTimeout(() => {
+                this.calloutText!.alpha = 1;
+                const reveal = animateTextReveal(this.calloutText!, 'Return tomorrow to keep your streak!', {
+                    duration: 500,
+                    letterDelay: 15,
+                });
+                this.cardAnimations.push(reveal);
+            }, this.cardRefs.length * 100 + 100);
+            this.cardAnimations.push(() => clearTimeout(timeout));
+        }
+
         if (this.activeCardElements) {
             const { valueText, unitLabel, root } = this.activeCardElements;
 
-            // Celebrate active card with scale pulse
-            const cardPulse = createPulseScale(root, 0.98, 1.02, 1200, { loop: true });
-            this.cardAnimations.push(cardPulse);
+            // Celebrate active card with scale pulse (after stagger completes)
+            const timeout = setTimeout(() => {
+                const cardPulse = createPulseScale(root, 0.98, 1.02, 1200, { loop: true });
+                this.cardAnimations.push(cardPulse);
+            }, 500);
+            this.cardAnimations.push(() => clearTimeout(timeout));
 
-            // Token count-up animation: 0 → value over 800ms
+            // Token count-up animation: 0 → value over 800ms (after stagger)
             const fromTokens = 0;
             const toTokens = parseInt(valueText.text.replace('+', ''), 10) || 0;
 
@@ -379,23 +417,29 @@ export class RewardsScreen extends BaseGameScreen {
             const originalTokenText = valueText.text;
             valueText.text = '+0';
 
-            const countUp = animateScoreCountUp(
-                valueText as any,
-                fromTokens,
-                toTokens,
-                {
-                    duration: 800,
-                    onComplete: () => {
-                        // Restore proper format after count-up
-                        valueText.text = originalTokenText;
-                    },
-                }
-            );
-            this.cardAnimations.push(countUp);
+            const countTimeout = setTimeout(() => {
+                const countUp = animateScoreCountUp(
+                    valueText as any,
+                    fromTokens,
+                    toTokens,
+                    {
+                        duration: 800,
+                        onComplete: () => {
+                            // Restore proper format after count-up
+                            valueText.text = originalTokenText;
+                        },
+                    }
+                );
+                this.cardAnimations.push(countUp);
+            }, 500);
+            this.cardAnimations.push(() => clearTimeout(countTimeout));
 
             // Success flash on the active card (subtle highlight)
-            const flash = createSuccessFlash(root, 400, {});
-            this.cardAnimations.push(flash);
+            const flashTimeout = setTimeout(() => {
+                const flash = createSuccessFlash(root, 400, {});
+                this.cardAnimations.push(flash);
+            }, 500);
+            this.cardAnimations.push(() => clearTimeout(flashTimeout));
         }
     }
 
@@ -412,6 +456,7 @@ export class RewardsScreen extends BaseGameScreen {
     hide(): void {
         this.cancelEntrance?.();
         this.cancelPolish?.();
+        this.cancelExit?.();
         this.cardAnimations.forEach((cancel) => cancel?.());
         this.cardAnimations = [];
         this.animManager.cancelGroup('modal-entrance');
@@ -419,6 +464,11 @@ export class RewardsScreen extends BaseGameScreen {
         this.animManager.cancelGroup('content-score');
         this.animManager.cancelGroup('polish-flash');
         this.animManager.cancelGroup('polish-pulse');
-        super.hide();
+
+        // Smooth exit animation before hiding
+        this.cancelExit = animateModalExit(this.container, {
+            duration: 200,
+            onComplete: () => super.hide(),
+        });
     }
 }
