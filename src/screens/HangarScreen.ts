@@ -311,7 +311,7 @@ export class HangarScreen extends Container {
         root.addChild(title);
 
         // Back button
-        const back = this.buildTapButton('← BACK', 78, 34, C.bgElevated, C.cyan, () => {
+        const back = this.buildTapButton('← MENU', 92, 34, C.bgElevated, C.gold, () => {
             navigationEvents.navigate('main-menu' as any);
         });
         back.position.set(x, y + (h - 34) / 2);
@@ -692,9 +692,9 @@ export class HangarScreen extends Container {
         const BTN_W = Math.floor((w - PAD * 3) / 2);
         const by    = y + (h - BTN_H) / 2;
 
-        const backBtn = this.buildActionButton('← MAIN MENU', BTN_W, BTN_H, C.bgElevated, () => {
+        const backBtn = this.buildActionButton('← BACK TO MENU', BTN_W, BTN_H, C.gold, () => {
             navigationEvents.navigate('main-menu' as any);
-        }, false, /* ghost */ true);
+        });
         backBtn.position.set(PAD, by);
         root.addChild(backBtn);
 
