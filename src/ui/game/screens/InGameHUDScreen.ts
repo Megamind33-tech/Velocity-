@@ -42,9 +42,9 @@ function labelStyle(fill: number): TextStyle {
     return new TextStyle({
         fill,
         fontSize: SZ_LABEL,
-        fontFamily: GAME_FONTS.narrow,
+        fontFamily: GAME_FONTS.functional,
         fontWeight: 'bold',
-        letterSpacing: 2,
+        letterSpacing: 1,
     });
 }
 
@@ -52,10 +52,10 @@ function majorStyle(fill: number): TextStyle {
     return new TextStyle({
         fill,
         fontSize: SZ_MAJOR,
-        fontFamily: GAME_FONTS.arcade,
+        fontFamily: GAME_FONTS.numerical,
         fontWeight: 'bold',
-        letterSpacing: 1,
-        dropShadow: { alpha: 0.7, blur: 3, color: 0x000000, distance: 2 },
+        letterSpacing: 0,
+        dropShadow: { alpha: 0.6, blur: 2, color: GAME_COLORS.bg_base, distance: 1 },
     });
 }
 
@@ -63,10 +63,10 @@ function secondaryStyle(fill: number): TextStyle {
     return new TextStyle({
         fill,
         fontSize: SZ_SECOND,
-        fontFamily: GAME_FONTS.arcade,
+        fontFamily: GAME_FONTS.numerical,
         fontWeight: 'bold',
-        letterSpacing: 1,
-        dropShadow: { alpha: 0.55, blur: 2, color: 0x000000, distance: 1 },
+        letterSpacing: 0,
+        dropShadow: { alpha: 0.4, blur: 1, color: GAME_COLORS.bg_base, distance: 1 },
     });
 }
 
@@ -74,10 +74,10 @@ function detailStyle(fill: number): TextStyle {
     return new TextStyle({
         fill,
         fontSize: SZ_DETAIL,
-        fontFamily: GAME_FONTS.narrow,
+        fontFamily: GAME_FONTS.functional,
         fontWeight: 'bold',
         letterSpacing: 0.5,
-        dropShadow: { alpha: 0.5, blur: 2, color: 0x000000, distance: 1 },
+        dropShadow: { alpha: 0.4, blur: 1, color: GAME_COLORS.bg_base, distance: 1 },
     });
 }
 
