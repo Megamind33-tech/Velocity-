@@ -187,9 +187,9 @@ export class ShopScreen extends Container {
     const progressContent = this.createProgressContent();
     this.progressPanel.addContent(progressContent);
 
-    // Navigation bar
+    // Navigation bar (3 rows now: gameplay + navigation)
     this.navigation = this.createNavigation();
-    this.navigation.position.set(40, 1680);
+    this.navigation.position.set(40, 1620);
     this.addChild(this.navigation);
   }
 
@@ -526,6 +526,8 @@ export class ShopScreen extends Container {
       { label: 'CLASSIC', variant: 'secondary' as const, action: 'classic' },
       { label: 'UPGRADE', variant: 'warning' as const, action: 'upgrade' },
       { label: 'EXIT', variant: 'danger' as const, action: 'exit' },
+      { label: 'HANGAR', variant: 'primary' as const, action: 'hangar' },
+      { label: 'PLANE STORE', variant: 'primary' as const, action: 'plane-store' },
     ];
 
     navButtons.forEach((btnConfig, index) => {
