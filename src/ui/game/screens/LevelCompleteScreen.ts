@@ -27,6 +27,7 @@ import { getVelocityUiTexture } from '../velocityUiArt';
 import { animateModalEntrance } from '../modalAnimations';
 import { AnimationManager } from '../AnimationManager';
 import { animateScoreCountUp, animateStarReveal } from '../contentAnimations';
+import { applyCelebratoryPulse } from '../modalPolish';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -113,6 +114,7 @@ export class LevelCompleteScreen extends BaseGameScreen {
     private starCount = 0;
     private animManager = AnimationManager.getInstance();
     private cancelEntrance: (() => void) | null = null;
+    private cancelPolish: (() => void) | null = null;
 
     constructor(app: Application) {
         super(app);
@@ -271,6 +273,11 @@ export class LevelCompleteScreen extends BaseGameScreen {
         this.container.scale.set(0.95, 0.95);
         this.cancelEntrance = animateModalEntrance(this.container, {
             duration: 300,
+            onComplete: () => {
+                // Apply celebratory polish after entrance completes
+                this.cancelPolish?.();
+                this.cancelPolish = applyCelebratoryPulse(this.container, 0.98, 1.02, 1200);
+            },
         });
     }
 
@@ -286,7 +293,9 @@ export class LevelCompleteScreen extends BaseGameScreen {
 
     hide(): void {
         this.cancelEntrance?.();
+        this.cancelPolish?.();
         this.animManager.cancelGroup('modal-entrance');
+        this.animManager.cancelGroup('polish-pulse-scale');
         super.hide();
     }
 }

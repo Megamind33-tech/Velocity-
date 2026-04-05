@@ -24,6 +24,7 @@ import { fitLabelToWidth } from '../menuShared/fitLabelToWidth';
 import { animateModalEntrance } from '../modalAnimations';
 import { AnimationManager } from '../AnimationManager';
 import { animateScoreCountUp } from '../contentAnimations';
+import { createGlowPulse } from '../polishEffects';
 
 function ts(fill: number, size: number, weight: '400'|'600'|'700'|'800' = '700', spacing = 0): TextStyle {
     return new TextStyle({
@@ -44,6 +45,7 @@ export class GameOverScreen extends BaseGameScreen {
     private scoreY = 0;
     private animManager = AnimationManager.getInstance();
     private cancelEntrance: (() => void) | null = null;
+    private cancelPolish: (() => void) | null = null;
 
     constructor(app: Application) {
         super(app);
@@ -198,6 +200,11 @@ export class GameOverScreen extends BaseGameScreen {
         this.container.scale.set(0.95, 0.95);
         this.cancelEntrance = animateModalEntrance(this.container, {
             duration: 300,
+            onComplete: () => {
+                // Apply subtle glow pulse after entrance (less intense than level complete)
+                this.cancelPolish?.();
+                this.cancelPolish = createGlowPulse(this.container, 0.95, 1.0, { loop: true });
+            },
         });
     }
 
@@ -213,7 +220,9 @@ export class GameOverScreen extends BaseGameScreen {
 
     hide(): void {
         this.cancelEntrance?.();
+        this.cancelPolish?.();
         this.animManager.cancelGroup('modal-entrance');
+        this.animManager.cancelGroup('polish-glow');
         super.hide();
     }
 }
