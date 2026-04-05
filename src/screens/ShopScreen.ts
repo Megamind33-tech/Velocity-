@@ -56,11 +56,50 @@ export class ShopScreen extends Container {
   private selectedTreasureId: string | null = null;
   private selectedItemId: string | null = null;
 
+  // Responsive layout properties
+  private screenWidth: number = 1080;
+  private screenHeight: number = 1920;
+  private isMobilePortrait: boolean = false;
+
   constructor() {
     super();
     this.loadGameData();
     this.setupBackground();
     this.setupLayout();
+  }
+
+  /**
+   * Calculate responsive dimensions based on screen size
+   */
+  private calculateLayout(): { mainPanelWidth: number; sidePanelWidth: number; isMobile: boolean } {
+    // Get actual screen dimensions
+    this.screenWidth = Math.max(this.screenWidth || 1080, 360);
+    this.screenHeight = Math.max(this.screenHeight || 1920, 600);
+
+    // Determine if mobile portrait (narrow screens)
+    this.isMobilePortrait = this.screenWidth < 768;
+
+    if (this.isMobilePortrait) {
+      // Mobile: single column
+      return {
+        mainPanelWidth: Math.max(this.screenWidth - 80, 280),
+        sidePanelWidth: Math.max(this.screenWidth - 80, 280),
+        isMobile: true,
+      };
+    } else {
+      // Desktop: two columns
+      const totalPad = 80;
+      const gutterWidth = 40;
+      const availableWidth = this.screenWidth - totalPad - gutterWidth;
+      const mainWidth = Math.round(availableWidth * 0.64);
+      const sideWidth = availableWidth - mainWidth;
+
+      return {
+        mainPanelWidth: mainWidth,
+        sidePanelWidth: sideWidth,
+        isMobile: false,
+      };
+    }
   }
 
   /**
@@ -137,60 +176,125 @@ export class ShopScreen extends Container {
   }
 
   /**
-   * Setup main screen layout
+   * Setup main screen layout (responsive to screen size)
    */
   private setupLayout(): void {
+    const layout = this.calculateLayout();
+
     // Screen title with glow
     this.addScreenTitle();
 
-    // Left panel - Treasures
-    this.mainPanel = new UIPanel({
-      width: 640,
-      height: 1200,
-      hasHeader: true,
-      headerText: 'TREASURES',
-      style: 'primary',
-    });
-    this.mainPanel.position.set(40, 120);
-    this.addChild(this.mainPanel);
+    const mainWidth = layout.mainPanelWidth;
+    const sideWidth = layout.sidePanelWidth;
+    const titleHeight = 80;
+    const padding = 40;
+    const gutter = this.isMobilePortrait ? 0 : 40;
 
-    // Treasure grid
-    this.treasureGrid = this.createTreasureGrid();
-    this.mainPanel.addContent(this.treasureGrid);
+    if (this.isMobilePortrait) {
+      // Mobile layout: vertical stack
+      let yPos = titleHeight + padding;
 
-    // Right panel - Items
-    this.itemsPanel = new UIPanel({
-      width: 360,
-      height: 1200,
-      hasHeader: true,
-      headerText: 'ITEMS',
-      style: 'secondary',
-    });
-    this.itemsPanel.position.set(720, 120);
-    this.addChild(this.itemsPanel);
+      // Full-width treasures panel
+      this.mainPanel = new UIPanel({
+        width: mainWidth,
+        height: 600,
+        hasHeader: true,
+        headerText: 'TREASURES',
+        style: 'primary',
+      });
+      this.mainPanel.position.set(padding, yPos);
+      this.addChild(this.mainPanel);
 
-    // Selected item display
-    this.selectedItemPanel = this.createSelectedItemDisplay();
-    this.itemsPanel.addContent(this.selectedItemPanel);
+      this.treasureGrid = this.createTreasureGrid();
+      this.mainPanel.addContent(this.treasureGrid);
 
-    // Progress section
-    this.progressPanel = new UIPanel({
-      width: 360,
-      height: 500,
-      hasHeader: true,
-      headerText: 'PROGRESS',
-      style: 'dark',
-    });
-    this.progressPanel.position.set(720, 1360);
-    this.addChild(this.progressPanel);
+      yPos += this.mainPanel.height + 20;
 
-    const progressContent = this.createProgressContent();
-    this.progressPanel.addContent(progressContent);
+      // Full-width items panel
+      this.itemsPanel = new UIPanel({
+        width: mainWidth,
+        height: 500,
+        hasHeader: true,
+        headerText: 'ITEMS',
+        style: 'secondary',
+      });
+      this.itemsPanel.position.set(padding, yPos);
+      this.addChild(this.itemsPanel);
 
-    // Navigation bar (3 rows now: gameplay + navigation)
-    this.navigation = this.createNavigation();
-    this.navigation.position.set(40, 1620);
-    this.addChild(this.navigation);
+      this.selectedItemPanel = this.createSelectedItemDisplay();
+      this.itemsPanel.addContent(this.selectedItemPanel);
+
+      yPos += this.itemsPanel.height + 20;
+
+      // Full-width progress panel
+      this.progressPanel = new UIPanel({
+        width: mainWidth,
+        height: 350,
+        hasHeader: true,
+        headerText: 'PROGRESS',
+        style: 'dark',
+      });
+      this.progressPanel.position.set(padding, yPos);
+      this.addChild(this.progressPanel);
+
+      const progressContent = this.createProgressContent();
+      this.progressPanel.addContent(progressContent);
+
+      yPos += this.progressPanel.height + 30;
+
+      // Navigation at bottom
+      this.navigation = this.createNavigation();
+      this.navigation.position.set(padding, yPos);
+      this.addChild(this.navigation);
+    } else {
+      // Desktop layout: two columns
+      // Left panel - Treasures
+      this.mainPanel = new UIPanel({
+        width: mainWidth,
+        height: 1200,
+        hasHeader: true,
+        headerText: 'TREASURES',
+        style: 'primary',
+      });
+      this.mainPanel.position.set(padding, titleHeight);
+      this.addChild(this.mainPanel);
+
+      this.treasureGrid = this.createTreasureGrid();
+      this.mainPanel.addContent(this.treasureGrid);
+
+      // Right panel - Items
+      this.itemsPanel = new UIPanel({
+        width: sideWidth,
+        height: 1200,
+        hasHeader: true,
+        headerText: 'ITEMS',
+        style: 'secondary',
+      });
+      this.itemsPanel.position.set(padding + mainWidth + gutter, titleHeight);
+      this.addChild(this.itemsPanel);
+
+      this.selectedItemPanel = this.createSelectedItemDisplay();
+      this.itemsPanel.addContent(this.selectedItemPanel);
+
+      // Progress section
+      this.progressPanel = new UIPanel({
+        width: sideWidth,
+        height: 500,
+        hasHeader: true,
+        headerText: 'PROGRESS',
+        style: 'dark',
+      });
+      this.progressPanel.position.set(padding + mainWidth + gutter, titleHeight + 1240);
+      this.addChild(this.progressPanel);
+
+      const progressContent = this.createProgressContent();
+      this.progressPanel.addContent(progressContent);
+
+      // Navigation bar
+      this.navigation = this.createNavigation();
+      this.navigation.position.set(padding, 1620);
+      this.addChild(this.navigation);
+    }
   }
 
   /**

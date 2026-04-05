@@ -49,11 +49,50 @@ export class HangarScreen extends Container {
   private planesGridContainer: Container;
   private navigation: Container;
 
+  // Responsive layout properties
+  private screenWidth: number = 1080;
+  private screenHeight: number = 1920;
+  private isMobilePortrait: boolean = false;
+
   constructor() {
     super();
     this.loadGameData();
     this.setupBackground();
     this.setupLayout();
+  }
+
+  /**
+   * Calculate responsive dimensions based on screen size
+   */
+  private calculateLayout(): { panelWidth: number; detailsWidth: number; isMobile: boolean } {
+    // Get actual screen dimensions
+    this.screenWidth = Math.max(this.screenWidth || 1080, 360);
+    this.screenHeight = Math.max(this.screenHeight || 1920, 600);
+
+    // Determine if mobile portrait (narrow screens)
+    this.isMobilePortrait = this.screenWidth < 768;
+
+    if (this.isMobilePortrait) {
+      // Mobile: single column, full width with padding
+      return {
+        panelWidth: Math.max(this.screenWidth - 80, 280),
+        detailsWidth: Math.max(this.screenWidth - 80, 280),
+        isMobile: true,
+      };
+    } else {
+      // Desktop/Tablet: two columns
+      const totalPad = 80; // 40 + 40 margins
+      const gutterWidth = 40; // spacing between panels
+      const availableWidth = this.screenWidth - totalPad - gutterWidth;
+      const leftWidth = Math.round(availableWidth * 0.6);
+      const rightWidth = availableWidth - leftWidth;
+
+      return {
+        panelWidth: leftWidth,
+        detailsWidth: rightWidth,
+        isMobile: false,
+      };
+    }
   }
 
   /**
@@ -156,53 +195,113 @@ export class HangarScreen extends Container {
   }
 
   /**
-   * Setup main layout
+   * Setup main layout (responsive to screen size)
    */
   private setupLayout(): void {
+    const layout = this.calculateLayout();
+
     // Screen title
     this.addScreenTitle();
 
-    // Left panel - Planes grid
-    this.planesPanel = new UIPanel({
-      width: 640,
-      height: 1400,
-      hasHeader: true,
-      headerText: 'YOUR FLEET',
-      style: 'primary',
-    });
-    this.planesPanel.position.set(40, 120);
-    this.addChild(this.planesPanel);
+    const panelWidth = layout.panelWidth;
+    const detailsWidth = layout.detailsWidth;
+    const titleHeight = 80;
+    const padding = 40;
+    const gutter = this.isMobilePortrait ? 0 : 40;
 
-    // Planes grid
-    this.planesGridContainer = this.createPlanesGrid();
-    this.planesPanel.addContent(this.planesGridContainer);
+    if (this.isMobilePortrait) {
+      // Mobile layout: vertical stack
+      let yPos = titleHeight + padding;
 
-    // Right top panel - Details
-    this.detailsPanel = new UIPanel({
-      width: 360,
-      height: 800,
-      hasHeader: true,
-      headerText: 'PLANE DETAILS',
-      style: 'secondary',
-    });
-    this.detailsPanel.position.set(720, 120);
-    this.addChild(this.detailsPanel);
+      // Full-width planes panel
+      this.planesPanel = new UIPanel({
+        width: panelWidth,
+        height: 600,
+        hasHeader: true,
+        headerText: 'YOUR FLEET',
+        style: 'primary',
+      });
+      this.planesPanel.position.set(padding, yPos);
+      this.addChild(this.planesPanel);
 
-    // Right bottom panel - Customization
-    this.customizationPanel = new UIPanel({
-      width: 360,
-      height: 540,
-      hasHeader: true,
-      headerText: 'UPGRADES',
-      style: 'dark',
-    });
-    this.customizationPanel.position.set(720, 960);
-    this.addChild(this.customizationPanel);
+      this.planesGridContainer = this.createPlanesGrid();
+      this.planesPanel.addContent(this.planesGridContainer);
 
-    // Navigation bar
-    this.navigation = this.createNavigation();
-    this.navigation.position.set(40, 1680);
-    this.addChild(this.navigation);
+      yPos += this.planesPanel.height + 20;
+
+      // Full-width details panel
+      this.detailsPanel = new UIPanel({
+        width: panelWidth,
+        height: 500,
+        hasHeader: true,
+        headerText: 'PLANE DETAILS',
+        style: 'secondary',
+      });
+      this.detailsPanel.position.set(padding, yPos);
+      this.addChild(this.detailsPanel);
+
+      yPos += this.detailsPanel.height + 20;
+
+      // Full-width customization panel
+      this.customizationPanel = new UIPanel({
+        width: panelWidth,
+        height: 400,
+        hasHeader: true,
+        headerText: 'UPGRADES',
+        style: 'dark',
+      });
+      this.customizationPanel.position.set(padding, yPos);
+      this.addChild(this.customizationPanel);
+
+      yPos += this.customizationPanel.height + 30;
+
+      // Navigation at bottom
+      this.navigation = this.createNavigation();
+      this.navigation.position.set(padding, yPos);
+      this.addChild(this.navigation);
+    } else {
+      // Desktop layout: two columns
+      // Left panel - Planes grid
+      this.planesPanel = new UIPanel({
+        width: panelWidth,
+        height: 1400,
+        hasHeader: true,
+        headerText: 'YOUR FLEET',
+        style: 'primary',
+      });
+      this.planesPanel.position.set(padding, titleHeight);
+      this.addChild(this.planesPanel);
+
+      this.planesGridContainer = this.createPlanesGrid();
+      this.planesPanel.addContent(this.planesGridContainer);
+
+      // Right top panel - Details
+      this.detailsPanel = new UIPanel({
+        width: detailsWidth,
+        height: 800,
+        hasHeader: true,
+        headerText: 'PLANE DETAILS',
+        style: 'secondary',
+      });
+      this.detailsPanel.position.set(padding + panelWidth + gutter, titleHeight);
+      this.addChild(this.detailsPanel);
+
+      // Right bottom panel - Customization
+      this.customizationPanel = new UIPanel({
+        width: detailsWidth,
+        height: 540,
+        hasHeader: true,
+        headerText: 'UPGRADES',
+        style: 'dark',
+      });
+      this.customizationPanel.position.set(padding + panelWidth + gutter, titleHeight + 840);
+      this.addChild(this.customizationPanel);
+
+      // Navigation bar
+      this.navigation = this.createNavigation();
+      this.navigation.position.set(padding, 1680);
+      this.addChild(this.navigation);
+    }
 
     // Initial selection
     if (this.selectedPlaneId) {

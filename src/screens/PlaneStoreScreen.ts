@@ -47,11 +47,42 @@ export class PlaneStoreScreen extends Container {
   private catalogGridContainer: Container;
   private navigation: Container;
 
+  // Responsive layout properties
+  private screenWidth: number = 1080;
+  private screenHeight: number = 1920;
+  private isMobilePortrait: boolean = false;
+
   constructor() {
     super();
     this.loadStoreData();
     this.setupBackground();
     this.setupLayout();
+  }
+
+  /**
+   * Calculate responsive dimensions based on screen size
+   */
+  private calculateLayout(): { panelWidth: number; isMobile: boolean } {
+    // Get actual screen dimensions
+    this.screenWidth = Math.max(this.screenWidth || 1080, 360);
+    this.screenHeight = Math.max(this.screenHeight || 1920, 600);
+
+    // Determine if mobile portrait (narrow screens)
+    this.isMobilePortrait = this.screenWidth < 768;
+
+    if (this.isMobilePortrait) {
+      // Mobile: single column
+      return {
+        panelWidth: Math.max(this.screenWidth - 80, 280),
+        isMobile: true,
+      };
+    } else {
+      // Desktop: full width
+      return {
+        panelWidth: 1000,
+        isMobile: false,
+      };
+    }
   }
 
   /**
@@ -148,49 +179,96 @@ export class PlaneStoreScreen extends Container {
   }
 
   /**
-   * Setup main layout
+   * Setup main layout (responsive to screen size)
    */
   private setupLayout(): void {
+    const layout = this.calculateLayout();
+    const panelWidth = layout.panelWidth;
+    const padding = 40;
+
     // Screen title
     this.addScreenTitle();
 
     // Filters bar
     this.filtersBar = this.createFiltersBar();
-    this.filtersBar.position.set(40, 120);
+    this.filtersBar.position.set(padding, 120);
     this.addChild(this.filtersBar);
 
-    // Featured plane panel
-    this.featuredPanel = new UIPanel({
-      width: 1000,
-      height: 420,
-      hasHeader: true,
-      headerText: 'FEATURED',
-      style: 'primary',
-    });
-    this.featuredPanel.position.set(40, 200);
-    this.addChild(this.featuredPanel);
+    if (this.isMobilePortrait) {
+      // Mobile layout: vertical stack
+      let yPos = 200;
 
-    const featured = this.createFeaturedCard();
-    this.featuredPanel.addContent(featured);
+      // Featured plane panel
+      this.featuredPanel = new UIPanel({
+        width: panelWidth,
+        height: 350,
+        hasHeader: true,
+        headerText: 'FEATURED',
+        style: 'primary',
+      });
+      this.featuredPanel.position.set(padding, yPos);
+      this.addChild(this.featuredPanel);
 
-    // Catalog panel
-    this.catalogPanel = new UIPanel({
-      width: 1000,
-      height: 1000,
-      hasHeader: true,
-      headerText: 'AVAILABLE PLANES',
-      style: 'secondary',
-    });
-    this.catalogPanel.position.set(40, 680);
-    this.addChild(this.catalogPanel);
+      const featured = this.createFeaturedCard();
+      this.featuredPanel.addContent(featured);
 
-    const catalog = this.createCatalogGrid();
-    this.catalogPanel.addContent(catalog);
+      yPos += this.featuredPanel.height + 20;
 
-    // Navigation bar
-    this.navigation = this.createNavigation();
-    this.navigation.position.set(40, 1780);
-    this.addChild(this.navigation);
+      // Catalog panel
+      this.catalogPanel = new UIPanel({
+        width: panelWidth,
+        height: 700,
+        hasHeader: true,
+        headerText: 'AVAILABLE PLANES',
+        style: 'secondary',
+      });
+      this.catalogPanel.position.set(padding, yPos);
+      this.addChild(this.catalogPanel);
+
+      const catalog = this.createCatalogGrid();
+      this.catalogPanel.addContent(catalog);
+
+      yPos += this.catalogPanel.height + 30;
+
+      // Navigation bar
+      this.navigation = this.createNavigation();
+      this.navigation.position.set(padding, yPos);
+      this.addChild(this.navigation);
+    } else {
+      // Desktop layout
+      // Featured plane panel
+      this.featuredPanel = new UIPanel({
+        width: panelWidth,
+        height: 420,
+        hasHeader: true,
+        headerText: 'FEATURED',
+        style: 'primary',
+      });
+      this.featuredPanel.position.set(padding, 200);
+      this.addChild(this.featuredPanel);
+
+      const featured = this.createFeaturedCard();
+      this.featuredPanel.addContent(featured);
+
+      // Catalog panel
+      this.catalogPanel = new UIPanel({
+        width: panelWidth,
+        height: 1000,
+        hasHeader: true,
+        headerText: 'AVAILABLE PLANES',
+        style: 'secondary',
+      });
+      this.catalogPanel.position.set(padding, 680);
+      this.addChild(this.catalogPanel);
+
+      const catalog = this.createCatalogGrid();
+      this.catalogPanel.addContent(catalog);
+
+      // Navigation bar
+      this.navigation = this.createNavigation();
+      this.navigation.position.set(padding, 1780);
+      this.addChild(this.navigation);
+    }
   }
 
   /**
