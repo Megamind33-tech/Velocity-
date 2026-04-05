@@ -17,6 +17,7 @@ import { getMainMenuProgress, isLevelUnlocked } from '../../../data/localProgres
 import { LEVEL_DEFINITIONS, type LevelDefinition } from '../../../data/levelDefinitions';
 import { gameFlow } from '../gameFlowBridge';
 import type { GameUIManager } from '../GameUIManager';
+import { navigationEvents } from '../../../screens/NavigationEvents';
 import { getVelocityCustomTexture } from '../velocityUiArt';
 import {
     buildTopUtilityBar,
@@ -1072,7 +1073,7 @@ function buildBottomDockPortrait(
                 label: 'HANGAR',
                 onTap: () => {
                     navIndexBySlot?.(2);
-                    ui.showScreen('hangar', true);
+                    navigationEvents.navigate('hangar');
                 },
                 draw: drawIconHangar,
                 menuIconKey: 'dock_nav_hangar',
@@ -1082,7 +1083,7 @@ function buildBottomDockPortrait(
                 label: 'STORE',
                 onTap: () => {
                     navIndexBySlot?.(3);
-                    ui.showScreen('store', true);
+                    navigationEvents.navigate('plane-store');
                 },
                 draw: drawIconStore,
                 menuIconKey: 'dock_nav_store',
