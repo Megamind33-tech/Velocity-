@@ -18,6 +18,7 @@ export type ScreenType =
     | 'leaderboard'
     | 'level-complete'
     | 'store'
+    | 'hangar'
     | 'achievements'
     | 'rewards';
 

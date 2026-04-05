@@ -57,20 +57,23 @@ export const TEXT_STYLES = {
   screenTitle: new TextStyle({
     fontFamily: FONTS.primary,
     fontSize: FONT_SIZES.h1,
-    fontWeight: FONT_WEIGHTS.extraBold,
+    fontWeight: '800',
     fill: COLORS.text.primary,
     letterSpacing: 2,
-    dropShadow: true,
-    dropShadowColor: '#000000',
-    dropShadowBlur: 8,
-    dropShadowDistance: 2,
+    dropShadow: {
+      color: 0x000000,
+      blur: 8,
+      distance: 2,
+      alpha: 0.85,
+      angle: Math.PI / 4,
+    },
   }),
 
   // Panel headers - bold, medium size
   panelHeader: new TextStyle({
     fontFamily: FONTS.primary,
     fontSize: FONT_SIZES.h2,
-    fontWeight: FONT_WEIGHTS.bold,
+    fontWeight: 'bold',
     fill: COLORS.text.primary,
     letterSpacing: 1,
   }),
@@ -79,7 +82,7 @@ export const TEXT_STYLES = {
   h3: new TextStyle({
     fontFamily: FONTS.primary,
     fontSize: FONT_SIZES.h3,
-    fontWeight: FONT_WEIGHTS.bold,
+    fontWeight: 'bold',
     fill: COLORS.text.primary,
     letterSpacing: 0.5,
   }),
@@ -88,7 +91,7 @@ export const TEXT_STYLES = {
   h4: new TextStyle({
     fontFamily: FONTS.primary,
     fontSize: FONT_SIZES.h4,
-    fontWeight: FONT_WEIGHTS.semiBold,
+    fontWeight: '600',
     fill: COLORS.text.primary,
   }),
 
@@ -96,7 +99,7 @@ export const TEXT_STYLES = {
   bodyText: new TextStyle({
     fontFamily: FONTS.secondary,
     fontSize: FONT_SIZES.body,
-    fontWeight: FONT_WEIGHTS.regular,
+    fontWeight: 'normal',
     fill: COLORS.text.secondary,
     lineHeight: LINE_HEIGHTS.normal,
   }),
@@ -105,7 +108,7 @@ export const TEXT_STYLES = {
   small: new TextStyle({
     fontFamily: FONTS.secondary,
     fontSize: FONT_SIZES.small,
-    fontWeight: FONT_WEIGHTS.regular,
+    fontWeight: 'normal',
     fill: COLORS.text.tertiary,
     lineHeight: LINE_HEIGHTS.normal,
   }),
@@ -114,7 +117,7 @@ export const TEXT_STYLES = {
   statLabel: new TextStyle({
     fontFamily: FONTS.secondary,
     fontSize: FONT_SIZES.small,
-    fontWeight: FONT_WEIGHTS.semiBold,
+    fontWeight: '600',
     fill: COLORS.text.tertiary,
     letterSpacing: 0.5,
   }),
@@ -123,7 +126,7 @@ export const TEXT_STYLES = {
   statValue: new TextStyle({
     fontFamily: FONTS.mono,
     fontSize: FONT_SIZES.h4,
-    fontWeight: FONT_WEIGHTS.semiBold,
+    fontWeight: '600',
     fill: COLORS.text.accent,
   }),
 
@@ -131,7 +134,7 @@ export const TEXT_STYLES = {
   buttonText: new TextStyle({
     fontFamily: FONTS.primary,
     fontSize: FONT_SIZES.body,
-    fontWeight: FONT_WEIGHTS.bold,
+    fontWeight: 'bold',
     fill: COLORS.text.primary,
     letterSpacing: 1.5,
   }),
@@ -140,7 +143,7 @@ export const TEXT_STYLES = {
   buttonTextSmall: new TextStyle({
     fontFamily: FONTS.primary,
     fontSize: FONT_SIZES.small,
-    fontWeight: FONT_WEIGHTS.bold,
+    fontWeight: 'bold',
     fill: COLORS.text.primary,
     letterSpacing: 1,
   }),
@@ -149,7 +152,7 @@ export const TEXT_STYLES = {
   dialogTitle: new TextStyle({
     fontFamily: FONTS.primary,
     fontSize: FONT_SIZES.h2,
-    fontWeight: FONT_WEIGHTS.bold,
+    fontWeight: 'bold',
     fill: COLORS.text.primary,
     letterSpacing: 1,
   }),
@@ -158,7 +161,7 @@ export const TEXT_STYLES = {
   dialogBody: new TextStyle({
     fontFamily: FONTS.secondary,
     fontSize: FONT_SIZES.body,
-    fontWeight: FONT_WEIGHTS.regular,
+    fontWeight: 'normal',
     fill: COLORS.text.secondary,
     align: 'center',
     wordWrap: true,
@@ -168,7 +171,7 @@ export const TEXT_STYLES = {
   disabled: new TextStyle({
     fontFamily: FONTS.secondary,
     fontSize: FONT_SIZES.body,
-    fontWeight: FONT_WEIGHTS.regular,
+    fontWeight: 'normal',
     fill: COLORS.text.disabled,
   }),
 
@@ -176,7 +179,7 @@ export const TEXT_STYLES = {
   accent: new TextStyle({
     fontFamily: FONTS.secondary,
     fontSize: FONT_SIZES.body,
-    fontWeight: FONT_WEIGHTS.semiBold,
+    fontWeight: '600',
     fill: COLORS.text.accent,
   }),
 
@@ -184,7 +187,7 @@ export const TEXT_STYLES = {
   badge: new TextStyle({
     fontFamily: FONTS.mono,
     fontSize: FONT_SIZES.tiny,
-    fontWeight: FONT_WEIGHTS.bold,
+    fontWeight: 'bold',
     fill: COLORS.text.primary,
   }),
 
@@ -192,7 +195,7 @@ export const TEXT_STYLES = {
   countdown: new TextStyle({
     fontFamily: FONTS.mono,
     fontSize: FONT_SIZES.h2,
-    fontWeight: FONT_WEIGHTS.bold,
+    fontWeight: 'bold',
     fill: COLORS.text.accent,
     letterSpacing: 2,
   }),
@@ -201,7 +204,7 @@ export const TEXT_STYLES = {
   warning: new TextStyle({
     fontFamily: FONTS.secondary,
     fontSize: FONT_SIZES.body,
-    fontWeight: FONT_WEIGHTS.semiBold,
+    fontWeight: '600',
     fill: COLORS.semantic.danger,
   }),
 
@@ -209,7 +212,7 @@ export const TEXT_STYLES = {
   success: new TextStyle({
     fontFamily: FONTS.secondary,
     fontSize: FONT_SIZES.body,
-    fontWeight: FONT_WEIGHTS.semiBold,
+    fontWeight: '600',
     fill: COLORS.semantic.success,
   }),
 } as const;

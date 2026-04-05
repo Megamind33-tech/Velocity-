@@ -23,9 +23,9 @@ interface StatsBarConfig {
 }
 
 export class StatsBar extends Container {
-  private bgBar: Graphics;
-  private fillBar: Graphics;
-  private glowBar: Graphics;
+  private bgBar!: Graphics;
+  private fillBar!: Graphics;
+  private glowBar!: Graphics;
   private labelText?: Text;
   private valueText?: Text;
   private percentageText?: Text;

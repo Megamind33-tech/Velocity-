@@ -1,608 +1,911 @@
 /**
- * HangarScreen
- * Garage/Workshop where player manages acquired planes
- * Two-panel design: plane list (left) + details (right)
+ * HangarScreen — Velocity Hangar
+ *
+ * Full-screen mobile portrait UI that lets the player browse and equip their
+ * aircraft.  Integrates real OGA plane sprites with the Velocity design
+ * language (GAME_COLORS palette, glowing borders, animated stats).
+ *
+ * Architecture
+ * ─────────────
+ * • Registered in ScreenManager → shown via navigationEvents.navigate('hangar')
+ * • Self-contained: all elements drawn inline with PixiJS 8 Graphics API so the
+ *   screen renders correctly without requiring Kenney sprite-sheet pre-loading.
+ * • Three live animations run while the screen is visible:
+ *     1. Floating selected-plane sprite  (sine-wave y offset, ~2.2 s period)
+ *     2. Glow-ring pulse on detail panel (alpha sine, phase-offset rings)
+ *     3. Stats-bar fill animation        (ease-out cubic, triggered on selection)
  */
 
-import { Container, Sprite, Graphics, Text, FederatedPointerEvent } from 'pixi.js';
-import { UIButton } from '../components/UIButton';
-import { StatsBar } from '../components/StatsBar';
-import { ColorTheme } from '../utils/ColorTheme';
+import {
+    Container,
+    Graphics,
+    Text,
+    TextStyle,
+    Sprite,
+} from 'pixi.js';
 import { navigationEvents } from './NavigationEvents';
+import {
+    getMainMenuProgress,
+    getSelectedPlaneId,
+    getUnlockedPlaneIds,
+    setSelectedPlaneId,
+} from '../data/localProgress';
+import { getPlayerPlaneTexture } from '../game/playerPlanes';
+import { GAME_COLORS } from '../ui/game/GameUITheme';
 
-interface PlaneStats {
-  power: number;
-  attack: number;
-  defense: number;
-  speed: number;
+// ─── Plane catalogue ──────────────────────────────────────────────────────────
+
+interface PlaneDef {
+    id: string;
+    label: string;
+    tier: string;
+    unlockLevel: number;
+    description: string;
+    speed: number;    // 0-100
+    agility: number;  // 0-100
+    power: number;    // 0-100
 }
 
-interface PlaneData {
-  id: string;
-  name: string;
-  type: 'FIGHTER' | 'BOMBER' | 'SPECIAL';
-  level: number;
-  owned: boolean;
-  unlockCost?: number;
-  stats: PlaneStats;
-  icon: string;
-  description: string;
-  flightHours?: number;
-  wins?: number;
-  upgrades?: string[];
-}
+const PLANES: PlaneDef[] = [
+    {
+        id: 'cadet',
+        label: 'CADET MK-I',
+        tier: 'Starter',
+        unlockLevel: 0,
+        description: 'A reliable all-rounder for new pilots. Balanced handling with forgiving flight dynamics.',
+        speed: 68,
+        agility: 74,
+        power: 58,
+    },
+    {
+        id: 'cartoon',
+        label: 'STUNT FOX',
+        tier: 'Reach Level 3',
+        unlockLevel: 3,
+        description: 'Built for aerobatics. Exceptional agility lets it thread gates that catch heavier craft.',
+        speed: 78,
+        agility: 96,
+        power: 62,
+    },
+    {
+        id: 'scout',
+        label: 'SCOUT RAPTOR',
+        tier: 'Reach Level 5',
+        unlockLevel: 5,
+        description: 'High-speed recon frame. Swift and nimble — favourite of veteran route runners.',
+        speed: 91,
+        agility: 84,
+        power: 74,
+    },
+    {
+        id: 'liner',
+        label: 'SKY LINER',
+        tier: 'Reach Level 8',
+        unlockLevel: 8,
+        description: 'Heavy transport reworked for competition. Raw power compensates for reduced agility.',
+        speed: 63,
+        agility: 57,
+        power: 93,
+    },
+    {
+        id: 'interceptor',
+        label: 'INTERCEPTOR',
+        tier: 'Reach Level 10',
+        unlockLevel: 10,
+        description: 'Elite combat frame — the pinnacle of Velocity engineering. Maximum speed and power.',
+        speed: 100,
+        agility: 79,
+        power: 97,
+    },
+];
+
+// ─── Colour aliases (Velocity design language) ────────────────────────────────
+
+const C = {
+    bgBase:      GAME_COLORS.bg_base,
+    bgSurface:   GAME_COLORS.bg_surface,
+    bgElevated:  GAME_COLORS.bg_elevated,
+    cyan:        GAME_COLORS.accent_cyan,
+    gold:        GAME_COLORS.accent_gold,
+    green:       GAME_COLORS.success,
+    danger:      GAME_COLORS.danger,
+    textPrimary: GAME_COLORS.text_primary,
+    textSec:     GAME_COLORS.text_secondary,
+    textMuted:   GAME_COLORS.text_muted,
+};
+
+// ─── HangarScreen ─────────────────────────────────────────────────────────────
 
 export class HangarScreen extends Container {
-  private selectedPlaneId: string | null = null;
-  private planesData: PlaneData[] = [];
-  private planesList: Container;
-  private detailsPanel: Container;
-  private navigation: Container;
-  private scrollOffset: number = 0;
 
-  constructor() {
-    super();
-    this.loadGameData();
-    this.setupBackground();
-    this.setupLayout();
-  }
+    // ── state ──────────────────────────────────────────────────────────────
+    private selectedId  = 'cadet';
+    private unlockedIds = new Set<string>(['cadet']);
 
-  /**
-   * Load game data
-   */
-  private loadGameData(): void {
-    this.planesData = [
-      {
-        id: '1',
-        name: 'RED JET',
-        type: 'FIGHTER',
-        level: 5,
-        owned: true,
-        stats: { power: 85, attack: 90, defense: 70, speed: 95 },
-        icon: 'plane_red.png',
-        description: 'Fast interceptor with balanced stats',
-        flightHours: 120,
-        wins: 48,
-        upgrades: ['Weapons-II', 'Engine-Turbo'],
-      },
-      {
-        id: '2',
-        name: 'BLUE A1',
-        type: 'FIGHTER',
-        level: 3,
-        owned: true,
-        stats: { power: 75, attack: 80, defense: 75, speed: 85 },
-        icon: 'plane_blue.png',
-        description: 'All-rounder fighter',
-        flightHours: 45,
-        wins: 18,
-        upgrades: ['Armor-I'],
-      },
-      {
-        id: '3',
-        name: 'YELLOW',
-        type: 'FIGHTER',
-        level: 4,
-        owned: true,
-        stats: { power: 80, attack: 75, defense: 65, speed: 100 },
-        icon: 'plane_yellow.png',
-        description: 'Agile speedster',
-        flightHours: 78,
-        wins: 32,
-        upgrades: [],
-      },
-      {
-        id: '4',
-        name: 'PURPLE BOMBER',
-        type: 'BOMBER',
-        level: 0,
-        owned: false,
-        unlockCost: 1500,
-        stats: { power: 95, attack: 85, defense: 60, speed: 70 },
-        icon: 'plane_purple.png',
-        description: 'Heavy bomber with devastating power',
-      },
-      {
-        id: '5',
-        name: 'STEALTH',
-        type: 'SPECIAL',
-        level: 0,
-        owned: false,
-        unlockCost: 2500,
-        stats: { power: 90, attack: 80, defense: 80, speed: 90 },
-        icon: 'plane_stealth.png',
-        description: 'Advanced stealth technology',
-      },
-      {
-        id: '6',
-        name: 'GREEN GUARDIAN',
-        type: 'FIGHTER',
-        level: 1,
-        owned: true,
-        stats: { power: 70, attack: 65, defense: 90, speed: 75 },
-        icon: 'plane_green.png',
-        description: 'Tank with heavy armor',
-        flightHours: 12,
-        wins: 5,
-        upgrades: [],
-      },
-    ];
+    // ── layer roots ────────────────────────────────────────────────────────
+    private bgLayer:     Container;
+    private headerLayer: Container;
+    private rosterLayer: Container;
+    private detailLayer: Container;
+    private navLayer:    Container;
 
-    const firstOwned = this.planesData.find((p) => p.owned);
-    if (firstOwned) {
-      this.selectedPlaneId = firstOwned.id;
-    }
-  }
+    // ── live animation handles ─────────────────────────────────────────────
+    private floatRAF:    number | null = null;
+    private glowRAF:     number | null = null;
+    private floatSprite: Sprite  | null = null;
+    private glowRing1:   Graphics | null = null;
+    private glowRing2:   Graphics | null = null;
 
-  /**
-   * Setup background
-   */
-  private setupBackground(): void {
-    const bg = new Graphics();
-    bg.beginFill(ColorTheme.get('background.primary'));
-    bg.drawRect(0, 0, 400, 900);
-    bg.endFill();
-    this.addChildAt(bg, 0);
-  }
+    // ── last known screen dimensions ───────────────────────────────────────
+    private sw = 390;
+    private sh = 844;
 
-  /**
-   * Setup layout - Two panel design
-   */
-  private setupLayout(): void {
-    // Title with glow effect
-    const title = new Text('HANGAR', {
-      fontSize: 32,
-      fontWeight: 'bold',
-      fontFamily: 'Orbitron, Arial',
-      fill: ColorTheme.get('brand.primary'),
-      dropShadow: {
-        color: ColorTheme.get('brand.primary'),
-        blur: 10,
-        distance: 0,
-        alpha: 0.6,
-      },
-    });
-    title.position.set(16, 12);
-    this.addChild(title);
+    constructor() {
+        super();
+        this.bgLayer     = new Container();
+        this.headerLayer = new Container();
+        this.rosterLayer = new Container();
+        this.detailLayer = new Container();
+        this.navLayer    = new Container();
 
-    const padding = 12;
-    const panelWidth = 170;
-    const leftX = padding;
-    const rightX = padding + panelWidth + 12;
+        this.addChild(this.bgLayer);
+        this.addChild(this.headerLayer);
+        this.addChild(this.rosterLayer);
+        this.addChild(this.detailLayer);
+        this.addChild(this.navLayer);
 
-    // LEFT PANEL - Planes List with AAA styling
-    this.planesList = new Container();
-    this.planesList.position.set(leftX, 55);
-    this.addChild(this.planesList);
-
-    const leftBg = new Graphics();
-    // Glowing cyan border - AAA style
-    leftBg.lineStyle(3, ColorTheme.get('brand.primary'), 1);
-    leftBg.drawRoundedRect(0, 0, panelWidth, 640, 8);
-    leftBg.endFill();
-
-    // Fill with dark semi-transparent background
-    leftBg.beginFill(ColorTheme.get('background.secondary'), 0.4);
-    leftBg.drawRoundedRect(1, 1, panelWidth - 2, 638, 7);
-    leftBg.endFill();
-    this.planesList.addChildAt(leftBg, 0);
-
-    let yPos = 8;
-    this.planesData.forEach((plane, index) => {
-      const planeItem = this.createPlaneListItem(plane, index + 1);
-      planeItem.position.set(4, yPos);
-      this.planesList.addChild(planeItem);
-      yPos += 100;
-    });
-
-    // RIGHT PANEL - Details with AAA styling
-    this.detailsPanel = new Container();
-    this.detailsPanel.position.set(rightX, 55);
-    this.addChild(this.detailsPanel);
-
-    const rightBg = new Graphics();
-    // Glowing green border - AAA style
-    rightBg.lineStyle(3, ColorTheme.get('brand.secondary'), 1);
-    rightBg.drawRoundedRect(0, 0, panelWidth, 640, 8);
-    rightBg.endFill();
-
-    rightBg.beginFill(ColorTheme.get('background.secondary'), 0.4);
-    rightBg.drawRoundedRect(1, 1, panelWidth - 2, 638, 7);
-    rightBg.endFill();
-    this.detailsPanel.addChildAt(rightBg, 0);
-
-    this.updateDetailsPanel();
-
-    // Navigation bar at bottom - VISIBLE with proper styling
-    this.navigation = this.createNavigation();
-    this.navigation.position.set(padding, 710);
-    this.addChild(this.navigation);
-  }
-
-  /**
-   * Create plane list item with icon and info
-   */
-  private createPlaneListItem(plane: PlaneData, index: number): Container {
-    const item = new Container();
-
-    // Item background with AAA styling - glowing border on selection
-    const isSelected = this.selectedPlaneId === plane.id;
-
-    // Border for selected
-    if (isSelected) {
-      const border = new Graphics();
-      border.lineStyle(2, ColorTheme.get('brand.primary'), 0.8);
-      border.drawRoundedRect(0, 0, 162, 96, 4);
-      border.endFill();
-      item.addChild(border);
+        this.visible = false;
     }
 
-    const bg = new Graphics();
-    bg.beginFill(
-      isSelected ? ColorTheme.get('brand.primary') : ColorTheme.get('background.secondary'),
-      isSelected ? 0.3 : 0.2
-    );
-    bg.drawRoundedRect(1, 1, 160, 94, 3);
-    bg.endFill();
-    item.addChild(bg);
+    // ═════════════════════════════════════════════════════════════════════════
+    //  Lifecycle (ScreenManager calls these)
+    // ═════════════════════════════════════════════════════════════════════════
 
-    // Number badge
-    const numBg = new Graphics();
-    numBg.beginFill(ColorTheme.get('brand.primary'), 0.8);
-    numBg.drawCircle(0, 0, 12);
-    numBg.endFill();
-    numBg.position.set(14, 14);
-    item.addChild(numBg);
-
-    const numText = new Text(String(index), {
-      fontSize: 14,
-      fontWeight: 'bold',
-      fontFamily: 'Oxanium, Arial',
-      fill: 0xffffff,
-    });
-    numText.anchor.set(0.5);
-    numText.position.set(14, 14);
-    item.addChild(numText);
-
-    // Plane icon placeholder
-    const iconBg = new Graphics();
-    iconBg.beginFill(ColorTheme.get('brand.secondary'), 0.5);
-    iconBg.drawRoundedRect(0, 0, 40, 40, 3);
-    iconBg.endFill();
-    iconBg.position.set(34, 8);
-    item.addChild(iconBg);
-
-    // Plane name
-    const nameText = new Text(plane.name, {
-      fontSize: 12,
-      fontWeight: 'bold',
-      fontFamily: 'Exo 2, Arial',
-      fill: ColorTheme.get('text.primary'),
-      wordWrap: true,
-      wordWrapWidth: 130,
-    });
-    nameText.position.set(8, 52);
-    item.addChild(nameText);
-
-    // Type and level on same line
-    const typeBg = new Graphics();
-    const typeColor = plane.type === 'FIGHTER' ? 0x7c3aed : plane.type === 'BOMBER' ? 0xdc2626 : 0x06b6d4;
-    typeBg.beginFill(typeColor, 0.7);
-    typeBg.drawRoundedRect(0, 0, 48, 18, 2);
-    typeBg.endFill();
-    typeBg.position.set(8, 76);
-    item.addChild(typeBg);
-
-    const typeText = new Text(plane.type, {
-      fontSize: 9,
-      fontWeight: 'bold',
-      fontFamily: 'Oxanium, Arial',
-      fill: 0xffffff,
-    });
-    typeText.position.set(10, 78);
-    item.addChild(typeText);
-
-    const levelBg = new Graphics();
-    levelBg.beginFill(ColorTheme.get('brand.secondary'), 0.7);
-    levelBg.drawRoundedRect(0, 0, 44, 18, 2);
-    levelBg.endFill();
-    levelBg.position.set(130, 76);
-    item.addChild(levelBg);
-
-    const levelText = new Text(`LVL ${plane.level}`, {
-      fontSize: 9,
-      fontWeight: 'bold',
-      fontFamily: 'Oxanium, Arial',
-      fill: 0xffffff,
-    });
-    levelText.position.set(132, 78);
-    item.addChild(levelText);
-
-    // Clickable
-    item.eventMode = 'static';
-    item.cursor = 'pointer';
-    item.on('pointerdown', () => {
-      this.selectedPlaneId = plane.id;
-      this.setupLayout(); // Refresh to show selection
-      this.updateDetailsPanel();
-    });
-
-    return item;
-  }
-
-  /**
-   * Update details panel on the right
-   */
-  private updateDetailsPanel(): void {
-    this.detailsPanel.removeChildren();
-
-    const selected = this.planesData.find((p) => p.id === this.selectedPlaneId);
-    if (!selected) return;
-
-    const panelWidth = 180;
-
-    // Panel background
-    const bg = new Graphics();
-    bg.lineStyle(2, ColorTheme.get('brand.primary'), 0.6);
-    bg.drawRoundedRect(0, 0, panelWidth, 680, 6);
-    bg.endFill();
-    this.detailsPanel.addChild(bg);
-
-    let yPos = 12;
-
-    // Plane name with highlight background - AAA style
-    const nameHiBg = new Graphics();
-    nameHiBg.beginFill(ColorTheme.get('brand.primary'), 0.2);
-    nameHiBg.drawRoundedRect(8, yPos - 2, 156, 32, 3);
-    nameHiBg.endFill();
-    this.detailsPanel.addChild(nameHiBg);
-
-    const nameText = new Text(selected.name, {
-      fontSize: 16,
-      fontWeight: 'bold',
-      fontFamily: 'Exo 2, Arial',
-      fill: ColorTheme.get('brand.primary'),
-      wordWrap: true,
-      wordWrapWidth: 148,
-    });
-    nameText.position.set(12, yPos);
-    this.detailsPanel.addChild(nameText);
-    yPos += 36;
-
-    // Description with separator
-    const sepLine = new Graphics();
-    sepLine.lineStyle(1, ColorTheme.get('brand.primary'), 0.3);
-    sepLine.moveTo(12, yPos);
-    sepLine.lineTo(160, yPos);
-    this.detailsPanel.addChild(sepLine);
-    yPos += 8;
-
-    const descText = new Text(selected.description, {
-      fontSize: 9,
-      fontFamily: 'Arial',
-      fill: ColorTheme.get('text.secondary'),
-      wordWrap: true,
-      wordWrapWidth: 148,
-    });
-    descText.position.set(12, yPos);
-    this.detailsPanel.addChild(descText);
-    yPos += 44;
-
-    // Stats header
-    const statsTitle = new Text('⚡ STATS', {
-      fontSize: 11,
-      fontWeight: 'bold',
-      fontFamily: 'Oxanium, Arial',
-      fill: ColorTheme.get('brand.primary'),
-    });
-    statsTitle.position.set(12, yPos);
-    this.detailsPanel.addChild(statsTitle);
-    yPos += 18;
-
-    // Stats bars with AAA styling
-    const stats = [
-      { label: 'PWR', value: selected.stats.power, color: 0xff6b35 },
-      { label: 'ATK', value: selected.stats.attack, color: 0xff2d00 },
-      { label: 'DEF', value: selected.stats.defense, color: 0x00d4ff },
-      { label: 'SPD', value: selected.stats.speed, color: 0x06ffa5 },
-    ];
-
-    stats.forEach((stat) => {
-      const label = new Text(stat.label, {
-        fontSize: 8,
-        fontWeight: 'bold',
-        fontFamily: 'Oxanium, Arial',
-        fill: 0xffffff,
-      });
-      label.position.set(12, yPos + 1);
-      this.detailsPanel.addChild(label);
-
-      // Stat value on right
-      const valueBg = new Graphics();
-      valueBg.beginFill(stat.color, 0.3);
-      valueBg.drawRoundedRect(138, yPos - 2, 20, 14, 2);
-      valueBg.endFill();
-      this.detailsPanel.addChild(valueBg);
-
-      const valueText = new Text(String(stat.value), {
-        fontSize: 8,
-        fontWeight: 'bold',
-        fontFamily: 'Oxanium, Arial',
-        fill: stat.color,
-      });
-      valueText.position.set(140, yPos);
-      this.detailsPanel.addChild(valueText);
-
-      const bar = new StatsBar({
-        width: 124,
-        height: 6,
-        showValue: false,
-        showLabel: false,
-        showPercentage: false,
-      });
-      bar.position.set(12, yPos + 10);
-      bar.setValue(stat.value, 100);
-      this.detailsPanel.addChild(bar);
-
-      yPos += 22;
-    });
-
-    // Flight stats if owned
-    if (selected.owned && selected.flightHours) {
-      yPos += 6;
-
-      const sepLine2 = new Graphics();
-      sepLine2.lineStyle(1, ColorTheme.get('brand.secondary'), 0.3);
-      sepLine2.moveTo(12, yPos);
-      sepLine2.lineTo(160, yPos);
-      this.detailsPanel.addChild(sepLine2);
-      yPos += 8;
-
-      const hoursText = new Text(`✈ ${selected.flightHours}h`, {
-        fontSize: 9,
-        fontFamily: 'Oxanium, Arial',
-        fill: ColorTheme.get('brand.secondary'),
-        fontWeight: 'bold',
-      });
-      hoursText.position.set(12, yPos);
-      this.detailsPanel.addChild(hoursText);
-
-      const winsText = new Text(`⭐ ${selected.wins}`, {
-        fontSize: 9,
-        fontFamily: 'Oxanium, Arial',
-        fill: ColorTheme.get('semantic.success'),
-        fontWeight: 'bold',
-      });
-      winsText.position.set(100, yPos);
-      this.detailsPanel.addChild(winsText);
-      yPos += 20;
-    }
-
-    // Upgrades section - AAA style
-    if (selected.upgrades && selected.upgrades.length > 0) {
-      yPos += 4;
-
-      const upgradesTitle = new Text('🔧 UPGRADES', {
-        fontSize: 9,
-        fontWeight: 'bold',
-        fontFamily: 'Oxanium, Arial',
-        fill: ColorTheme.get('semantic.warning'),
-      });
-      upgradesTitle.position.set(12, yPos);
-      this.detailsPanel.addChild(upgradesTitle);
-      yPos += 14;
-
-      selected.upgrades.forEach((upgrade) => {
-        const upgradeBg = new Graphics();
-        upgradeBg.lineStyle(1, ColorTheme.get('semantic.warning'), 0.5);
-        upgradeBg.beginFill(ColorTheme.get('semantic.warning'), 0.15);
-        upgradeBg.drawRoundedRect(0, 0, 148, 16, 2);
-        upgradeBg.endFill();
-        upgradeBg.position.set(12, yPos);
-        this.detailsPanel.addChild(upgradeBg);
-
-        const upgradeText = new Text(upgrade, {
-          fontSize: 8,
-          fontFamily: 'Oxanium, Arial',
-          fill: ColorTheme.get('semantic.warning'),
-          fontWeight: 'bold',
+    async fadeIn(duration = 320): Promise<void> {
+        this.refreshGameData();
+        this.sw = window.innerWidth  || 390;
+        this.sh = window.innerHeight || 844;
+        this.build();
+        this.visible = true;
+        this.alpha   = 0;
+        return new Promise(resolve => {
+            const t0 = performance.now();
+            const tick = (now: number) => {
+                const p = Math.min((now - t0) / duration, 1);
+                this.alpha = 1 - Math.pow(1 - p, 3);
+                if (p < 1) requestAnimationFrame(tick);
+                else { this.alpha = 1; resolve(); }
+            };
+            requestAnimationFrame(tick);
         });
-        upgradeText.position.set(14, yPos + 2);
-        this.detailsPanel.addChild(upgradeText);
-
-        yPos += 18;
-      });
     }
-  }
 
-  /**
-   * Create navigation bar
-   */
-  private createNavigation(): Container {
-    const nav = new Container();
+    async fadeOut(duration = 220): Promise<void> {
+        this.stopAnimations();
+        return new Promise(resolve => {
+            const start = this.alpha;
+            const t0    = performance.now();
+            const tick  = (now: number) => {
+                const p = Math.min((now - t0) / duration, 1);
+                this.alpha = start * (1 - p);
+                if (p < 1) requestAnimationFrame(tick);
+                else { this.alpha = 0; this.visible = false; resolve(); }
+            };
+            requestAnimationFrame(tick);
+        });
+    }
 
-    const navButtons = [
-      { label: 'SHOP', variant: 'primary' as const, action: 'shop' },
-      { label: 'PLAY', variant: 'success' as const, action: 'play' },
-      { label: 'EXIT', variant: 'danger' as const, action: 'exit' },
-    ];
+    destroyScreen(): void {
+        this.stopAnimations();
+        this.destroy({ children: true });
+    }
 
-    navButtons.forEach((btnConfig, index) => {
-      const button = new UIButton({
-        text: btnConfig.label,
-        width: 120,
-        height: 40,
-        variant: btnConfig.variant,
-        onClick: () => this.handleNavigation(btnConfig.action),
-      });
+    // ═════════════════════════════════════════════════════════════════════════
+    //  Data helpers
+    // ═════════════════════════════════════════════════════════════════════════
 
-      button.position.set(index * 128, 0);
-      nav.addChild(button);
-    });
+    private refreshGameData(): void {
+        const prog = getMainMenuProgress();
+        const ids  = getUnlockedPlaneIds(prog.maxUnlocked);
+        this.unlockedIds = new Set(ids);
+        this.selectedId  = getSelectedPlaneId();
+        if (!this.unlockedIds.has(this.selectedId)) this.selectedId = 'cadet';
+    }
 
-    return nav;
-  }
+    // ═════════════════════════════════════════════════════════════════════════
+    //  Full layout build
+    // ═════════════════════════════════════════════════════════════════════════
 
-  /**
-   * Handle navigation
-   */
-  private handleNavigation(action: string): void {
-    navigationEvents.navigate(action as any);
-  }
+    private build(): void {
+        this.stopAnimations();
+        this.bgLayer.removeChildren();
+        this.headerLayer.removeChildren();
+        this.rosterLayer.removeChildren();
+        this.detailLayer.removeChildren();
+        this.navLayer.removeChildren();
 
-  /**
-   * Screen lifecycle - fadeIn
-   */
-  async fadeIn(duration: number = 300): Promise<void> {
-    this.alpha = 0;
-    const startTime = Date.now();
+        const sw = this.sw;
+        const sh = this.sh;
 
-    return new Promise((resolve) => {
-      const animate = () => {
-        const elapsed = Date.now() - startTime;
-        const progress = Math.min(elapsed / duration, 1);
-        this.alpha = progress;
+        const PAD       = 10;
+        const HEADER_H  = 58;
+        const NAV_H     = 62;
+        const CONTENT_H = sh - HEADER_H - NAV_H;
+        const CONTENT_W = sw - PAD * 2;
+        const ROSTER_W  = Math.floor(CONTENT_W * 0.42);
+        const DETAIL_W  = CONTENT_W - ROSTER_W - 8;
 
-        if (progress < 1) {
-          requestAnimationFrame(animate);
-        } else {
-          this.alpha = 1;
-          resolve();
+        this.paintBackground(sw, sh);
+        this.paintHeader(PAD, 0, sw - PAD, HEADER_H);
+        this.paintRoster(PAD, HEADER_H, ROSTER_W, CONTENT_H);
+        this.paintDetail(PAD + ROSTER_W + 8, HEADER_H, DETAIL_W, CONTENT_H);
+        this.paintNavBar(0, sh - NAV_H, sw, NAV_H);
+
+        this.startAnimations();
+    }
+
+    /** Rebuild only when selection changes (preserves scroll / performance) */
+    private rebuild(): void {
+        this.build();
+    }
+
+    // ═════════════════════════════════════════════════════════════════════════
+    //  Background
+    // ═════════════════════════════════════════════════════════════════════════
+
+    private paintBackground(sw: number, sh: number): void {
+        const root = this.bgLayer;
+
+        // Deep space base
+        const base = new Graphics();
+        base.rect(0, 0, sw, sh);
+        base.fill({ color: C.bgBase });
+        root.addChild(base);
+
+        // Diagonal scanline grid — subtle atmosphere
+        const grid = new Graphics();
+        const step = 40;
+        for (let x = -sh; x < sw + sh; x += step) {
+            grid.moveTo(x, 0);
+            grid.lineTo(x + sh, sh);
         }
-      };
+        grid.stroke({ color: C.cyan, width: 0.5, alpha: 0.035 });
+        root.addChild(grid);
 
-      animate();
-    });
-  }
+        // Horizontal accent line under header region
+        const hline = new Graphics();
+        hline.rect(0, 0, sw, 1);
+        hline.fill({ color: C.cyan, alpha: 0.06 });
+        root.addChild(hline);
+    }
 
-  /**
-   * Screen lifecycle - fadeOut
-   */
-  async fadeOut(duration: number = 300): Promise<void> {
-    const startTime = Date.now();
+    // ═════════════════════════════════════════════════════════════════════════
+    //  Header
+    // ═════════════════════════════════════════════════════════════════════════
 
-    return new Promise((resolve) => {
-      const animate = () => {
-        const elapsed = Date.now() - startTime;
-        const progress = Math.min(elapsed / duration, 1);
-        this.alpha = 1 - progress;
+    private paintHeader(x: number, y: number, w: number, h: number): void {
+        const root = this.headerLayer;
 
-        if (progress < 1) {
-          requestAnimationFrame(animate);
-        } else {
-          this.alpha = 0;
-          resolve();
+        // Bar background
+        const bar = new Graphics();
+        bar.rect(0, y, w + x, h);
+        bar.fill({ color: C.bgSurface, alpha: 0.97 });
+        bar.moveTo(0, y + h - 1);
+        bar.lineTo(w + x, y + h - 1);
+        bar.stroke({ color: C.cyan, width: 1.5, alpha: 0.5 });
+        root.addChild(bar);
+
+        // HANGAR title (centred)
+        const title = new Text({
+            text: 'HANGAR',
+            style: new TextStyle({
+                fontFamily: 'Orbitron, monospace',
+                fontSize: 20,
+                fontWeight: 'bold',
+                fill: C.cyan,
+                dropShadow: { color: C.cyan, blur: 14, distance: 0, alpha: 0.65 },
+            }),
+        });
+        title.anchor.set(0.5, 0.5);
+        title.position.set((w + x) / 2, y + h / 2);
+        root.addChild(title);
+
+        // Back button
+        const back = this.buildTapButton('← BACK', 78, 34, C.bgElevated, C.cyan, () => {
+            navigationEvents.navigate('main-menu' as any);
+        });
+        back.position.set(x, y + (h - 34) / 2);
+        root.addChild(back);
+
+        // Owned-planes badge (right)
+        const owned = PLANES.filter(p => this.unlockedIds.has(p.id)).length;
+        const badge = new Text({
+            text: `${owned} / ${PLANES.length} OWNED`,
+            style: new TextStyle({
+                fontFamily: 'Orbitron, monospace',
+                fontSize: 9,
+                fontWeight: 'bold',
+                fill: C.gold,
+            }),
+        });
+        badge.anchor.set(1, 0.5);
+        badge.position.set(w + x - x, y + h / 2);
+        root.addChild(badge);
+    }
+
+    // ═════════════════════════════════════════════════════════════════════════
+    //  Roster panel  (left column)
+    // ═════════════════════════════════════════════════════════════════════════
+
+    private paintRoster(x: number, y: number, w: number, h: number): void {
+        const root = this.rosterLayer;
+
+        // Panel card
+        const panel = new Graphics();
+        panel.roundRect(x, y, w, h, 8);
+        panel.fill({ color: C.bgSurface, alpha: 0.6 });
+        panel.roundRect(x, y, w, h, 8);
+        panel.stroke({ color: C.cyan, width: 1, alpha: 0.22 });
+        root.addChild(panel);
+
+        // Section label
+        const lbl = new Text({
+            text: 'SELECT CRAFT',
+            style: new TextStyle({
+                fontFamily: 'Orbitron, monospace',
+                fontSize: 8,
+                fontWeight: 'bold',
+                fill: C.textMuted,
+                letterSpacing: 2,
+            }),
+        });
+        lbl.position.set(x + 10, y + 8);
+        root.addChild(lbl);
+
+        const TOP_PAD = 26;
+        const ITEM_H  = Math.floor((h - TOP_PAD) / PLANES.length);
+
+        PLANES.forEach((plane, idx) => {
+            const iy = y + TOP_PAD + idx * ITEM_H;
+            const isSelected = plane.id === this.selectedId;
+            const isUnlocked  = this.unlockedIds.has(plane.id);
+            this.paintRosterRow(root, plane, x, iy, w, ITEM_H, isSelected, isUnlocked);
+        });
+    }
+
+    private paintRosterRow(
+        root: Container,
+        plane: PlaneDef,
+        x: number, y: number, w: number, h: number,
+        isSelected: boolean,
+        isUnlocked: boolean,
+    ): void {
+        const PAD = 5;
+
+        // Row bg
+        const rowBg = new Graphics();
+        rowBg.roundRect(x + PAD, y + 2, w - PAD * 2, h - 4, 5);
+        rowBg.fill({
+            color: isSelected ? C.bgElevated : C.bgBase,
+            alpha: isSelected ? 1 : 0.45,
+        });
+        root.addChild(rowBg);
+
+        // Left accent stripe (selection indicator)
+        if (isSelected) {
+            const stripe = new Graphics();
+            stripe.roundRect(x + PAD, y + 6, 3, h - 12, 2);
+            stripe.fill({ color: C.cyan });
+            root.addChild(stripe);
         }
-      };
 
-      animate();
-    });
-  }
+        // OGA sprite thumbnail
+        const SPR_BOX = Math.min(h - 10, 46);
+        const tex   = getPlayerPlaneTexture(plane.id);
+        const spr   = new Sprite(tex);
+        spr.anchor.set(0.5);
+        const scale = SPR_BOX / Math.max(tex.width, tex.height, 1);
+        spr.scale.set(scale);
+        spr.position.set(x + PAD + 8 + SPR_BOX / 2, y + h / 2);
+        spr.alpha = isUnlocked ? 1 : 0.2;
+        root.addChild(spr);
 
-  /**
-   * Cleanup
-   */
-  destroyScreen(): void {
-    this.removeChildren();
-  }
+        // Plane name
+        const name = new Text({
+            text: plane.label,
+            style: new TextStyle({
+                fontFamily: 'Orbitron, monospace',
+                fontSize: 9,
+                fontWeight: 'bold',
+                fill: isSelected ? C.cyan : isUnlocked ? C.textPrimary : C.textMuted,
+                wordWrap: true,
+                wordWrapWidth: w - SPR_BOX - 30,
+            }),
+        });
+        name.position.set(x + PAD + SPR_BOX + 14, y + 8);
+        root.addChild(name);
+
+        // Status chip
+        const statusColor = isUnlocked ? (isSelected ? C.gold : C.green) : C.textMuted;
+        const statusTxt   = isUnlocked ? (isSelected ? '● ACTIVE' : '✓ OWNED') : `🔒 Lv.${plane.unlockLevel}`;
+        const status = new Text({
+            text: statusTxt,
+            style: new TextStyle({ fontFamily: 'monospace', fontSize: 8, fill: statusColor }),
+        });
+        status.position.set(x + PAD + SPR_BOX + 14, y + h - 18);
+        root.addChild(status);
+
+        // Hit area (only for unlocked planes)
+        if (isUnlocked) {
+            const hit = new Graphics();
+            hit.rect(x + PAD, y + 2, w - PAD * 2, h - 4);
+            hit.fill({ color: 0xffffff, alpha: 0.001 });
+            hit.eventMode = 'static';
+            hit.cursor    = 'pointer';
+            hit.on('pointerdown', () => { rowBg.alpha = 0.6; });
+            hit.on('pointerup',   () => { rowBg.alpha = 1; this.selectPlane(plane.id); });
+            hit.on('pointerupoutside', () => { rowBg.alpha = 1; });
+            root.addChild(hit);
+        }
+
+        // Dimming overlay for locked planes
+        if (!isUnlocked) {
+            const dim = new Graphics();
+            dim.roundRect(x + PAD, y + 2, w - PAD * 2, h - 4, 5);
+            dim.fill({ color: C.bgBase, alpha: 0.5 });
+            root.addChild(dim);
+        }
+    }
+
+    // ═════════════════════════════════════════════════════════════════════════
+    //  Detail panel  (right column)
+    // ═════════════════════════════════════════════════════════════════════════
+
+    private paintDetail(x: number, y: number, w: number, h: number): void {
+        const root   = this.detailLayer;
+        const plane  = PLANES.find(p => p.id === this.selectedId)!;
+        const owned  = this.unlockedIds.has(plane.id);
+        const active = plane.id === this.selectedId && owned;
+
+        // Panel card
+        const panel = new Graphics();
+        panel.roundRect(x, y, w, h, 8);
+        panel.fill({ color: C.bgSurface, alpha: 0.75 });
+        panel.roundRect(x, y, w, h, 8);
+        panel.stroke({ color: C.cyan, width: 1.5, alpha: 0.5 });
+        root.addChild(panel);
+
+        // Corner accent brackets
+        this.paintCornerAccents(root, x, y, w, h, C.cyan);
+
+        // ── Showcase area ─────────────────────────────────────────────────────
+        const SHOWCASE_H = Math.min(Math.floor(h * 0.40), 172);
+        const cx         = x + w / 2;
+        const cy         = y + SHOWCASE_H / 2 + 6;
+        const ringR      = Math.min(w * 0.38, SHOWCASE_H * 0.44);
+
+        // Showcase dark inset
+        const inset = new Graphics();
+        inset.roundRect(x + 5, y + 5, w - 10, SHOWCASE_H - 2, 5);
+        inset.fill({ color: C.bgBase, alpha: 0.82 });
+        root.addChild(inset);
+
+        // Outer glow ring (animated)
+        this.glowRing1 = new Graphics();
+        this.glowRing1.circle(cx, cy, ringR);
+        this.glowRing1.stroke({ color: C.cyan, width: 1.5, alpha: 0.22 });
+        root.addChild(this.glowRing1);
+
+        // Inner glow ring (animated, phase-offset)
+        this.glowRing2 = new Graphics();
+        this.glowRing2.circle(cx, cy, ringR * 0.65);
+        this.glowRing2.stroke({ color: C.cyan, width: 1, alpha: 0.14 });
+        root.addChild(this.glowRing2);
+
+        // Runway reflection line
+        const runway = new Graphics();
+        runway.moveTo(x + 18, cy + ringR * 0.72);
+        runway.lineTo(x + w - 18, cy + ringR * 0.72);
+        runway.stroke({ color: C.cyan, width: 1, alpha: 0.16 });
+        root.addChild(runway);
+
+        // OGA plane sprite — LARGE, floats
+        const tex    = getPlayerPlaneTexture(plane.id);
+        const spr    = new Sprite(tex);
+        spr.anchor.set(0.5);
+        const sprH   = Math.min(SHOWCASE_H - 28, 96);
+        const scale  = sprH / Math.max(tex.height, 1);
+        spr.scale.set(scale);
+        spr.position.set(cx, cy);
+        spr.alpha    = owned ? 1 : 0.25;
+        root.addChild(spr);
+        this.floatSprite = spr;
+
+        // Lock icon (if not unlocked)
+        if (!owned) {
+            const lockT = new Text({
+                text: '🔒',
+                style: new TextStyle({ fontSize: 28 }),
+            });
+            lockT.anchor.set(0.5);
+            lockT.position.set(cx, cy);
+            root.addChild(lockT);
+        }
+
+        // ── Info area ─────────────────────────────────────────────────────────
+        const IX = x + 12;
+        const IW = w - 24;
+        let   iy = y + SHOWCASE_H + 10;
+
+        // Plane name
+        const nameText = new Text({
+            text: plane.label,
+            style: new TextStyle({
+                fontFamily: 'Orbitron, monospace',
+                fontSize: Math.min(13, Math.floor(IW / 8)),
+                fontWeight: 'bold',
+                fill: C.cyan,
+                dropShadow: { color: C.cyan, blur: 10, distance: 0, alpha: 0.5 },
+            }),
+        });
+        nameText.position.set(IX, iy);
+        root.addChild(nameText);
+        iy += nameText.height + 3;
+
+        // Tier badge
+        const tierTxt = new Text({
+            text: owned ? `✓ ${plane.tier}` : plane.tier,
+            style: new TextStyle({
+                fontFamily: 'monospace',
+                fontSize: 9,
+                fill: owned ? C.green : C.textMuted,
+                fontWeight: owned ? 'bold' : 'normal',
+            }),
+        });
+        tierTxt.position.set(IX, iy);
+        root.addChild(tierTxt);
+        iy += tierTxt.height + 8;
+
+        // Separator
+        const sep = new Graphics();
+        sep.moveTo(IX, iy).lineTo(IX + IW, iy);
+        sep.stroke({ color: C.cyan, width: 1, alpha: 0.2 });
+        root.addChild(sep);
+        iy += 8;
+
+        // Description
+        const descText = new Text({
+            text: plane.description,
+            style: new TextStyle({
+                fontFamily: 'Arial, sans-serif',
+                fontSize: 9,
+                fill: C.textSec,
+                wordWrap: true,
+                wordWrapWidth: IW,
+                lineHeight: 13,
+            }),
+        });
+        descText.position.set(IX, iy);
+        root.addChild(descText);
+        iy += descText.height + 10;
+
+        // ── Stat bars ─────────────────────────────────────────────────────────
+        const STATS = [
+            { label: 'SPEED',   value: plane.speed,   color: 0x00D1FF },
+            { label: 'AGILITY', value: plane.agility, color: 0x22C55E },
+            { label: 'POWER',   value: plane.power,   color: 0xFFD166 },
+        ];
+        const BAR_H   = 7;
+        const ROW_GAP = 15;
+
+        STATS.forEach(stat => {
+            // Row label
+            const lbl = new Text({
+                text: stat.label,
+                style: new TextStyle({
+                    fontFamily: 'Orbitron, monospace',
+                    fontSize: 8,
+                    fontWeight: 'bold',
+                    fill: C.textSec,
+                    letterSpacing: 1,
+                }),
+            });
+            lbl.position.set(IX, iy);
+            root.addChild(lbl);
+
+            // Value (right-aligned)
+            const val = new Text({
+                text: String(stat.value),
+                style: new TextStyle({
+                    fontFamily: 'Orbitron, monospace',
+                    fontSize: 8,
+                    fontWeight: 'bold',
+                    fill: stat.color,
+                }),
+            });
+            val.anchor.set(1, 0);
+            val.position.set(IX + IW, iy);
+            root.addChild(val);
+
+            iy += lbl.height + 2;
+
+            // Track background
+            const track = new Graphics();
+            track.roundRect(IX, iy, IW, BAR_H, BAR_H / 2);
+            track.fill({ color: C.bgBase, alpha: 0.85 });
+            root.addChild(track);
+
+            // Animated fill bar
+            const fill = new Graphics();
+            root.addChild(fill);
+            this.animateBar(fill, IX, iy, IW * (stat.value / 100), BAR_H, stat.color, 480);
+
+            iy += BAR_H + ROW_GAP;
+        });
+
+        // ── Action button  (pinned near panel bottom) ─────────────────────────
+        const BTN_Y = y + h - 52;
+        if (owned) {
+            const isActiveNow = plane.id === getSelectedPlaneId();
+            const btn = this.buildActionButton(
+                isActiveNow ? 'ACTIVE CRAFT ✓' : 'EQUIP THIS CRAFT',
+                IW, 40,
+                isActiveNow ? C.gold : C.cyan,
+                () => {
+                    if (!isActiveNow) {
+                        setSelectedPlaneId(plane.id);
+                        this.selectedId = plane.id;
+                        this.rebuild();
+                    }
+                },
+                isActiveNow,
+            );
+            btn.position.set(IX, BTN_Y);
+            root.addChild(btn);
+        } else {
+            const btn = this.buildActionButton(
+                `LOCKED — ${plane.tier}`,
+                IW, 40, C.textMuted, () => {}, false,
+            );
+            btn.position.set(IX, BTN_Y);
+            btn.alpha = 0.48;
+            root.addChild(btn);
+        }
+    }
+
+    // ═════════════════════════════════════════════════════════════════════════
+    //  Nav bar (bottom strip)
+    // ═════════════════════════════════════════════════════════════════════════
+
+    private paintNavBar(x: number, y: number, w: number, h: number): void {
+        const root = this.navLayer;
+        const PAD  = 10;
+
+        const bg = new Graphics();
+        bg.rect(x, y, w, h);
+        bg.fill({ color: C.bgSurface, alpha: 0.97 });
+        bg.moveTo(x, y).lineTo(x + w, y);
+        bg.stroke({ color: C.cyan, width: 1, alpha: 0.3 });
+        root.addChild(bg);
+
+        const BTN_H = 44;
+        const BTN_W = Math.floor((w - PAD * 3) / 2);
+        const by    = y + (h - BTN_H) / 2;
+
+        const backBtn = this.buildActionButton('← MAIN MENU', BTN_W, BTN_H, C.bgElevated, () => {
+            navigationEvents.navigate('main-menu' as any);
+        }, false, /* ghost */ true);
+        backBtn.position.set(PAD, by);
+        root.addChild(backBtn);
+
+        const storeBtn = this.buildActionButton('STORE  →', BTN_W, BTN_H, C.gold, () => {
+            navigationEvents.navigate('shop' as any);
+        });
+        storeBtn.position.set(PAD * 2 + BTN_W, by);
+        root.addChild(storeBtn);
+    }
+
+    // ═════════════════════════════════════════════════════════════════════════
+    //  Selection
+    // ═════════════════════════════════════════════════════════════════════════
+
+    private selectPlane(id: string): void {
+        if (id === this.selectedId) return;
+        this.selectedId = id;
+        setSelectedPlaneId(id);
+        this.rebuild();
+    }
+
+    // ═════════════════════════════════════════════════════════════════════════
+    //  Animations
+    // ═════════════════════════════════════════════════════════════════════════
+
+    private startAnimations(): void {
+        this.runFloat();
+        this.runGlowPulse();
+    }
+
+    private stopAnimations(): void {
+        if (this.floatRAF !== null) { cancelAnimationFrame(this.floatRAF); this.floatRAF = null; }
+        if (this.glowRAF  !== null) { cancelAnimationFrame(this.glowRAF);  this.glowRAF  = null; }
+        this.floatSprite = null;
+        this.glowRing1   = null;
+        this.glowRing2   = null;
+    }
+
+    private runFloat(): void {
+        const spr   = this.floatSprite;
+        if (!spr) return;
+        const baseY = spr.y;
+        const AMP   = 5;       // ± pixels
+        const PERIOD = 2200;   // ms full cycle
+
+        const tick = (now: number) => {
+            if (!this.visible || !this.floatSprite) return;
+            spr.y = baseY + Math.sin((now / PERIOD) * Math.PI * 2) * AMP;
+            this.floatRAF = requestAnimationFrame(tick);
+        };
+        this.floatRAF = requestAnimationFrame(tick);
+    }
+
+    private runGlowPulse(): void {
+        const r1 = this.glowRing1;
+        const r2 = this.glowRing2;
+        if (!r1 || !r2) return;
+        const PERIOD = 1800;
+
+        const tick = (now: number) => {
+            if (!this.visible) return;
+            const t = (now / PERIOD) * Math.PI * 2;
+            r1.alpha = 0.15 + Math.sin(t)           * 0.28;
+            r2.alpha = 0.10 + Math.sin(t + Math.PI) * 0.22;
+            this.glowRAF = requestAnimationFrame(tick);
+        };
+        this.glowRAF = requestAnimationFrame(tick);
+    }
+
+    /**
+     * Animate a stat-fill bar from 0 → fillW using ease-out-cubic.
+     * The Graphics object must already be in the display list before calling.
+     */
+    private animateBar(
+        g: Graphics,
+        bx: number, by: number,
+        fillW: number, barH: number,
+        color: number,
+        duration: number,
+    ): void {
+        const r  = barH / 2;
+        const t0 = performance.now();
+
+        const tick = (now: number) => {
+            const p     = Math.min((now - t0) / duration, 1);
+            const eased = 1 - Math.pow(1 - p, 3);
+            const w     = Math.max(r * 2, fillW * eased);
+
+            g.clear();
+            // Main fill
+            g.roundRect(bx, by, w, barH, r);
+            g.fill({ color });
+            // Shine stripe
+            g.roundRect(bx + 2, by + 1, Math.max(1, w - 4), Math.ceil(barH * 0.4), r - 1);
+            g.fill({ color: 0xffffff, alpha: 0.16 });
+
+            if (p < 1) requestAnimationFrame(tick);
+        };
+        requestAnimationFrame(tick);
+    }
+
+    // ═════════════════════════════════════════════════════════════════════════
+    //  Reusable UI factories
+    // ═════════════════════════════════════════════════════════════════════════
+
+    /** Small header / inline tap button */
+    private buildTapButton(
+        label: string,
+        w: number, h: number,
+        bgColor: number,
+        accentColor: number,
+        onClick: () => void,
+    ): Container {
+        const c  = new Container();
+        const bg = new Graphics();
+        bg.roundRect(0, 0, w, h, 6);
+        bg.fill({ color: bgColor, alpha: 0.92 });
+        bg.roundRect(0, 0, w, h, 6);
+        bg.stroke({ color: accentColor, width: 1, alpha: 0.55 });
+        c.addChild(bg);
+
+        const t = new Text({
+            text: label,
+            style: new TextStyle({
+                fontFamily: 'Orbitron, monospace',
+                fontSize: 9,
+                fontWeight: 'bold',
+                fill: accentColor,
+            }),
+        });
+        t.anchor.set(0.5);
+        t.position.set(w / 2, h / 2);
+        c.addChild(t);
+
+        c.eventMode = 'static';
+        c.cursor = 'pointer';
+        c.on('pointerdown', () => c.scale.set(0.95));
+        c.on('pointerup',   () => { c.scale.set(1); onClick(); });
+        c.on('pointerupoutside', () => c.scale.set(1));
+        return c;
+    }
+
+    /**
+     * Full-width action / nav button.
+     * @param ghost   renders as outlined-only (no coloured fill) when true
+     * @param dimmed  renders at reduced opacity (for "active already" state)
+     */
+    private buildActionButton(
+        label: string,
+        w: number, h: number,
+        accentColor: number,
+        onClick: () => void,
+        dimmed  = false,
+        ghost   = false,
+    ): Container {
+        const c  = new Container();
+        const bg = new Graphics();
+        bg.roundRect(0, 0, w, h, 8);
+        bg.fill({ color: ghost ? accentColor : accentColor, alpha: ghost ? 0.10 : 0.16 });
+        bg.roundRect(0, 0, w, h, 8);
+        bg.stroke({ color: accentColor, width: 1.5, alpha: ghost ? 0.55 : 0.9 });
+        c.addChild(bg);
+
+        // Top shine
+        const shine = new Graphics();
+        shine.roundRect(2, 2, w - 4, Math.floor(h * 0.38), 6);
+        shine.fill({ color: 0xffffff, alpha: 0.04 });
+        c.addChild(shine);
+
+        const t = new Text({
+            text: label,
+            style: new TextStyle({
+                fontFamily: 'Orbitron, monospace',
+                fontSize: Math.min(11, Math.floor(w / (label.length * 0.7))),
+                fontWeight: 'bold',
+                fill: accentColor,
+                dropShadow: { color: accentColor, blur: 7, distance: 0, alpha: 0.38 },
+            }),
+        });
+        t.anchor.set(0.5);
+        t.position.set(w / 2, h / 2);
+        c.addChild(t);
+
+        if (dimmed) c.alpha = 0.65;
+
+        c.eventMode = 'static';
+        c.cursor    = 'pointer';
+        c.on('pointerdown', () => { c.scale.set(0.97); });
+        c.on('pointerup',   () => { c.scale.set(1); onClick(); });
+        c.on('pointerupoutside', () => c.scale.set(1));
+        return c;
+    }
+
+    /** Four-corner bracket decoration for a panel */
+    private paintCornerAccents(
+        root: Container,
+        x: number, y: number, w: number, h: number,
+        color: number,
+        len   = 12,
+        thick = 1.5,
+    ): void {
+        const g = new Graphics();
+        // top-left
+        g.moveTo(x,         y + len).lineTo(x,         y).lineTo(x + len,     y);
+        // top-right
+        g.moveTo(x + w - len, y).lineTo(x + w, y).lineTo(x + w, y + len);
+        // bottom-left
+        g.moveTo(x,         y + h - len).lineTo(x,     y + h).lineTo(x + len, y + h);
+        // bottom-right
+        g.moveTo(x + w - len, y + h).lineTo(x + w, y + h).lineTo(x + w, y + h - len);
+        g.stroke({ color, width: thick, alpha: 0.75 });
+        root.addChild(g);
+    }
 }

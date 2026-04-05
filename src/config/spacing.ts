@@ -247,7 +247,7 @@ export class LayoutHelper {
   static createSafeBounds(
     width: number,
     height: number,
-    padding: number = SPACING.screen
+    padding: number = SPACING.margin.screen
   ): {
     x: number;
     y: number;

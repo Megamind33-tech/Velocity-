@@ -8,7 +8,7 @@
  * - assets/ui/kenney/panels/panel_blue_header.png (16px slicing, for header)
  */
 
-import { Container, NineSliceSprite, Texture, Text, DisplayObject, Graphics, BlurFilter } from 'pixi.js';
+import { Container, NineSliceSprite, Texture, Text, Graphics, BlurFilter } from 'pixi.js';
 import { ColorTheme } from '../utils/ColorTheme';
 import { TEXT_STYLES } from '../config/typography';
 import { SPACING } from '../config/spacing';
@@ -28,10 +28,10 @@ interface UIPanelConfig {
 }
 
 export class UIPanel extends Container {
-  private panelSprite: NineSliceSprite;
+  private panelSprite!: NineSliceSprite;
   private headerSprite?: NineSliceSprite;
   private headerText?: Text;
-  private contentContainer: Container;
+  private contentContainer!: Container;
   private glowOverlay?: Graphics;
   private config: UIPanelConfig;
 
@@ -250,14 +250,14 @@ export class UIPanel extends Container {
    * Add a child to the content container
    * Use this to add UI elements to the panel
    */
-  addContent(child: DisplayObject): void {
+  addContent(child: Container): void {
     this.contentContainer.addChild(child);
   }
 
   /**
    * Remove a child from the content container
    */
-  removeContent(child: DisplayObject): void {
+  removeContent(child: Container): void {
     this.contentContainer.removeChild(child);
   }
 

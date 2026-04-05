@@ -15,7 +15,6 @@ import {
   Text,
   Sprite,
   Graphics,
-  DisplayObject,
   BlurFilter,
 } from 'pixi.js';
 import { ColorTheme } from '../utils/ColorTheme';
@@ -40,8 +39,8 @@ interface UIButtonConfig {
 }
 
 export class UIButton extends Container {
-  private background: NineSliceSprite;
-  private label: Text;
+  private background!: NineSliceSprite;
+  private captionText!: Text;
   private icon?: Sprite;
   private glowOverlay?: Graphics;
   private state: ButtonState = 'normal';
@@ -142,23 +141,23 @@ export class UIButton extends Container {
    * Setup button label
    */
   private setupLabel(): void {
-    this.label = new Text(
+    this.captionText = new Text(
       this.config.text.toUpperCase(),
       TEXT_STYLES.buttonText
     );
 
-    this.label.anchor.set(0.5);
+    this.captionText.anchor.set(0.5);
 
     // Position based on icon
     if (this.config.icon) {
       // Shift right if there's an icon
-      this.label.x = this.config.width! / 2 + SPACING.components.button.iconMargin;
+      this.captionText.x = this.config.width! / 2 + SPACING.components.button.iconMargin;
     } else {
-      this.label.x = this.config.width! / 2;
+      this.captionText.x = this.config.width! / 2;
     }
 
-    this.label.y = this.config.height! / 2;
-    this.addChild(this.label);
+    this.captionText.y = this.config.height! / 2;
+    this.addChild(this.captionText);
   }
 
   /**
@@ -177,7 +176,7 @@ export class UIButton extends Container {
       this.addChild(this.icon);
 
       // Adjust label position to account for icon
-      this.label.x = this.config.width! / 2 + SPACING.components.button.iconMargin;
+      this.captionText.x = this.config.width! / 2 + SPACING.components.button.iconMargin;
     } catch (error) {
       console.warn(`Failed to load button icon: ${this.config.icon}`, error);
     }
@@ -229,7 +228,7 @@ export class UIButton extends Container {
     }
 
     this.background.tint = buttonColor;
-    this.label.style.fill = textColor;
+    this.captionText.style.fill = textColor;
   }
 
   /**
@@ -373,14 +372,14 @@ export class UIButton extends Container {
    * Update button text
    */
   setText(text: string): void {
-    this.label.text = text.toUpperCase();
+    this.captionText.text = text.toUpperCase();
   }
 
   /**
    * Get button text
    */
   getText(): string {
-    return this.label.text;
+    return this.captionText.text;
   }
 
   /**
@@ -476,8 +475,8 @@ export class UIButton extends Container {
     if (this.background) {
       this.background.destroy();
     }
-    if (this.label) {
-      this.label.destroy();
+    if (this.captionText) {
+      this.captionText.destroy();
     }
     if (this.icon) {
       this.icon.destroy();
