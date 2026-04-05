@@ -1,4 +1,4 @@
-import { Application, TextStyle } from 'pixi.js';
+import { Application, Container, Sprite, TextStyle } from 'pixi.js';
 import { BaseGameScreen } from '../GameUIManager';
 import { GAME_COLORS, GAME_FONTS, GAME_SIZES } from '../GameUITheme';
 import { fitLabelToWidth } from '../menuShared/fitLabelToWidth';
@@ -19,6 +19,7 @@ import {
     getUnlockedPlaneIds,
     setSelectedPlaneId,
 } from '../../../data/localProgress';
+import { getPlayerPlaneTexture } from '../../../game/playerPlanes';
 
 const PLANES: { id: string; label: string; tier: string }[] = [
     { id: 'cadet', label: 'CADET MK-I', tier: 'Starter' },
@@ -77,6 +78,9 @@ export class HangarScreen extends BaseGameScreen {
         const gap = 12;
         let y = GAME_SIZES.spacing.xxl;
 
+        const iconColW = 44;
+        const btnInnerW = Math.max(120, btnW - iconColW - 8);
+
         PLANES.forEach((plane) => {
             const ok = unlocked.has(plane.id);
             const line = ok
@@ -84,7 +88,7 @@ export class HangarScreen extends BaseGameScreen {
                 : `${plane.label}  ·  LOCKED`;
             const fitT = fitLabelToWidth(
                 line,
-                btnW - 28,
+                btnInnerW - 20,
                 (fs) =>
                     new TextStyle({
                         fontFamily: GAME_FONTS.functional,
@@ -98,6 +102,17 @@ export class HangarScreen extends BaseGameScreen {
             const t = fitT.text;
             fitT.destroy();
 
+            const row = new Container();
+            row.position.set((innerW - btnW) / 2, y);
+
+            const preview = new Sprite(getPlayerPlaneTexture(plane.id));
+            preview.anchor.set(0.5);
+            const ph = 38;
+            preview.scale.set(ph / Math.max(1, preview.texture.height));
+            preview.position.set(iconColW / 2, btnH / 2);
+            preview.alpha = ok ? 1 : 0.38;
+            row.addChild(preview);
+
             const itemBtn = createVelocityGameButton(
                 t,
                 ok ? (plane.id === selected ? 'accent' : 'secondary') : 'secondary',
@@ -106,13 +121,14 @@ export class HangarScreen extends BaseGameScreen {
                     setSelectedPlaneId(plane.id);
                     this.rebuildBody();
                 },
-                { width: btnW, height: btnH },
+                { width: btnInnerW, height: btnH },
             );
+            itemBtn.position.set(iconColW + 4, 0);
             if (!ok) {
                 itemBtn.alpha = 0.55;
             }
-            itemBtn.position.set((innerW - btnW) / 2, y);
-            body.addChild(itemBtn);
+            row.addChild(itemBtn);
+            body.addChild(row);
             y += btnH + gap;
         });
 

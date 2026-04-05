@@ -51,6 +51,7 @@ import {
     setLastRunSummary,
 } from './ui/game/gameFlowBridge';
 import { getVelocityUiTexture, preloadVelocityUiTextures } from './ui/game/velocityUiArt';
+import { applyPlayerPlaneVisual, preloadPlayerPlaneTextures } from './game/playerPlanes';
 
 /** Log init failure and show a safe, user-visible alert (no innerHTML interpolation). */
 function showInitFailure(message: string, detail?: string): void {
@@ -98,6 +99,7 @@ async function init() {
     startAuthInBackground();
 
     await preloadVelocityUiTextures();
+    await preloadPlayerPlaneTextures();
 
     const uiManager = GameUIManager.init(app);
     uiManager.registerScreen('main-menu', new MainMenuScreen(app));
@@ -140,17 +142,9 @@ async function init() {
     world.addSystem(new LeaderboardSystem());
     world.addSystem(new QuestSystem());
 
-    const droneGfx = new Graphics();
-    droneGfx.poly([-25, 0, -10, -15, 15, -15, 30, 0, 15, 15, -10, 15]);
-    droneGfx.fill({ color: 0x222233 });
-    droneGfx.stroke({ color: 0x00ffcc, width: 2 });
-    droneGfx.circle(-20, 0, 8).fill({ color: 0xff3300, alpha: 0.6 });
-    droneGfx.circle(-20, 0, 4).fill({ color: 0xffcc00 });
-
-    const texture = app.renderer.generateTexture(droneGfx);
-    const playerSprite = new Sprite(texture);
-    playerSprite.anchor.set(0.5);
+    const playerSprite = new Sprite(Texture.WHITE);
     playerSprite.visible = false;
+    applyPlayerPlaneVisual(playerSprite);
     app.stage.addChild(playerSprite);
 
     const player = world.createEntity();
@@ -420,6 +414,7 @@ async function init() {
         distanceQuest.configure(player);
         distanceQuest.syncBaseline(world);
 
+        applyPlayerPlaneVisual(playerSprite);
         playerSprite.visible = true;
 
         GameState.setPaused(false);

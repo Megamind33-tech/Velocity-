@@ -31,6 +31,15 @@ Normalized **128×128** PNGs (cropped + scaled from originals). Dock code uses *
 
 All listed OGA entries are CC0 per their pages.
 
+## Player planes (`public/oga-players/`)
+
+2D sprites for the **hangar + in-run player ship** (see `src/game/playerPlanes.ts`). Provenance and licenses: **`public/oga-players/SOURCES.md`** and **`LICENSE-fighters-CC-BY-3.0.txt`**.
+
+- **Cadet / Scout** — cropped from [Fighter planes ww2 theme](https://opengameart.org/content/fighter-planes-ww2-theme) (CC-BY 3.0, Nick).
+- **Interceptor** — center crop from [Private Jet](https://opengameart.org/content/private-jet) texture (CC0, weirdybeardyman).
+
+[Scifi Plane](https://opengameart.org/content/scifi-plane) (CC-BY 3.0, Ulf) is **3D-only** in the OGA download; not bundled until a 2D render or pipeline exists.
+
 ## Families wired by code
 - `Kenney UI Pack` (`PNG/Blue|Grey|Yellow|Red|Extra`) via `src/ui/game/velocityUiArt.ts`
   - Mission list rows (playable + locked faces) use **`panel_fill` + `panel_frame`** nine-slice via `kenneyMissionCardFace()` in `kenneyLandscapeWidgets.ts` when preloaded — vector fallback only if textures fail.
