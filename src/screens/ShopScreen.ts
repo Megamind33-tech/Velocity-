@@ -4,10 +4,7 @@
  * Two-panel design: products grid (left) + details (right)
  */
 
-import { Container, Graphics, Sprite, Text } from 'pixi.js';
-import { UIButton } from '../components/UIButton';
-import { StatsBar } from '../components/StatsBar';
-import { ColorTheme } from '../utils/ColorTheme';
+import { Container, Graphics, Sprite, Text, TextStyle } from 'pixi.js';
 import { navigationEvents } from './NavigationEvents';
 import { getPlayerPlaneTexture } from '../game/playerPlanes';
 import {
@@ -17,6 +14,7 @@ import {
   spendShopTokens,
   unlockHangarPlane,
 } from '../data/localProgress';
+import { GAME_COLORS } from '../ui/game/GameUITheme';
 
 interface ShopItem {
   id: string;
@@ -46,6 +44,19 @@ interface PlaneItem extends ShopItem {
 
 type TabType = 'tokens' | 'powerups' | 'fuel' | 'planes';
 
+const C = {
+  bgBase: GAME_COLORS.bg_base,
+  bgSurface: GAME_COLORS.bg_surface,
+  bgElevated: GAME_COLORS.bg_elevated,
+  cyan: GAME_COLORS.accent_cyan,
+  gold: GAME_COLORS.accent_gold,
+  green: GAME_COLORS.success,
+  danger: GAME_COLORS.danger,
+  textPrimary: GAME_COLORS.text_primary,
+  textSec: GAME_COLORS.text_secondary,
+  textMuted: GAME_COLORS.text_muted,
+};
+
 export class ShopScreen extends Container {
   private currentTab: TabType = 'tokens';
   private selectedItemId: string | null = null;
@@ -58,7 +69,6 @@ export class ShopScreen extends Container {
   constructor() {
     super();
     this.loadShopData();
-    this.setupBackground();
     this.setupLayout();
   }
 
@@ -227,22 +237,34 @@ export class ShopScreen extends Container {
    */
   private setupBackground(): void {
     const bg = new Graphics();
-    bg.beginFill(ColorTheme.get('background.primary'));
+    bg.beginFill(C.bgBase);
     bg.drawRect(0, 0, 400, 900);
     bg.endFill();
     this.addChildAt(bg, 0);
+
+    const grid = new Graphics();
+    for (let x = -900; x < 1200; x += 44) {
+      grid.moveTo(x, 0);
+      grid.lineTo(x + 900, 900);
+    }
+    grid.stroke({ color: C.cyan, width: 0.6, alpha: 0.05 });
+    this.addChild(grid);
   }
 
   /**
    * Setup layout
    */
   private setupLayout(): void {
+    this.removeChildren();
+    this.setupBackground();
+
     // Title
     const title = new Text('SHOP', {
       fontSize: 28,
       fontWeight: 'bold',
       fontFamily: 'Orbitron, Arial',
-      fill: ColorTheme.get('brand.primary'),
+      fill: C.cyan,
+      dropShadow: { color: C.cyan, alpha: 0.7, blur: 10, distance: 0 },
     });
     title.position.set(16, 12);
     this.addChild(title);
@@ -263,7 +285,10 @@ export class ShopScreen extends Container {
     this.addChild(this.itemsGrid);
 
     const leftBg = new Graphics();
-    leftBg.lineStyle(2, ColorTheme.get('brand.primary'), 0.6);
+    leftBg.beginFill(C.bgSurface, 0.85);
+    leftBg.drawRoundedRect(0, 0, panelWidth, 600, 6);
+    leftBg.endFill();
+    leftBg.lineStyle(2, C.cyan, 0.6);
     leftBg.drawRoundedRect(0, 0, panelWidth, 600, 6);
     leftBg.endFill();
     this.itemsGrid.addChildAt(leftBg, 0);
@@ -298,16 +323,18 @@ export class ShopScreen extends Container {
 
     let xPos = 0;
     tabList.forEach((tab) => {
-      const button = new UIButton({
-        text: tab.label,
-        width: 92,
-        height: 32,
-        variant: this.currentTab === tab.id ? 'primary' : 'secondary',
-        onClick: () => {
+      const isActive = this.currentTab === tab.id;
+      const button = this.createHangerStyleButton(
+        tab.label,
+        92,
+        32,
+        isActive ? C.cyan : C.bgElevated,
+        () => {
           this.currentTab = tab.id;
           this.setupLayout();
         },
-      });
+        isActive,
+      );
 
       button.position.set(xPos, 0);
       tabs.addChild(button);
@@ -315,6 +342,50 @@ export class ShopScreen extends Container {
     });
 
     return tabs;
+  }
+
+  private createHangerStyleButton(
+    label: string,
+    width: number,
+    height: number,
+    accent: number,
+    onClick: () => void,
+    active = false,
+  ): Container {
+    const root = new Container();
+    const bg = new Graphics();
+    bg.roundRect(0, 0, width, height, 8);
+    bg.fill({ color: active ? C.bgElevated : C.bgSurface, alpha: active ? 1 : 0.92 });
+    bg.roundRect(0, 0, width, height, 8);
+    bg.stroke({ color: accent, width: active ? 2 : 1.5, alpha: 0.9 });
+    bg.roundRect(3, 3, width - 6, Math.max(8, Math.floor(height * 0.34)), 5);
+    bg.fill({ color: 0xffffff, alpha: active ? 0.13 : 0.06 });
+    root.addChild(bg);
+
+    const text = new Text({
+      text: label,
+      style: new TextStyle({
+        fontSize: 12,
+        fontFamily: 'Orbitron, monospace',
+        fontWeight: 'bold',
+        fill: active ? accent : C.textPrimary,
+      }),
+    });
+    text.anchor.set(0.5);
+    text.position.set(width / 2, height / 2);
+    root.addChild(text);
+
+    root.eventMode = 'static';
+    root.cursor = 'pointer';
+    root.on('pointerdown', () => root.scale.set(0.97));
+    root.on('pointerup', () => {
+      root.scale.set(1);
+      onClick();
+    });
+    root.on('pointerupoutside', () => root.scale.set(1));
+    root.on('pointercancel', () => root.scale.set(1));
+
+    return root;
   }
 
   /**
@@ -347,15 +418,21 @@ export class ShopScreen extends Container {
     const bg = new Graphics();
     const isSelected = this.selectedItemId === item.id;
     bg.beginFill(
-      isSelected ? ColorTheme.get('brand.primary') : ColorTheme.get('background.secondary'),
-      isSelected ? 0.4 : 0.3
+      isSelected ? C.bgElevated : C.bgSurface,
+      isSelected ? 1 : 0.74
     );
+    bg.drawRoundedRect(0, 0, 176, 120, 4);
+    bg.endFill();
+    bg.lineStyle(1.5, isSelected ? C.cyan : C.textMuted, isSelected ? 0.9 : 0.45);
     bg.drawRoundedRect(0, 0, 176, 120, 4);
     bg.endFill();
     card.addChild(bg);
 
     const iconBg = new Graphics();
-    iconBg.beginFill(ColorTheme.get('brand.secondary'), 0.5);
+    iconBg.beginFill(C.bgElevated, 1);
+    iconBg.drawRoundedRect(0, 0, 60, 60, 4);
+    iconBg.endFill();
+    iconBg.lineStyle(1.2, C.cyan, 0.55);
     iconBg.drawRoundedRect(0, 0, 60, 60, 4);
     iconBg.endFill();
     iconBg.position.set(58, 8);
@@ -380,7 +457,7 @@ export class ShopScreen extends Container {
       fontSize: 11,
       fontWeight: 'bold',
       fontFamily: 'Exo 2, Arial',
-      fill: ColorTheme.get('text.primary'),
+      fill: isSelected ? C.cyan : C.textPrimary,
       wordWrap: true,
       wordWrapWidth: 160,
     });
@@ -389,7 +466,11 @@ export class ShopScreen extends Container {
 
     // Price - highlighted
     const priceBg = new Graphics();
-    priceBg.beginFill(ColorTheme.get('semantic.success'), 0.7);
+    const priceTone = item.category === 'planes' ? C.gold : C.green;
+    priceBg.beginFill(C.bgElevated, 0.95);
+    priceBg.drawRoundedRect(0, 0, 160, 20, 2);
+    priceBg.endFill();
+    priceBg.lineStyle(1.2, priceTone, 0.85);
     priceBg.drawRoundedRect(0, 0, 160, 20, 2);
     priceBg.endFill();
     priceBg.position.set(8, 96);
@@ -405,7 +486,7 @@ export class ShopScreen extends Container {
       fontSize: 11,
       fontWeight: 'bold',
       fontFamily: 'Oxanium, Arial',
-      fill: 0xffffff,
+      fill: priceTone,
     });
     priceText.position.set(12, 98);
     card.addChild(priceText);
@@ -434,7 +515,10 @@ export class ShopScreen extends Container {
 
     // Panel background
     const bg = new Graphics();
-    bg.lineStyle(2, ColorTheme.get('brand.primary'), 0.6);
+    bg.beginFill(C.bgSurface, 0.9);
+    bg.drawRoundedRect(0, 0, panelWidth, 600, 6);
+    bg.endFill();
+    bg.lineStyle(2, C.cyan, 0.7);
     bg.drawRoundedRect(0, 0, panelWidth, 600, 6);
     bg.endFill();
     this.detailsPanel.addChild(bg);
@@ -446,7 +530,7 @@ export class ShopScreen extends Container {
       fontSize: 18,
       fontWeight: 'bold',
       fontFamily: 'Exo 2, Arial',
-      fill: ColorTheme.get('brand.primary'),
+      fill: C.cyan,
       wordWrap: true,
       wordWrapWidth: 160,
     });
@@ -458,7 +542,7 @@ export class ShopScreen extends Container {
     const descText = new Text(selected.description, {
       fontSize: 10,
       fontFamily: 'Arial',
-      fill: ColorTheme.get('text.secondary'),
+      fill: C.textSec,
       wordWrap: true,
       wordWrapWidth: 160,
     });
@@ -469,7 +553,10 @@ export class ShopScreen extends Container {
     // Bonus if exists
     if (selected.bonus) {
       const bonusBg = new Graphics();
-      bonusBg.beginFill(ColorTheme.get('semantic.success'), 0.3);
+      bonusBg.beginFill(C.bgElevated, 0.86);
+      bonusBg.drawRoundedRect(0, 0, 156, 28, 3);
+      bonusBg.endFill();
+      bonusBg.lineStyle(1, C.green, 0.75);
       bonusBg.drawRoundedRect(0, 0, 156, 28, 3);
       bonusBg.endFill();
       bonusBg.position.set(12, yPos);
@@ -479,7 +566,7 @@ export class ShopScreen extends Container {
         fontSize: 10,
         fontWeight: 'bold',
         fontFamily: 'Oxanium, Arial',
-        fill: ColorTheme.get('semantic.success'),
+        fill: C.green,
       });
       bonusText.position.set(14, yPos + 6);
       this.detailsPanel.addChild(bonusText);
@@ -505,24 +592,20 @@ export class ShopScreen extends Container {
             fontSize: 9,
             fontWeight: 'bold',
             fontFamily: 'Oxanium, Arial',
-            fill: ColorTheme.get('text.tertiary'),
+            fill: C.textSec,
           });
           label.position.set(12, yPos);
           this.detailsPanel.addChild(label);
 
-          const bar = new StatsBar({
-            label: '',
-            maxValue: 100,
-            color: ColorTheme.get('brand.primary'),
-            width: 156,
-            height: 8,
-            showValue: false,
-            showLabel: false,
-            showPercentage: false,
-          });
-          bar.position.set(12, yPos + 12);
-          bar.setValue(stat.value, 100);
-          this.detailsPanel.addChild(bar);
+          const track = new Graphics();
+          track.roundRect(12, yPos + 12, 156, 8, 4);
+          track.fill({ color: C.bgBase, alpha: 0.9 });
+          this.detailsPanel.addChild(track);
+
+          const fill = new Graphics();
+          fill.roundRect(12, yPos + 12, 156 * (stat.value / 100), 8, 4);
+          fill.fill({ color: C.cyan });
+          this.detailsPanel.addChild(fill);
 
           yPos += 28;
         });
@@ -534,7 +617,7 @@ export class ShopScreen extends Container {
       fontSize: 11,
       fontWeight: 'bold',
       fontFamily: 'Oxanium, Arial',
-      fill: ColorTheme.get('brand.secondary'),
+      fill: C.gold,
     });
     balLine.position.set(12, yPos);
     this.detailsPanel.addChild(balLine);
@@ -565,23 +648,18 @@ export class ShopScreen extends Container {
       }
     }
 
-    const buyButton = new UIButton({
-      text: buyLabel,
-      width: 168,
-      height: 36,
-      variant: buyVariant,
-      onClick: () => {
-        if (selected.category !== 'planes' || !planeId) {
-          console.log('Purchasing:', selected.name);
-          return;
-        }
-        if (owned || tokenCost <= 0) return;
-        if (spendShopTokens(tokenCost)) {
-          unlockHangarPlane(planeId);
-          this.setupLayout();
-        }
-      },
-    });
+    const buyAccent = buyVariant === 'danger' ? C.danger : buyVariant === 'secondary' ? C.textMuted : C.gold;
+    const buyButton = this.createHangerStyleButton(buyLabel, 168, 36, buyAccent, () => {
+      if (selected.category !== 'planes' || !planeId) {
+        console.log('Purchasing:', selected.name);
+        return;
+      }
+      if (owned || tokenCost <= 0) return;
+      if (spendShopTokens(tokenCost)) {
+        unlockHangarPlane(planeId);
+        this.setupLayout();
+      }
+    }, buyVariant === 'success');
     buyButton.position.set(12, yPos);
     this.detailsPanel.addChild(buyButton);
   }
@@ -593,19 +671,15 @@ export class ShopScreen extends Container {
     const nav = new Container();
 
     const navButtons = [
-      { label: 'HANGAR', variant: 'primary' as const, action: 'hangar' },
-      { label: 'PLAY', variant: 'success' as const, action: 'play' },
-      { label: 'EXIT', variant: 'danger' as const, action: 'exit' },
+      { label: 'HANGAR', accent: C.cyan, action: 'hangar' },
+      { label: 'PLAY', accent: C.green, action: 'play' },
+      { label: 'EXIT', accent: C.danger, action: 'exit' },
     ];
 
     navButtons.forEach((btnConfig, index) => {
-      const button = new UIButton({
-        text: btnConfig.label,
-        width: 120,
-        height: 40,
-        variant: btnConfig.variant,
-        onClick: () => this.handleNavigation(btnConfig.action),
-      });
+      const button = this.createHangerStyleButton(btnConfig.label, 120, 40, btnConfig.accent, () =>
+        this.handleNavigation(btnConfig.action),
+      );
 
       button.position.set(index * 128, 0);
       nav.addChild(button);
