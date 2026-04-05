@@ -1,415 +1,233 @@
 /**
  * ScreenManager
- * Professional screen lifecycle management for Velocity's AAA game screens
- * Handles Shop (unified with planes, powerups, fuel, tokens) and Hangar screens
+ * Professional screen lifecycle management for Velocity's full-screen UI.
+ * Handles Hangar, Shop (tokens/power-ups/fuel) and Plane Store screens.
  */
 
 import { Container, Application } from 'pixi.js';
 import { ShopScreen } from './ShopScreen';
 import { HangarScreen } from './HangarScreen';
+import { PlaneStoreScreen } from './PlaneStoreScreen';
 
-// Game screen types
-export type VelocityScreenType = 'shop' | 'hangar' | 'main-menu';
+export type VelocityScreenType = 'shop' | 'hangar' | 'plane-store' | 'main-menu';
 
-/**
- * Screen interface compatible with game UI system
- */
 export interface IVelocityScreen {
-  container: Container;
-  show(): void;
-  hide(): void;
-  dispose?(): void;
+    container: Container;
+    show(): void;
+    hide(): void;
+    dispose?(): void;
 }
 
-/**
- * Screen wrapper for ShopScreen
- */
+// ─── Screen wrappers ──────────────────────────────────────────────────────────
+
 class ShopScreenWrapper implements IVelocityScreen {
-  container: Container;
-  private screen: ShopScreen;
-
-  constructor() {
-    this.screen = new ShopScreen();
-    this.container = this.screen;
-  }
-
-  show(): void {
-    this.container.visible = true;
-    this.screen.fadeIn(300).catch(console.error);
-  }
-
-  hide(): void {
-    this.container.visible = false;
-  }
-
-  dispose(): void {
-    this.screen.destroyScreen();
-  }
+    container: Container;
+    private screen: ShopScreen;
+    constructor() {
+        this.screen    = new ShopScreen();
+        this.container = this.screen;
+    }
+    show(): void  { this.container.visible = true;  this.screen.fadeIn(300).catch(console.error); }
+    hide(): void  { this.container.visible = false; }
+    dispose(): void { this.screen.destroyScreen(); }
 }
 
-/**
- * Screen wrapper for HangarScreen
- */
 class HangarScreenWrapper implements IVelocityScreen {
-  container: Container;
-  private screen: HangarScreen;
-
-  constructor() {
-    this.screen = new HangarScreen();
-    this.container = this.screen;
-  }
-
-  show(): void {
-    this.container.visible = true;
-    this.screen.fadeIn(300).catch(console.error);
-  }
-
-  hide(): void {
-    this.container.visible = false;
-  }
-
-  dispose(): void {
-    this.screen.destroyScreen();
-  }
+    container: Container;
+    private screen: HangarScreen;
+    constructor() {
+        this.screen    = new HangarScreen();
+        this.container = this.screen;
+    }
+    show(): void  { this.screen.fadeIn(300).catch(console.error); }
+    hide(): void  { this.screen.fadeOut(180).catch(console.error); }
+    dispose(): void { this.screen.destroyScreen(); }
 }
 
+class PlaneStoreScreenWrapper implements IVelocityScreen {
+    container: Container;
+    private screen: PlaneStoreScreen;
+    constructor() {
+        this.screen    = new PlaneStoreScreen();
+        this.container = this.screen;
+    }
+    show(): void  { this.screen.fadeIn(300).catch(console.error); }
+    hide(): void  { this.screen.fadeOut(180).catch(console.error); }
+    dispose(): void { this.screen.destroyScreen(); }
+}
 
-/**
- * ScreenManager - Centralized screen management for Velocity AAA screens
- * Professional lifecycle management with smooth transitions
- */
+// ─── ScreenManager ────────────────────────────────────────────────────────────
+
 export class ScreenManager {
-  private static instance: ScreenManager;
+    private static instance: ScreenManager;
 
-  private app: Application | null = null;
-  private uiLayer: Container | null = null;
-  private screens: Map<VelocityScreenType, IVelocityScreen> = new Map();
-  private currentScreen: VelocityScreenType | null = null;
-  private previousScreen: VelocityScreenType | null = null;
-  private isTransitioning: boolean = false;
+    private app:              Application | null = null;
+    private uiLayer:          Container   | null = null;
+    private screens:          Map<VelocityScreenType, IVelocityScreen> = new Map();
+    private currentScreen:    VelocityScreenType | null = null;
+    private previousScreen:   VelocityScreenType | null = null;
+    private isTransitioning   = false;
 
-  private constructor() {}
+    private constructor() {}
 
-  /**
-   * Get singleton instance
-   */
-  public static getInstance(): ScreenManager {
-    if (!ScreenManager.instance) {
-      ScreenManager.instance = new ScreenManager();
-    }
-    return ScreenManager.instance;
-  }
-
-  /**
-   * Initialize ScreenManager with PixiJS app
-   */
-  public init(app: Application, uiLayer?: Container): void {
-    this.app = app;
-    this.uiLayer = uiLayer || new Container();
-
-    if (!uiLayer) {
-      this.app.stage.addChild(this.uiLayer!);
+    public static getInstance(): ScreenManager {
+        if (!ScreenManager.instance) ScreenManager.instance = new ScreenManager();
+        return ScreenManager.instance;
     }
 
-    console.log('✓ ScreenManager initialized');
-  }
-
-  /**
-   * Create and register all screens
-   */
-  public createAllScreens(): void {
-    if (!this.uiLayer) {
-      throw new Error('ScreenManager not initialized. Call init() first.');
+    public init(app: Application, uiLayer?: Container): void {
+        this.app     = app;
+        this.uiLayer = uiLayer ?? new Container();
+        if (!uiLayer) this.app.stage.addChild(this.uiLayer!);
+        console.log('✓ ScreenManager initialized');
     }
 
-    // Create screen wrappers
-    const shopScreen = new ShopScreenWrapper();
-    const hangarScreen = new HangarScreenWrapper();
+    public createAllScreens(): void {
+        if (!this.uiLayer) throw new Error('ScreenManager not initialized. Call init() first.');
 
-    // Register screens
-    this.registerScreen('shop', shopScreen);
-    this.registerScreen('hangar', hangarScreen);
+        this.registerScreen('shop',        new ShopScreenWrapper());
+        this.registerScreen('hangar',      new HangarScreenWrapper());
+        this.registerScreen('plane-store', new PlaneStoreScreenWrapper());
 
-    console.log('✓ All game screens created and registered');
-  }
-
-  /**
-   * Register a screen
-   */
-  private registerScreen(type: VelocityScreenType, screen: IVelocityScreen): void {
-    this.screens.set(type, screen);
-    this.uiLayer!.addChild(screen.container);
-    screen.hide();
-    console.log(`  ✓ Screen registered: ${type}`);
-  }
-
-  /**
-   * Show a screen with smooth transition
-   */
-  public async showScreen(
-    type: VelocityScreenType,
-    transitionType: 'fade' | 'slide-left' | 'slide-right' | 'none' = 'fade'
-  ): Promise<void> {
-    // Prevent overlapping transitions
-    if (this.isTransitioning) {
-      console.warn('Transition already in progress');
-      return;
+        console.log('✓ All game screens created and registered');
     }
 
-    const newScreen = this.screens.get(type);
-    if (!newScreen) {
-      console.warn(`Screen not found: ${type}`);
-      return;
+    private registerScreen(type: VelocityScreenType, screen: IVelocityScreen): void {
+        this.screens.set(type, screen);
+        this.uiLayer!.addChild(screen.container);
+        screen.hide();
+        console.log(`  ✓ Screen registered: ${type}`);
     }
 
-    // Prevent showing same screen twice
-    if (this.currentScreen === type) {
-      return;
+    public async showScreen(
+        type: VelocityScreenType,
+        transitionType: 'fade' | 'slide-left' | 'slide-right' | 'none' = 'fade',
+    ): Promise<void> {
+        if (this.isTransitioning) {
+            console.warn('Transition already in progress');
+            return;
+        }
+        const newScreen = this.screens.get(type);
+        if (!newScreen) {
+            console.warn(`Screen not found: ${type}`);
+            return;
+        }
+        if (this.currentScreen === type) return;
+
+        this.isTransitioning = true;
+        try {
+            const outgoing = this.currentScreen ? this.screens.get(this.currentScreen) : null;
+            this.previousScreen = this.currentScreen;
+
+            if (outgoing && transitionType !== 'none') {
+                await this.transition(outgoing.container, newScreen.container, transitionType);
+                outgoing.hide();
+            } else if (outgoing) {
+                outgoing.hide();
+            }
+
+            newScreen.show();
+            this.currentScreen = type;
+            console.log(`→ Screen shown: ${type} (${transitionType})`);
+        } finally {
+            this.isTransitioning = false;
+        }
     }
 
-    this.isTransitioning = true;
-
-    try {
-      const currentScreenObj = this.currentScreen ? this.screens.get(this.currentScreen) : null;
-
-      // Store previous screen
-      this.previousScreen = this.currentScreen;
-
-      // Execute transition
-      if (currentScreenObj && transitionType !== 'none') {
-        await this.transitionScreens(
-          currentScreenObj.container,
-          newScreen.container,
-          transitionType
-        );
-        currentScreenObj.hide();
-      } else if (currentScreenObj) {
-        currentScreenObj.hide();
-      }
-
-      // Show new screen
-      newScreen.show();
-      this.currentScreen = type;
-
-      console.log(`→ Screen shown: ${type} (transition: ${transitionType})`);
-    } finally {
-      this.isTransitioning = false;
+    /** Hide all registered screens without disposing them. */
+    public hideAll(): void {
+        for (const [, screen] of this.screens) {
+            screen.hide();
+        }
+        this.currentScreen = null;
     }
-  }
 
-  /**
-   * Transition between screens
-   */
-  private async transitionScreens(
-    outgoing: Container,
-    incoming: Container,
-    transitionType: string
-  ): Promise<void> {
-    return new Promise((resolve) => {
-      const duration = 300;
-      const startTime = Date.now();
-
-      switch (transitionType) {
-        case 'fade':
-          this.transitionFade(outgoing, incoming, duration, startTime, resolve);
-          break;
-        case 'slide-left':
-          this.transitionSlideLeft(outgoing, incoming, duration, startTime, resolve);
-          break;
-        case 'slide-right':
-          this.transitionSlideRight(outgoing, incoming, duration, startTime, resolve);
-          break;
-        default:
-          resolve();
-      }
-    });
-  }
-
-  /**
-   * Fade transition
-   */
-  private transitionFade(
-    outgoing: Container,
-    incoming: Container,
-    duration: number,
-    startTime: number,
-    callback: () => void
-  ): void {
-    outgoing.alpha = 1;
-    incoming.alpha = 0;
-
-    const animate = () => {
-      const elapsed = Date.now() - startTime;
-      const progress = Math.min(elapsed / duration, 1);
-
-      // Ease out cubic
-      const eased = 1 - Math.pow(1 - progress, 3);
-
-      outgoing.alpha = 1 - eased;
-      incoming.alpha = eased;
-
-      if (progress < 1) {
-        requestAnimationFrame(animate);
-      } else {
-        outgoing.alpha = 0;
-        incoming.alpha = 1;
-        callback();
-      }
-    };
-
-    animate();
-  }
-
-  /**
-   * Slide left transition
-   */
-  private transitionSlideLeft(
-    outgoing: Container,
-    incoming: Container,
-    duration: number,
-    startTime: number,
-    callback: () => void
-  ): void {
-    const width = this.app?.screen.width || 1080;
-    outgoing.x = 0;
-    incoming.x = width;
-
-    const animate = () => {
-      const elapsed = Date.now() - startTime;
-      const progress = Math.min(elapsed / duration, 1);
-
-      // Ease out cubic
-      const eased = 1 - Math.pow(1 - progress, 3);
-
-      outgoing.x = -width * eased;
-      incoming.x = width - width * eased;
-
-      if (progress < 1) {
-        requestAnimationFrame(animate);
-      } else {
-        outgoing.x = -width;
-        incoming.x = 0;
-        callback();
-      }
-    };
-
-    animate();
-  }
-
-  /**
-   * Slide right transition
-   */
-  private transitionSlideRight(
-    outgoing: Container,
-    incoming: Container,
-    duration: number,
-    startTime: number,
-    callback: () => void
-  ): void {
-    const width = this.app?.screen.width || 1080;
-    outgoing.x = 0;
-    incoming.x = -width;
-
-    const animate = () => {
-      const elapsed = Date.now() - startTime;
-      const progress = Math.min(elapsed / duration, 1);
-
-      // Ease out cubic
-      const eased = 1 - Math.pow(1 - progress, 3);
-
-      outgoing.x = width * eased;
-      incoming.x = -width + width * eased;
-
-      if (progress < 1) {
-        requestAnimationFrame(animate);
-      } else {
-        outgoing.x = width;
-        incoming.x = 0;
-        callback();
-      }
-    };
-
-    animate();
-  }
-
-  /**
-   * Get current screen type
-   */
-  public getCurrentScreen(): VelocityScreenType | null {
-    return this.currentScreen;
-  }
-
-  /**
-   * Get previous screen type
-   */
-  public getPreviousScreen(): VelocityScreenType | null {
-    return this.previousScreen;
-  }
-
-  /**
-   * Check if screen is active
-   */
-  public isScreenActive(type: VelocityScreenType): boolean {
-    return this.currentScreen === type;
-  }
-
-  /**
-   * Navigate back to previous screen
-   */
-  public async goBack(): Promise<void> {
-    if (this.previousScreen) {
-      await this.showScreen(this.previousScreen, 'slide-right');
-    } else {
-      console.warn('No previous screen to go back to');
+    public async goBack(): Promise<void> {
+        if (this.previousScreen) await this.showScreen(this.previousScreen, 'slide-right');
+        else console.warn('No previous screen to go back to');
     }
-  }
 
-  /**
-   * Get screen container
-   */
-  public getScreen(type: VelocityScreenType): Container | null {
-    const screen = this.screens.get(type);
-    return screen ? screen.container : null;
-  }
+    public getCurrentScreen(): VelocityScreenType | null { return this.currentScreen; }
+    public getPreviousScreen(): VelocityScreenType | null { return this.previousScreen; }
+    public isScreenActive(type: VelocityScreenType): boolean { return this.currentScreen === type; }
+    public getScreen(type: VelocityScreenType): Container | null { return this.screens.get(type)?.container ?? null; }
+    public isCurrentlyTransitioning(): boolean { return this.isTransitioning; }
+    public listScreens(): VelocityScreenType[] { return Array.from(this.screens.keys()); }
 
-  /**
-   * Check if currently transitioning
-   */
-  public isCurrentlyTransitioning(): boolean {
-    return this.isTransitioning;
-  }
-
-  /**
-   * List all registered screens
-   */
-  public listScreens(): VelocityScreenType[] {
-    return Array.from(this.screens.keys());
-  }
-
-  /**
-   * Dispose all screens
-   */
-  public dispose(): void {
-    for (const [, screen] of this.screens) {
-      if (screen.dispose) {
-        screen.dispose();
-      }
-      this.uiLayer?.removeChild(screen.container);
+    public dispose(): void {
+        for (const [, screen] of this.screens) {
+            if (screen.dispose) screen.dispose();
+            this.uiLayer?.removeChild(screen.container);
+        }
+        this.screens.clear();
+        this.currentScreen  = null;
+        this.previousScreen = null;
     }
-    this.screens.clear();
-    this.currentScreen = null;
-    this.previousScreen = null;
-  }
 
-  /**
-   * Get debug info
-   */
-  public getDebugInfo(): object {
-    return {
-      current: this.currentScreen,
-      previous: this.previousScreen,
-      screens: Array.from(this.screens.keys()),
-      isTransitioning: this.isTransitioning,
-    };
-  }
+    // ── Transitions ───────────────────────────────────────────────────────────
+
+    private transition(
+        out: Container,
+        inn: Container,
+        type: string,
+    ): Promise<void> {
+        return new Promise(resolve => {
+            const DURATION  = 280;
+            const screenW   = this.app?.screen.width ?? 390;
+            const t0        = performance.now();
+
+            switch (type) {
+                case 'fade': {
+                    out.alpha = 1; inn.alpha = 0;
+                    const tick = (now: number) => {
+                        const p = Math.min((now - t0) / DURATION, 1);
+                        const e = 1 - Math.pow(1 - p, 3);
+                        out.alpha = 1 - e;
+                        inn.alpha = e;
+                        if (p < 1) requestAnimationFrame(tick);
+                        else { out.alpha = 0; inn.alpha = 1; resolve(); }
+                    };
+                    requestAnimationFrame(tick);
+                    break;
+                }
+                case 'slide-left': {
+                    out.x = 0; inn.x = screenW;
+                    const tick = (now: number) => {
+                        const p = Math.min((now - t0) / DURATION, 1);
+                        const e = 1 - Math.pow(1 - p, 3);
+                        out.x = -screenW * e;
+                        inn.x =  screenW - screenW * e;
+                        if (p < 1) requestAnimationFrame(tick);
+                        else { out.x = -screenW; inn.x = 0; resolve(); }
+                    };
+                    requestAnimationFrame(tick);
+                    break;
+                }
+                case 'slide-right': {
+                    out.x = 0; inn.x = -screenW;
+                    const tick = (now: number) => {
+                        const p = Math.min((now - t0) / DURATION, 1);
+                        const e = 1 - Math.pow(1 - p, 3);
+                        out.x =  screenW * e;
+                        inn.x = -screenW + screenW * e;
+                        if (p < 1) requestAnimationFrame(tick);
+                        else { out.x = screenW; inn.x = 0; resolve(); }
+                    };
+                    requestAnimationFrame(tick);
+                    break;
+                }
+                default:
+                    resolve();
+            }
+        });
+    }
+
+    public getDebugInfo(): object {
+        return {
+            current:       this.currentScreen,
+            previous:      this.previousScreen,
+            screens:       Array.from(this.screens.keys()),
+            isTransitioning: this.isTransitioning,
+        };
+    }
 }

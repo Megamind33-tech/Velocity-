@@ -8,6 +8,7 @@ export type NavigationAction =
   | 'shop'
   | 'hangar'
   | 'plane-store'
+  | 'main-menu'
   | 'play'
   | 'resume'
   | 'save'

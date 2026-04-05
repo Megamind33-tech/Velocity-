@@ -132,6 +132,12 @@ async function init() {
             case 'plane-store':
                 await screenManager.showScreen('plane-store', 'slide-left');
                 break;
+            case 'main-menu':
+                // Return to main menu from hangar / store without disposing ScreenManager
+                screenManager.hideAll();
+                uiManager.bringToFront();
+                await uiManager.showScreen('main-menu', true, 'crossfade');
+                break;
             case 'back':
                 await screenManager.goBack();
                 break;
@@ -145,7 +151,7 @@ async function init() {
                 // Return to main menu
                 screenManager.dispose();
                 navigationEvents.clearListeners();
-                await uiManager.showScreen('main-menu', true, 'fade');
+                await uiManager.showScreen('main-menu', true, 'crossfade');
                 break;
             default:
                 console.log('Navigation action:', action);
