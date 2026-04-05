@@ -1148,7 +1148,9 @@ export function buildPortraitMissionScreen(p: BuildPortraitMissionScreenParams):
 
     const tabsH = 48;
     const dockH = 80;
-    const listH = Math.max(156, sh - y - tabsH - P_SPACE.s8 - dockH - p.safeBottom - P_SPACE.s16);
+    const gapAfterTabs = P_SPACE.s8;
+    const gapBeforeDock = P_SPACE.s8;
+    const listH = Math.max(156, sh - y - tabsH - gapAfterTabs - dockH - gapBeforeDock - p.safeBottom);
 
     const list = buildMissionListPortrait(cw, listH, (id) => gameFlow().startLevelWithMicGate?.(id), p.getProgress);
 
@@ -1157,7 +1159,7 @@ export function buildPortraitMissionScreen(p: BuildPortraitMissionScreenParams):
     }, tabsH);
     tabs.root.position.set(0, y);
     root.addChild(tabs.root);
-    y += tabsH + P_SPACE.s10;
+    y += tabsH + gapAfterTabs;
 
     list.root.position.set(0, y);
     root.addChild(list.root);
