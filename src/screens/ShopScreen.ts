@@ -4,7 +4,7 @@
  * Two-panel design: products grid (left) + details (right)
  */
 
-import { Container, Graphics, Sprite, Text, TextStyle } from 'pixi.js';
+import { Container, Graphics, Rectangle, Sprite, Text, TextStyle } from 'pixi.js';
 import { navigationEvents } from './NavigationEvents';
 import { getPlayerPlaneTexture } from '../game/playerPlanes';
 import {
@@ -63,8 +63,11 @@ export class ShopScreen extends Container {
   private items: ShopItem[] = [];
   private tabButtons!: Container;
   private itemsGrid!: Container;
+  private itemsScrollContent!: Container;
   private detailsPanel!: Container;
   private navigation!: Container;
+  private itemsScrollY = 0;
+  private itemsMaxScroll = 0;
 
   constructor() {
     super();
@@ -276,6 +279,7 @@ export class ShopScreen extends Container {
 
     const padding = 12;
     const panelWidth = 188;
+    const listViewportHeight = 600;
     const leftX = padding;
     const rightX = padding + panelWidth + 8;
 
@@ -292,6 +296,18 @@ export class ShopScreen extends Container {
     leftBg.drawRoundedRect(0, 0, panelWidth, 600, 6);
     leftBg.endFill();
     this.itemsGrid.addChildAt(leftBg, 0);
+
+    this.itemsScrollContent = new Container();
+    this.itemsScrollContent.position.set(0, 0);
+    this.itemsGrid.addChild(this.itemsScrollContent);
+
+    const listMask = new Graphics();
+    listMask.drawRoundedRect(2, 2, panelWidth - 4, listViewportHeight - 4, 6);
+    listMask.fill({ color: 0xffffff, alpha: 1 });
+    this.itemsGrid.addChild(listMask);
+    this.itemsScrollContent.mask = listMask;
+
+    this.bindListScroll(panelWidth, listViewportHeight);
 
     this.updateItemsGrid();
 
@@ -392,20 +408,24 @@ export class ShopScreen extends Container {
    * Update items grid
    */
   private updateItemsGrid(): void {
-    // Remove existing items (keep background)
-    while (this.itemsGrid.children.length > 1) {
-      this.itemsGrid.removeChildAt(1);
-    }
+    this.itemsScrollContent.removeChildren();
 
     const filtered = this.items.filter((item) => item.category === this.currentTab);
 
     let yPos = 8;
+    const cardStep = 104;
     filtered.forEach((item) => {
       const itemCard = this.createItemCard(item);
       itemCard.position.set(6, yPos);
-      this.itemsGrid.addChild(itemCard);
-      yPos += 130;
+      this.itemsScrollContent.addChild(itemCard);
+      yPos += cardStep;
     });
+
+    const contentHeight = yPos + 4;
+    const viewportHeight = 600;
+    this.itemsMaxScroll = Math.max(0, contentHeight - viewportHeight);
+    this.itemsScrollY = Math.max(0, Math.min(this.itemsScrollY, this.itemsMaxScroll));
+    this.itemsScrollContent.y = -this.itemsScrollY;
   }
 
   /**
@@ -421,7 +441,10 @@ export class ShopScreen extends Container {
       isSelected ? C.bgElevated : C.bgSurface,
       isSelected ? 1 : 0.74
     );
-    bg.drawRoundedRect(0, 0, 176, 120, 4);
+    bg.drawRoundedRect(0, 0, 176, 94, 4);
+    bg.endFill();
+    bg.lineStyle(1.5, isSelected ? C.cyan : C.textMuted, isSelected ? 0.9 : 0.45);
+    bg.drawRoundedRect(0, 0, 176, 94, 4);
     bg.endFill();
     bg.lineStyle(1.5, isSelected ? C.cyan : C.textMuted, isSelected ? 0.9 : 0.45);
     bg.drawRoundedRect(0, 0, 176, 120, 4);
@@ -430,22 +453,22 @@ export class ShopScreen extends Container {
 
     const iconBg = new Graphics();
     iconBg.beginFill(C.bgElevated, 1);
-    iconBg.drawRoundedRect(0, 0, 60, 60, 4);
+    iconBg.drawRoundedRect(0, 0, 52, 52, 4);
     iconBg.endFill();
     iconBg.lineStyle(1.2, C.cyan, 0.55);
-    iconBg.drawRoundedRect(0, 0, 60, 60, 4);
+    iconBg.drawRoundedRect(0, 0, 52, 52, 4);
     iconBg.endFill();
-    iconBg.position.set(58, 8);
+    iconBg.position.set(62, 6);
     card.addChild(iconBg);
 
     if (item.planeAssetId) {
       try {
         const spr = new Sprite(getPlayerPlaneTexture(item.planeAssetId));
         spr.anchor.set(0.5);
-        const box = 52;
+        const box = 46;
         const sc = box / Math.max(spr.texture.height, 1);
         spr.scale.set(sc);
-        spr.position.set(58 + 30, 8 + 30);
+        spr.position.set(62 + 26, 6 + 26);
         card.addChild(spr);
       } catch {
         /* texture fallback */
@@ -461,7 +484,7 @@ export class ShopScreen extends Container {
       wordWrap: true,
       wordWrapWidth: 160,
     });
-    nameText.position.set(8, 72);
+    nameText.position.set(8, 60);
     card.addChild(nameText);
 
     // Price - highlighted
@@ -473,7 +496,7 @@ export class ShopScreen extends Container {
     priceBg.lineStyle(1.2, priceTone, 0.85);
     priceBg.drawRoundedRect(0, 0, 160, 20, 2);
     priceBg.endFill();
-    priceBg.position.set(8, 96);
+    priceBg.position.set(8, 72);
     card.addChild(priceBg);
 
     const priceLabel =
@@ -488,7 +511,7 @@ export class ShopScreen extends Container {
       fontFamily: 'Oxanium, Arial',
       fill: priceTone,
     });
-    priceText.position.set(12, 98);
+    priceText.position.set(12, 74);
     card.addChild(priceText);
 
     // Clickable
@@ -500,6 +523,58 @@ export class ShopScreen extends Container {
     });
 
     return card;
+  }
+
+  private bindListScroll(panelWidth: number, viewportHeight: number): void {
+    this.itemsGrid.eventMode = 'static';
+    this.itemsGrid.hitArea = new Rectangle(0, 0, panelWidth, viewportHeight);
+    this.itemsGrid.removeAllListeners('wheel');
+    this.itemsGrid.on('wheel', (event) => {
+      const delta = (event as WheelEvent).deltaY || 0;
+      this.scrollListBy(delta * 0.6);
+    });
+
+    let dragging = false;
+    let dragStartY = 0;
+    let scrollStart = 0;
+    this.itemsGrid.removeAllListeners('pointerdown');
+    this.itemsGrid.removeAllListeners('pointermove');
+    this.itemsGrid.removeAllListeners('pointerup');
+    this.itemsGrid.removeAllListeners('pointerupoutside');
+    this.itemsGrid.removeAllListeners('pointercancel');
+    this.itemsGrid.on('pointerdown', (e) => {
+      dragging = true;
+      dragStartY = e.global.y;
+      scrollStart = this.itemsScrollY;
+      this.itemsGrid.cursor = 'grabbing';
+    });
+    this.itemsGrid.on('pointermove', (e) => {
+      if (!dragging) return;
+      const dy = e.global.y - dragStartY;
+      this.scrollListTo(scrollStart - dy);
+    });
+    const finish = () => {
+      dragging = false;
+      this.itemsGrid.cursor = this.itemsMaxScroll > 0 ? 'grab' : 'default';
+    };
+    this.itemsGrid.on('pointerup', finish);
+    this.itemsGrid.on('pointerupoutside', finish);
+    this.itemsGrid.on('pointercancel', finish);
+    this.itemsGrid.cursor = this.itemsMaxScroll > 0 ? 'grab' : 'default';
+  }
+
+  private scrollListBy(delta: number): void {
+    this.scrollListTo(this.itemsScrollY + delta);
+  }
+
+  private scrollListTo(value: number): void {
+    this.itemsScrollY = Math.max(0, Math.min(value, this.itemsMaxScroll));
+    if (this.itemsScrollContent) {
+      this.itemsScrollContent.y = -this.itemsScrollY;
+    }
+    if (this.itemsGrid) {
+      this.itemsGrid.cursor = this.itemsMaxScroll > 0 ? 'grab' : 'default';
+    }
   }
 
   /**
