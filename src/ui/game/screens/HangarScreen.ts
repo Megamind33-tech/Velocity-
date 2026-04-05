@@ -137,7 +137,7 @@ export class HangarScreen extends BaseGameScreen {
         const backBtn = createVelocityGameButton(
             'MAIN MENU',
             'secondary',
-            () => this.uiManager.showScreenSync('main-menu', true, 'crossfade'),
+            () => this.uiManager.showScreenSync('main-menu', true, 'none'),
             {
             width: btnW,
             height: btnH,

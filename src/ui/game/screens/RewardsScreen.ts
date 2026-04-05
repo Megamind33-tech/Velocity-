@@ -329,7 +329,7 @@ export class RewardsScreen extends BaseGameScreen {
             'CLAIM REWARD',
             'accent',
             () => {
-                this.uiManager.goBack();
+                this.uiManager.showScreenSync('main-menu', true, 'none');
             },
             { width: btnW, height: btnH },
         );
@@ -339,9 +339,9 @@ export class RewardsScreen extends BaseGameScreen {
 
         // ── Back button — secondary, subordinate ────────────────────────────
         const backBtn = createVelocityGameButton(
-            'BACK',
+            'MAIN MENU',
             'secondary',
-            () => this.uiManager.goBack(),
+            () => this.uiManager.showScreenSync('main-menu', true, 'none'),
             { width: btnW, height: 40 },
         );
         backBtn.position.set(0, y);

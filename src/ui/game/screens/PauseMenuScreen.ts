@@ -189,7 +189,7 @@ export class PauseMenuScreen extends BaseGameScreen {
                     () => {
                         resumeFromGamePause();
                         gameFlow().openMainMenu();
-                        this.uiManager.showScreen('main-menu');
+                        this.uiManager.showScreenSync('main-menu', true, 'none');
                     },
                     { width: btnW, height: btnH }
                 )) ||
@@ -198,7 +198,7 @@ export class PauseMenuScreen extends BaseGameScreen {
                 () => {
                     resumeFromGamePause();
                     gameFlow().openMainMenu();
-                    this.uiManager.showScreen('main-menu');
+                    this.uiManager.showScreenSync('main-menu', true, 'none');
                 },
                 'danger',
                 'medium',

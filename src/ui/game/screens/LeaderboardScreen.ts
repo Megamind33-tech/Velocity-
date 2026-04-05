@@ -71,7 +71,8 @@ export class LeaderboardScreen extends BaseGameScreen {
 
         const btnW = Math.min(260, innerW);
         const btnH = 48;
-        const backBtn = createVelocityGameButton('BACK', 'secondary', () => this.uiManager.goBack(), {
+        const backBtn = createVelocityGameButton('MAIN MENU', 'secondary', () =>
+            this.uiManager.showScreenSync('main-menu', true, 'none'), {
             width: btnW,
             height: btnH,
         });

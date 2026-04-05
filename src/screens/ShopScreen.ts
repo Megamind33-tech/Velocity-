@@ -272,6 +272,12 @@ export class ShopScreen extends Container {
     title.position.set(16, 12);
     this.addChild(title);
 
+    const homeBtn = this.createHangerStyleButton('← HOME', 108, 34, C.gold, () =>
+      this.handleNavigation('main-menu'),
+    );
+    homeBtn.position.set(278, 12);
+    this.addChild(homeBtn);
+
     // TAB BUTTONS at top
     this.tabButtons = this.createTabButtons();
     this.tabButtons.position.set(16, 44);
@@ -445,9 +451,6 @@ export class ShopScreen extends Container {
     bg.endFill();
     bg.lineStyle(1.5, isSelected ? C.cyan : C.textMuted, isSelected ? 0.9 : 0.45);
     bg.drawRoundedRect(0, 0, 176, 94, 4);
-    bg.endFill();
-    bg.lineStyle(1.5, isSelected ? C.cyan : C.textMuted, isSelected ? 0.9 : 0.45);
-    bg.drawRoundedRect(0, 0, 176, 120, 4);
     bg.endFill();
     card.addChild(bg);
 
@@ -746,9 +749,9 @@ export class ShopScreen extends Container {
     const nav = new Container();
 
     const navButtons = [
+      { label: 'HOME', accent: C.gold, action: 'main-menu' },
       { label: 'HANGAR', accent: C.cyan, action: 'hangar' },
       { label: 'PLAY', accent: C.green, action: 'play' },
-      { label: 'EXIT', accent: C.danger, action: 'exit' },
     ];
 
     navButtons.forEach((btnConfig, index) => {

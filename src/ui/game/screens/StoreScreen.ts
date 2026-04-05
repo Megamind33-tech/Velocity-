@@ -94,10 +94,15 @@ export class StoreScreen extends BaseGameScreen {
             y += btnH + gap;
         });
 
-        const backBtn = createVelocityGameButton('BACK', 'secondary', () => this.uiManager.goBack(), {
-            width: btnW,
-            height: btnH,
-        });
+        const backBtn = createVelocityGameButton(
+            'MAIN MENU',
+            'secondary',
+            () => this.uiManager.showScreenSync('main-menu', true, 'none'),
+            {
+                width: btnW,
+                height: btnH,
+            },
+        );
         backBtn.position.set((innerW - btnW) / 2, y + 8);
         body.addChild(backBtn);
     }
