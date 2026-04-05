@@ -60,7 +60,7 @@ export class SettingsScreen extends BaseGameScreen {
             'danger',
             () => {
                 resetLocalProgress();
-                this.uiManager.showScreen('main-menu', true);
+                this.uiManager.showScreenSync('main-menu', true, 'none');
             },
             { width: btnW, height: btnH },
         );
@@ -68,7 +68,8 @@ export class SettingsScreen extends BaseGameScreen {
         body.addChild(resetBtn);
         y += btnH + GAME_SIZES.spacing.md;
 
-        const backBtn = createVelocityGameButton('BACK', 'secondary', () => this.uiManager.goBack(), {
+        const backBtn = createVelocityGameButton('MAIN MENU', 'secondary', () =>
+            this.uiManager.showScreenSync('main-menu', true, 'none'), {
             width: btnW,
             height: btnH,
         });

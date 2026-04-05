@@ -147,7 +147,7 @@ export class GameOverScreen extends BaseGameScreen {
             'danger',
             () => {
                 gameFlow().openMainMenu();
-                this.uiManager.showScreen('main-menu');
+                this.uiManager.showScreenSync('main-menu', true, 'none');
             },
             { width: btnW, height: 40 },
         );
