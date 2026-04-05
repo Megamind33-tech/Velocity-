@@ -8,6 +8,7 @@ import { Container, Application } from 'pixi.js';
 import { ShopScreen } from './ShopScreen';
 import { HangarScreen } from './HangarScreen';
 import { PlaneStoreScreen } from './PlaneStoreScreen';
+import { consumePlaneStoreOpen } from './shopNavigationIntent';
 
 export type VelocityScreenType = 'shop' | 'hangar' | 'plane-store' | 'main-menu';
 
@@ -23,11 +24,22 @@ export interface IVelocityScreen {
 class ShopScreenWrapper implements IVelocityScreen {
     container: Container;
     private screen: ShopScreen;
+
     constructor() {
         this.screen    = new ShopScreen();
         this.container = this.screen;
     }
-    show(): void  { this.container.visible = true;  this.screen.fadeIn(300).catch(console.error); }
+
+    show(): void {
+        this.container.visible = true;
+        const planesFirst = consumePlaneStoreOpen();
+        this.screen.fadeIn(300).then(() => {
+            if (planesFirst && 'openToPlanesTab' in this.screen) {
+                (this.screen as any).openToPlanesTab();
+            }
+        }).catch(console.error);
+    }
+
     hide(): void  { this.container.visible = false; }
     dispose(): void { this.screen.destroyScreen(); }
 }
