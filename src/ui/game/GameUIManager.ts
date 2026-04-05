@@ -126,9 +126,16 @@ export class GameUIManager {
                 newScreen.container,
                 { type: transitionType, duration: 300 }
             );
-        } else if (hideCurrentScreen && currentScreenObj) {
-            // No animation, just hide current
+            // Transitions only tween alpha; invisible containers still intercept pointers
+            // and sit above older siblings — must fully hide the outgoing screen.
             currentScreenObj.hide();
+            currentScreenObj.container.alpha = 1;
+        } else if (hideCurrentScreen && currentScreenObj) {
+            currentScreenObj.hide();
+        }
+
+        if (newScreen.container.alpha < 1) {
+            newScreen.container.alpha = 1;
         }
 
         console.log(`→ Screen shown: ${type} (transition: ${transitionType})`);

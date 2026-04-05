@@ -46,7 +46,7 @@ export const PORTRAIT_MOCK_MODEL: PortraitMissionScreenModel = {
     ],
     featured: {
         title: 'VELOCITY',
-        subtitle: 'Voice-Powered Flight',
+        subtitle: '',
         routesCompleted: 7,
         routesTotal: 20,
         micLive: true,

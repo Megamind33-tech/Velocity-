@@ -253,19 +253,22 @@ function buildFeaturedMissionCard(p: FeaturedProps): {
     });
     title.position.set(pad, pad);
     root.addChild(title);
-    const sub = new Text({
-        text: p.subtitle,
-        style: new TextStyle({
-            fontFamily: FONT,
-            fontSize: P_TYPO.heroSubtitle.fontSize,
-            fontWeight: P_TYPO.heroSubtitle.fontWeight,
-            fill: P_COLORS.accentCyanSoft,
-            letterSpacing: P_TYPO.heroSubtitle.letterSpacing,
-        }),
-    });
-    sub.position.set(pad, pad + 38);
-    root.addChild(sub);
-    const routeY = pad + 62;
+    const hasSub = p.subtitle.trim().length > 0;
+    if (hasSub) {
+        const sub = new Text({
+            text: p.subtitle,
+            style: new TextStyle({
+                fontFamily: FONT,
+                fontSize: P_TYPO.heroSubtitle.fontSize,
+                fontWeight: P_TYPO.heroSubtitle.fontWeight,
+                fill: P_COLORS.accentCyanSoft,
+                letterSpacing: P_TYPO.heroSubtitle.letterSpacing,
+            }),
+        });
+        sub.position.set(pad, pad + 38);
+        root.addChild(sub);
+    }
+    const routeY = pad + (hasSub ? 62 : 48);
     const lbl = new Text({
         text: `Routes  ${p.routesDone} / ${p.routesTotal}`,
         style: ts(P_TYPO.meta, P_COLORS.textMuted),
@@ -1135,7 +1138,7 @@ export function buildPortraitMissionScreen(p: BuildPortraitMissionScreenParams):
         cw,
         cardH,
         title: 'VELOCITY',
-        subtitle: 'Voice-Powered Flight',
+        subtitle: '',
         routesDone: prog.unlockedCount,
         routesTotal: prog.totalLevels,
         rank,
