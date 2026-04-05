@@ -241,11 +241,11 @@ export function buildCommandDock(
         slotContainers.push(slot);
     });
 
-    function setActive(i: number): void {
+    function paintDockCradles(activeIndex: number): void {
         const slotW2 = cw / n;
         dockCradles.forEach((cr, idx) => {
             const cellW = slotW2 - margin * 2;
-            const on = idx === i;
+            const on = idx === activeIndex;
             const cradleTop = H >= 80 ? 8 : 7;
             if (cr instanceof NineSliceSprite) {
                 cr.texture = on && cradleActiveTex ? cradleActiveTex : cradleTex!;
@@ -271,6 +271,10 @@ export function buildCommandDock(
                 }
             }
         });
+    }
+
+    function setActive(i: number): void {
+        paintDockCradles(i);
         slotContainers.forEach((ch, idx) => {
             const on = idx === i;
             const iconLayer = ch.children[3] as Container;
