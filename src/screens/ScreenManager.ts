@@ -403,7 +403,7 @@ export class ScreenManager {
   /**
    * Check if currently transitioning
    */
-  public isTransitioning(): boolean {
+  public isCurrentlyTransitioning(): boolean {
     return this.isTransitioning;
   }
 
