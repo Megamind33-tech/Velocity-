@@ -8,8 +8,8 @@ All five PNGs in this folder are **rebuilt from the same OGA sources** by
 `scripts/process_plane_sprites.py` so each craft is a **single isolated sprite**
 (no UV sheet filler, no shared grey backdrop):
 
-- **Fighters:** alpha cleanup + tight crop (`plane_cadet.png`, `plane_scout.png`).
-- **Cartoon:** chroma separation from grey studio background → one opaque silhouette.
+- **Fighters:** alpha cleanup + **largest connected blob only** (source crops often had **two stacked planes** in one file).
+- **Cartoon:** chroma separation from grey studio background → **largest** opaque silhouette (drops HUD/debris islands).
 - **Jets:** border-seeded flood removal of UV “hull” + **largest connected alpha
   component** so only one aircraft patch remains (`plane_interceptor_jet.png`,
   `plane_liner.png`).

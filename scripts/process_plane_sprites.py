@@ -154,11 +154,16 @@ def process_cartoon(src: Path) -> Image.Image:
     orig = np.array(Image.open(src).convert("RGBA"))
     rgba[:, :, :3] = orig[:, :, :3]
     rgba[:, :, 3] = m_arr
+    # Sheet / debris: keep a single connected aircraft silhouette
+    rgba[:, :, 3] = keep_largest_opaque_component(rgba[:, :, 3])
     return crop_pad_rgba(Image.fromarray(rgba, "RGBA"), pad=6)
 
 
 def process_fighter(src: Path) -> Image.Image:
-    """Tighten soft alpha fringe from sheet extraction."""
+    """
+    WW2 fighter crops sometimes contain TWO stacked planes in one PNG.
+    Keep only the largest 4-connected alpha blob so exactly one craft shows.
+    """
     arr = np.array(Image.open(src).convert("RGBA"))
     a = arr[:, :, 3].astype(np.float32)
     # Gamma on alpha to reduce muddy halos
@@ -166,6 +171,7 @@ def process_fighter(src: Path) -> Image.Image:
     arr[:, :, 3] = a.astype(np.uint8)
     # Hard cutoff of near-transparent pixels
     arr[arr[:, :, 3] < 14, 3] = 0
+    arr[:, :, 3] = keep_largest_opaque_component(arr[:, :, 3])
     return crop_pad_rgba(Image.fromarray(arr, "RGBA"), pad=4)
 
 

@@ -8,13 +8,16 @@ import { getSelectedPlaneId } from '../data/localProgress';
 
 const BASE = `${import.meta.env.BASE_URL}oga-players`;
 
+/** Bump when regenerating `public/oga-players` so cached textures reload. */
+const PLANE_TEX_QUERY = '?v=single-blob-2';
+
 /** Hangar plane id → static texture URL */
 export const PLAYER_PLANE_TEXTURE_URL: Record<string, string> = {
-    cadet: `${BASE}/plane_cadet.png`,
-    cartoon: `${BASE}/plane_cartoon.png`,
-    scout: `${BASE}/plane_scout.png`,
-    liner: `${BASE}/plane_liner.png`,
-    interceptor: `${BASE}/plane_interceptor_jet.png`,
+    cadet: `${BASE}/plane_cadet.png${PLANE_TEX_QUERY}`,
+    cartoon: `${BASE}/plane_cartoon.png${PLANE_TEX_QUERY}`,
+    scout: `${BASE}/plane_scout.png${PLANE_TEX_QUERY}`,
+    liner: `${BASE}/plane_liner.png${PLANE_TEX_QUERY}`,
+    interceptor: `${BASE}/plane_interceptor_jet.png${PLANE_TEX_QUERY}`,
 };
 
 const DEFAULT_ID = 'cadet';
