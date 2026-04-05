@@ -2,10 +2,12 @@
  * GameUIManager: Master UI system for Velocity
  * Manages all game screens and UI state
  * Game-focused architecture with proper screen management
+ * Includes professional screen transition animations
  */
 
 import { Container, Application } from 'pixi.js';
 import { ResponsiveUIManager } from '../ResponsiveUIManager';
+import { ScreenTransitionManager } from './screenTransitionManager';
 
 export type ScreenType =
     | 'main-menu'
@@ -39,6 +41,7 @@ export class GameUIManager {
 
     private app: Application;
     private responsiveManager: ResponsiveUIManager;
+    private transitionManager: ScreenTransitionManager;
     private uiLayer: Container;
     private screens: Map<ScreenType, IGameScreen> = new Map();
     private currentScreen: ScreenType | null = null;
@@ -47,6 +50,7 @@ export class GameUIManager {
     private constructor(app: Application) {
         this.app = app;
         this.responsiveManager = ResponsiveUIManager.getInstance();
+        this.transitionManager = ScreenTransitionManager.getInstance();
 
         // Create UI layer
         this.uiLayer = new Container();
@@ -89,30 +93,44 @@ export class GameUIManager {
     }
 
     /**
-     * Show a screen and hide the current one
+     * Show a screen and hide the current one with professional transition animation.
+     * @param type Screen type to show
+     * @param hideCurrentScreen Whether to hide the current screen (default: true)
+     * @param transitionType Type of transition (default: 'crossfade')
      */
-    public showScreen(type: ScreenType, hideCurrentScreen: boolean = true): void {
+    public async showScreen(
+        type: ScreenType,
+        hideCurrentScreen: boolean = true,
+        transitionType: 'crossfade' | 'slide' | 'zoom' | 'none' = 'crossfade',
+    ): Promise<void> {
         const newScreen = this.screens.get(type);
         if (!newScreen) {
             console.warn(`Screen not found: ${type}`);
             return;
         }
 
-        // Hide current screen if requested
-        if (hideCurrentScreen && this.currentScreen) {
-            const current = this.screens.get(this.currentScreen);
-            if (current) {
-                current.hide();
-            }
-        }
+        const currentScreenObj = this.currentScreen ? this.screens.get(this.currentScreen) : null;
 
-        // Store previous screen
+        // Store previous screen before transition
         this.previousScreen = this.currentScreen;
 
-        // Show new screen
+        // Show new screen (but keep hidden during transition if animating)
         newScreen.show();
         this.currentScreen = type;
-        console.log(`→ Screen shown: ${type}`);
+
+        // Execute transition animation if requested and there's a current screen
+        if (hideCurrentScreen && currentScreenObj && transitionType !== 'none') {
+            await this.transitionManager.transitionScreens(
+                currentScreenObj.container,
+                newScreen.container,
+                { type: transitionType, duration: 300 }
+            );
+        } else if (hideCurrentScreen && currentScreenObj) {
+            // No animation, just hide current
+            currentScreenObj.hide();
+        }
+
+        console.log(`→ Screen shown: ${type} (transition: ${transitionType})`);
     }
 
     /**
@@ -148,16 +166,16 @@ export class GameUIManager {
     }
 
     /**
-     * Go back to previous screen
+     * Go back to previous screen with transition animation
      */
-    public goBack(): void {
+    public async goBack(): Promise<void> {
         const prev = this.previousScreen;
         const cur = this.currentScreen;
         if (!prev || prev === cur) {
-            this.showScreen('main-menu');
+            await this.showScreen('main-menu', true, 'crossfade');
             return;
         }
-        this.showScreen(prev);
+        await this.showScreen(prev, true, 'crossfade');
     }
 
     /**
@@ -222,6 +240,13 @@ export class GameUIManager {
      */
     public getResponsiveManager(): ResponsiveUIManager {
         return this.responsiveManager;
+    }
+
+    /**
+     * Get screen transition manager
+     */
+    public getTransitionManager(): ScreenTransitionManager {
+        return this.transitionManager;
     }
 
     /**
