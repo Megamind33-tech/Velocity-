@@ -1,5 +1,6 @@
 /**
  * Main menu — Portrait mission console (mobile-first AAA quality)
+ * Includes professional entrance animations, button interactions, and polish effects
  */
 
 import { Application, Container, FederatedPointerEvent, Graphics } from 'pixi.js';
@@ -11,6 +12,9 @@ import { ResponsiveUIManager } from '../../ResponsiveUIManager';
 import { buildPortraitMissionScreen, type PortraitMissionBundle } from '../menuPortrait/portraitMissionScreen';
 import { getPilotRank } from '../menuLayoutHelpers';
 import { mountVelocityShell, resizeVelocityShell, type VelocityShellParts } from '../velocityScreenShell';
+import { animateAlpha, animatePosition, easeOut } from '../animationHelpers';
+import { AnimationManager } from '../AnimationManager';
+import { createGlowPulse } from '../polishEffects';
 
 
 export class MainMenuScreen extends BaseGameScreen {
@@ -24,10 +28,16 @@ export class MainMenuScreen extends BaseGameScreen {
 
     private _tick = 0;
     private _flyBtn: Container | null = null;
+    private _flyShimmer = 0; // Animation tick for fly button shimmer
 
     private listDrag = false;
     private listDragY = 0;
     private listScrollStart = 0;
+
+    // Animation management
+    private animManager = AnimationManager.getInstance();
+    private cancelEntrance: (() => void) | null = null;
+    private cancelGlow: (() => void) | null = null;
     constructor(app: Application) {
         super(app);
         this.content.label = 'mainMenuContent';
@@ -145,6 +155,36 @@ export class MainMenuScreen extends BaseGameScreen {
     show(): void {
         super.show();
         this.rebuildLayout(this.app.screen.width, this.app.screen.height);
+
+        // Animate content entrance: fade + position slide from top
+        this.cancelEntrance?.();
+        this.content.alpha = 0;
+        this.content.position.y = -50;
+
+        this.cancelEntrance = animateAlpha(this.content, 0, 1, {
+            duration: 400,
+            easing: easeOut,
+        });
+
+        animatePosition(this.content, { y: -50 }, { y: 0 }, {
+            duration: 400,
+            easing: easeOut,
+            onComplete: () => {
+                // Apply glow pulse to fly button after entrance
+                if (this._flyBtn) {
+                    this.cancelGlow?.();
+                    this.cancelGlow = createGlowPulse(this._flyBtn, 0.8, 1.0, { loop: true });
+                }
+            },
+        });
+    }
+
+    hide(): void {
+        this.cancelEntrance?.();
+        this.cancelGlow?.();
+        this.animManager.cancelGroup('modal-entrance');
+        this.animManager.cancelGroup('polish-glow');
+        super.hide();
     }
 
     resize(width: number, height: number): void {
