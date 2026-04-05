@@ -769,7 +769,7 @@ function buildMissionCardPortrait(
     root.addChild(ic);
 
     const btnW = 104;
-    const btnH = 44;
+    const btnH = 40;
     const tx = icX + P_ICON.emblem + P_SPACE.s12;
     const tw = Math.max(40, cw - tx - btnW - P_SPACE.s16 - 8);
     const tagReserve = 56;
