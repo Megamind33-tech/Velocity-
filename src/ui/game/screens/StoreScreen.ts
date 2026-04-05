@@ -10,9 +10,13 @@ import {
     type VelocityModalLayout,
 } from '../velocityModalLayout';
 import { createVelocityGameButton } from '../velocityUiButtons';
+import { animateModalEntrance } from '../modalAnimations';
+import { AnimationManager } from '../AnimationManager';
 
 export class StoreScreen extends BaseGameScreen {
     private layout!: VelocityModalLayout;
+    private animManager = AnimationManager.getInstance();
+    private cancelEntrance: (() => void) | null = null;
 
     constructor(app: Application) {
         super(app);
@@ -94,6 +98,14 @@ export class StoreScreen extends BaseGameScreen {
 
     show(): void {
         super.show();
+
+        // Animate modal entrance
+        this.cancelEntrance?.();
+        this.container.alpha = 0;
+        this.container.scale.set(0.95, 0.95);
+        this.cancelEntrance = animateModalEntrance(this.container, {
+            duration: 300,
+        });
     }
 
     resize(width: number, height: number): void {
@@ -104,5 +116,11 @@ export class StoreScreen extends BaseGameScreen {
         this.layout.panelH = panelH;
         this.layout.innerW = velocityModalInnerWidth(panelW);
         repositionVelocityModal(this.layout, width, height);
+    }
+
+    hide(): void {
+        this.cancelEntrance?.();
+        this.animManager.cancelGroup('modal-entrance');
+        super.hide();
     }
 }

@@ -8,6 +8,8 @@ import { ResponsiveUIManager } from '../../ResponsiveUIManager';
 import { mountVelocityShell, resizeVelocityShell, type VelocityShellParts } from '../velocityScreenShell';
 import { createVelocityGameButton } from '../velocityUiButtons';
 import { velocityUiArtReady } from '../velocityUiArt';
+import { animateModalEntrance } from '../modalAnimations';
+import { AnimationManager } from '../AnimationManager';
 
 /**
  * Pause: same shell as other modals + Kenney panel + uniform buttons.
@@ -18,6 +20,8 @@ export class PauseMenuScreen extends BaseGameScreen {
     private panelBgSlot!: Container;
     private titleText!: Text;
     private content!: Container;
+    private animManager = AnimationManager.getInstance();
+    private cancelEntrance: (() => void) | null = null;
 
     constructor(app: Application) {
         super(app);
@@ -204,9 +208,23 @@ export class PauseMenuScreen extends BaseGameScreen {
     show(): void {
         super.show();
         this.layoutPause();
+
+        // Animate modal entrance
+        this.cancelEntrance?.();
+        this.panel.alpha = 0;
+        this.panel.scale.set(0.95, 0.95);
+        this.cancelEntrance = animateModalEntrance(this.panel, {
+            duration: 300,
+        });
     }
 
     resize(width: number, height: number): void {
         this.layoutPause();
+    }
+
+    hide(): void {
+        this.cancelEntrance?.();
+        this.animManager.cancelGroup('modal-entrance');
+        super.hide();
     }
 }

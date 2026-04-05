@@ -24,6 +24,8 @@ import {
 } from '../velocityModalLayout';
 import { createVelocityGameButton } from '../velocityUiButtons';
 import { getVelocityUiTexture } from '../velocityUiArt';
+import { animateModalEntrance, animateModalExit } from '../modalAnimations';
+import { AnimationManager } from '../AnimationManager';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -108,6 +110,8 @@ export class LevelCompleteScreen extends BaseGameScreen {
     private scoreValText!: Text;
     private starRow!: Container;
     private starCount = 0;
+    private animManager = AnimationManager.getInstance();
+    private cancelEntrance: (() => void) | null = null;
 
     constructor(app: Application) {
         super(app);
@@ -248,6 +252,14 @@ export class LevelCompleteScreen extends BaseGameScreen {
     show(): void {
         super.show();
         this.refreshRunSummary();
+
+        // Animate modal entrance
+        this.cancelEntrance?.();
+        this.container.alpha = 0;
+        this.container.scale.set(0.95, 0.95);
+        this.cancelEntrance = animateModalEntrance(this.container, {
+            duration: 300,
+        });
     }
 
     resize(width: number, height: number): void {
@@ -258,5 +270,11 @@ export class LevelCompleteScreen extends BaseGameScreen {
         this.layout.panelH = panelH;
         this.layout.innerW = velocityModalInnerWidth(panelW);
         repositionVelocityModal(this.layout, width, height);
+    }
+
+    hide(): void {
+        this.cancelEntrance?.();
+        this.animManager.cancelGroup('modal-entrance');
+        super.hide();
     }
 }
