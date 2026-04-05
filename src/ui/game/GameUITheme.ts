@@ -112,11 +112,11 @@ export const GAME_FONTS = {
  * Size System
  */
 export const GAME_SIZES = {
-    // Button sizes (scaled for touch on mobile)
+    // Button sizes (8px grid + minimum 48px touch target per Google/Apple HIG)
     button: {
-        small: { width: 70, height: 35 },
-        medium: { width: 120, height: 45 },
-        large: { width: 160, height: 55 },
+        small: { width: 80, height: 40 },
+        medium: { width: 120, height: 48 },
+        large: { width: 160, height: 56 },
     },
 
     // Font sizes
@@ -160,11 +160,11 @@ export const GAME_SIZES = {
         thick: 3,
     },
 
-    // Corner radius
+    // Corner radius (per spec: 8px buttons, 12px cards, 16px modals)
     radius: {
-        small: 4,
-        medium: 8,
-        large: 12,
+        small: 8,    // Button radius (was 4)
+        medium: 12,  // Card radius (was 8)
+        large: 16,   // Modal radius (was 12)
     },
 
     // Panel sizes

@@ -55,11 +55,12 @@ import {
 
 export type MenuButtonTier = 'cta' | 'secondary' | 'economy' | 'utility';
 
+// Button heights follow 8px grid + min touch target (48px per Google/Apple HIG)
 export const MENU_TIER_HEIGHT: Record<MenuButtonTier, number> = {
-    cta:       70,
-    secondary: 52,
-    economy:   46,
-    utility:   40,
+    cta:       56,  // Primary CTA height (spec minimum)
+    secondary: 48,  // Minimum touch target
+    economy:   48,  // Minimum touch target
+    utility:   48,  // Minimum touch target
 };
 
 /** Optional visual treatment for menu buttons (CTA launch energy, social modules). */
