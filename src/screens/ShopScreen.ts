@@ -1,101 +1,168 @@
 /**
  * ShopScreen
- * Mobile card-based treasure shop interface
- * Clean, minimal design for mobile phones
+ * Unified shop with tabs for Tokens, Power Ups, Fuel, and Planes
+ * Two-panel design: products grid (left) + details (right)
  */
 
 import { Container, Graphics, Text } from 'pixi.js';
 import { UIButton } from '../components/UIButton';
+import { StatsBar } from '../components/StatsBar';
 import { ColorTheme } from '../utils/ColorTheme';
 import { navigationEvents } from './NavigationEvents';
 
-// Game data structures
-interface TreasureData {
+interface ShopItem {
   id: string;
   name: string;
   price: number;
-  rarity: 'common' | 'rare' | 'epic' | 'legendary';
+  category: 'tokens' | 'powerups' | 'fuel' | 'planes';
   icon: string;
-  contents: {
-    coins?: number;
-    gems?: number;
-    xp?: number;
-  };
+  description: string;
+  bonus?: string;
 }
 
-interface ItemData {
-  id: string;
-  name: string;
-  type: string;
+interface PlaneItem extends ShopItem {
   stats: {
     power: number;
     attack: number;
     defense: number;
     speed: number;
   };
-  icon: string;
 }
 
+type TabType = 'tokens' | 'powerups' | 'fuel' | 'planes';
+
 export class ShopScreen extends Container {
-  private treasureData: TreasureData[] = [];
-  private itemData: ItemData[] = [];
-  private scrollContainer: Container;
+  private currentTab: TabType = 'tokens';
+  private selectedItemId: string | null = null;
+  private items: ShopItem[] = [];
+  private tabButtons: Container;
+  private itemsGrid: Container;
+  private detailsPanel: Container;
   private navigation: Container;
 
   constructor() {
     super();
-    this.loadGameData();
+    this.loadShopData();
     this.setupBackground();
     this.setupLayout();
   }
 
   /**
-   * Load game data
+   * Load shop data
    */
-  private loadGameData(): void {
-    // Treasure data
-    this.treasureData = [
+  private loadShopData(): void {
+    this.items = [
+      // TOKENS
       {
-        id: 'bronze',
-        name: 'BRONZE TREASURE',
-        price: 260,
-        rarity: 'common',
-        icon: 'treasure_bronze.png',
-        contents: { coins: 100, xp: 50 },
+        id: 'tokens-100',
+        name: '100 TOKENS',
+        price: 2.99,
+        category: 'tokens',
+        icon: 'token.png',
+        description: 'Get 100 tokens to unlock premium content',
+        bonus: '+10 bonus tokens',
       },
       {
-        id: 'silver',
-        name: 'SILVER TREASURE',
-        price: 350,
-        rarity: 'rare',
-        icon: 'treasure_silver.png',
-        contents: { coins: 250, xp: 100 },
+        id: 'tokens-500',
+        name: '500 TOKENS',
+        price: 9.99,
+        category: 'tokens',
+        icon: 'token.png',
+        description: 'Great value pack with bonus tokens',
+        bonus: '+100 bonus tokens',
       },
       {
-        id: 'gold',
-        name: 'GOLD TREASURE',
-        price: 450,
-        rarity: 'epic',
-        icon: 'treasure_gold.png',
-        contents: { coins: 500, gems: 50, xp: 200 },
+        id: 'tokens-1000',
+        name: '1000 TOKENS',
+        price: 16.99,
+        category: 'tokens',
+        icon: 'token.png',
+        description: 'Best value premium token bundle',
+        bonus: '+300 bonus tokens',
+      },
+      // POWER UPS
+      {
+        id: 'shield-5',
+        name: 'SHIELD x5',
+        price: 4.99,
+        category: 'powerups',
+        icon: 'shield.png',
+        description: 'Protect your plane from damage',
+      },
+      {
+        id: 'boost-10',
+        name: 'SPEED BOOST x10',
+        price: 6.99,
+        category: 'powerups',
+        icon: 'boost.png',
+        description: 'Temporary speed enhancement',
+      },
+      {
+        id: 'invincible-3',
+        name: 'INVINCIBLE x3',
+        price: 9.99,
+        category: 'powerups',
+        icon: 'star.png',
+        description: 'Complete invulnerability for 10 seconds',
+      },
+      // FUEL
+      {
+        id: 'fuel-50',
+        name: 'FUEL 50 LITERS',
+        price: 1.99,
+        category: 'fuel',
+        icon: 'fuel.png',
+        description: 'Keep your plane flying longer',
+      },
+      {
+        id: 'fuel-200',
+        name: 'FUEL 200 LITERS',
+        price: 5.99,
+        category: 'fuel',
+        icon: 'fuel.png',
+        description: 'Extended range missions',
+      },
+      {
+        id: 'fuel-unlimited',
+        name: 'UNLIMITED FUEL',
+        price: 19.99,
+        category: 'fuel',
+        icon: 'fuel.png',
+        description: 'Never run out of fuel',
+      },
+      // PLANES
+      {
+        id: 'raptor',
+        name: 'F-22 RAPTOR',
+        price: 24.99,
+        category: 'planes',
+        icon: 'plane_raptor.png',
+        description: 'Cutting-edge fighter jet',
+        bonus: 'Advanced maneuverability',
+      },
+      {
+        id: 'spirit',
+        name: 'B-2 SPIRIT',
+        price: 34.99,
+        category: 'planes',
+        icon: 'plane_spirit.png',
+        description: 'Legendary stealth bomber',
+        bonus: 'Heavy payload capacity',
+      },
+      {
+        id: 'aurora',
+        name: 'AURORA',
+        price: 49.99,
+        category: 'planes',
+        icon: 'plane_aurora.png',
+        description: 'Experimental hypersonic',
+        bonus: 'Max speed capability',
       },
     ];
 
-    // Item data
-    this.itemData = [
-      {
-        id: 'yellow',
-        name: 'YELLOW',
-        type: 'F-20 TIGERSHARK',
-        stats: {
-          power: 85,
-          attack: 90,
-          defense: 70,
-          speed: 95,
-        },
-        icon: 'plane_yellow.png',
-      },
-    ];
+    if (this.items.length > 0) {
+      this.selectedItemId = this.items[0].id;
+    }
   }
 
   /**
@@ -110,116 +177,292 @@ export class ShopScreen extends Container {
   }
 
   /**
-   * Setup layout - MOBILE CARD-BASED DESIGN
-   * Clean, minimal cards stacked vertically
+   * Setup layout
    */
   private setupLayout(): void {
     // Title
     const title = new Text('SHOP', {
-      fontSize: 32,
+      fontSize: 28,
       fontWeight: 'bold',
       fontFamily: 'Orbitron, Arial',
       fill: ColorTheme.get('brand.primary'),
     });
-    title.position.set(16, 16);
+    title.position.set(16, 12);
     this.addChild(title);
 
-    // Scroll container for cards
-    this.scrollContainer = new Container();
-    this.scrollContainer.position.set(0, 60);
-    this.addChild(this.scrollContainer);
+    // TAB BUTTONS at top
+    this.tabButtons = this.createTabButtons();
+    this.tabButtons.position.set(16, 44);
+    this.addChild(this.tabButtons);
 
-    let yPos = 0;
     const padding = 12;
+    const panelWidth = 188;
+    const leftX = padding;
+    const rightX = padding + panelWidth + 8;
 
-    // Create treasure cards
-    this.treasureData.forEach((treasure) => {
-      const card = this.createTreasureCard(treasure);
-      card.position.set(padding, yPos);
-      this.scrollContainer.addChild(card);
-      yPos += 100 + 12; // Card height + gap
-    });
+    // LEFT PANEL - Items Grid
+    this.itemsGrid = new Container();
+    this.itemsGrid.position.set(leftX, 95);
+    this.addChild(this.itemsGrid);
 
-    // Navigation bar at bottom
+    const leftBg = new Graphics();
+    leftBg.lineStyle(2, ColorTheme.get('brand.primary'), 0.6);
+    leftBg.drawRoundedRect(0, 0, panelWidth, 600, 6);
+    leftBg.endFill();
+    this.itemsGrid.addChildAt(leftBg, 0);
+
+    this.updateItemsGrid();
+
+    // RIGHT PANEL - Details
+    this.detailsPanel = new Container();
+    this.detailsPanel.position.set(rightX, 95);
+    this.addChild(this.detailsPanel);
+
+    this.updateDetailsPanel();
+
+    // Navigation bar
     this.navigation = this.createNavigation();
-    this.navigation.position.set(12, 800);
+    this.navigation.position.set(padding, 750);
     this.addChild(this.navigation);
   }
 
   /**
-   * Create a treasure card
+   * Create tab buttons
    */
-  private createTreasureCard(treasure: TreasureData): Container {
+  private createTabButtons(): Container {
+    const tabs = new Container();
+
+    const tabList: { label: string; id: TabType }[] = [
+      { label: 'TOKENS', id: 'tokens' },
+      { label: 'POWER UPS', id: 'powerups' },
+      { label: 'FUEL', id: 'fuel' },
+      { label: 'PLANES', id: 'planes' },
+    ];
+
+    let xPos = 0;
+    tabList.forEach((tab) => {
+      const button = new UIButton({
+        text: tab.label,
+        width: 92,
+        height: 32,
+        variant: this.currentTab === tab.id ? 'primary' : 'secondary',
+        onClick: () => {
+          this.currentTab = tab.id;
+          this.setupLayout();
+        },
+      });
+
+      button.position.set(xPos, 0);
+      tabs.addChild(button);
+      xPos += 96;
+    });
+
+    return tabs;
+  }
+
+  /**
+   * Update items grid
+   */
+  private updateItemsGrid(): void {
+    // Remove existing items (keep background)
+    while (this.itemsGrid.children.length > 1) {
+      this.itemsGrid.removeChildAt(1);
+    }
+
+    const filtered = this.items.filter((item) => item.category === this.currentTab);
+
+    let yPos = 8;
+    filtered.forEach((item) => {
+      const itemCard = this.createItemCard(item);
+      itemCard.position.set(6, yPos);
+      this.itemsGrid.addChild(itemCard);
+      yPos += 130;
+    });
+  }
+
+  /**
+   * Create item card for grid
+   */
+  private createItemCard(item: ShopItem): Container {
     const card = new Container();
 
     // Card background
     const bg = new Graphics();
-    bg.beginFill(ColorTheme.get('background.secondary'), 0.7);
-    bg.drawRoundedRect(0, 0, 352, 88, 8);
+    const isSelected = this.selectedItemId === item.id;
+    bg.beginFill(
+      isSelected ? ColorTheme.get('brand.primary') : ColorTheme.get('background.secondary'),
+      isSelected ? 0.4 : 0.3
+    );
+    bg.drawRoundedRect(0, 0, 176, 120, 4);
     bg.endFill();
     card.addChild(bg);
 
-    // Treasure name
-    const nameText = new Text(treasure.name, {
-      fontSize: 16,
+    // Item icon placeholder
+    const iconBg = new Graphics();
+    iconBg.beginFill(ColorTheme.get('brand.secondary'), 0.5);
+    iconBg.drawRoundedRect(0, 0, 60, 60, 4);
+    iconBg.endFill();
+    iconBg.position.set(58, 8);
+    card.addChild(iconBg);
+
+    // Item name
+    const nameText = new Text(item.name, {
+      fontSize: 11,
       fontWeight: 'bold',
       fontFamily: 'Exo 2, Arial',
       fill: ColorTheme.get('text.primary'),
+      wordWrap: true,
+      wordWrapWidth: 160,
     });
-    nameText.position.set(12, 8);
+    nameText.position.set(8, 72);
     card.addChild(nameText);
 
-    // Rarity badge
-    const rarityBg = new Graphics();
-    const rarityColor = treasure.rarity === 'common' ? 0x6b7280 :
-                        treasure.rarity === 'rare' ? 0x3b82f6 :
-                        treasure.rarity === 'epic' ? 0x8b5cf6 : 0xf59e0b;
-    rarityBg.beginFill(rarityColor, 0.8);
-    rarityBg.drawRoundedRect(0, 0, 80, 24, 4);
-    rarityBg.endFill();
-    rarityBg.position.set(12, 28);
-    card.addChild(rarityBg);
-
-    const rarityText = new Text(treasure.rarity.toUpperCase(), {
-      fontSize: 10,
-      fontWeight: 'bold',
-      fontFamily: 'Oxanium, Arial',
-      fill: 0xffffff,
-    });
-    rarityText.position.set(16, 32);
-    card.addChild(rarityText);
-
-    // Price badge
+    // Price - highlighted
     const priceBg = new Graphics();
-    priceBg.beginFill(ColorTheme.get('brand.success'), 0.8);
-    priceBg.drawRoundedRect(0, 0, 80, 24, 4);
+    priceBg.beginFill(ColorTheme.get('brand.success'), 0.7);
+    priceBg.drawRoundedRect(0, 0, 160, 20, 2);
     priceBg.endFill();
-    priceBg.position.set(256, 28);
+    priceBg.position.set(8, 96);
     card.addChild(priceBg);
 
-    const priceText = new Text(`$${treasure.price}`, {
-      fontSize: 11,
+    const priceText = new Text(`$${item.price}`, {
+      fontSize: 12,
       fontWeight: 'bold',
       fontFamily: 'Oxanium, Arial',
       fill: 0xffffff,
     });
-    priceText.position.set(260, 32);
+    priceText.position.set(12, 98);
     card.addChild(priceText);
 
-    // Contents row
-    const contentsText = new Text(`${treasure.contents.coins || 0} Coins`, {
-      fontSize: 12,
-      fontFamily: 'Oxanium, Arial',
-      fill: ColorTheme.get('text.secondary'),
-    });
-    contentsText.position.set(12, 60);
-    card.addChild(contentsText);
-
-    // Click to purchase
+    // Clickable
     card.eventMode = 'static';
     card.cursor = 'pointer';
+    card.on('pointerdown', () => {
+      this.selectedItemId = item.id;
+      this.setupLayout();
+    });
 
     return card;
+  }
+
+  /**
+   * Update details panel
+   */
+  private updateDetailsPanel(): void {
+    this.detailsPanel.removeChildren();
+
+    const selected = this.items.find((i) => i.id === this.selectedItemId);
+    if (!selected) return;
+
+    const panelWidth = 180;
+
+    // Panel background
+    const bg = new Graphics();
+    bg.lineStyle(2, ColorTheme.get('brand.primary'), 0.6);
+    bg.drawRoundedRect(0, 0, panelWidth, 600, 6);
+    bg.endFill();
+    this.detailsPanel.addChild(bg);
+
+    let yPos = 12;
+
+    // Item name - big
+    const nameText = new Text(selected.name, {
+      fontSize: 18,
+      fontWeight: 'bold',
+      fontFamily: 'Exo 2, Arial',
+      fill: ColorTheme.get('brand.primary'),
+      wordWrap: true,
+      wordWrapWidth: 160,
+    });
+    nameText.position.set(12, yPos);
+    this.detailsPanel.addChild(nameText);
+    yPos += 40;
+
+    // Description
+    const descText = new Text(selected.description, {
+      fontSize: 10,
+      fontFamily: 'Arial',
+      fill: ColorTheme.get('text.secondary'),
+      wordWrap: true,
+      wordWrapWidth: 160,
+    });
+    descText.position.set(12, yPos);
+    this.detailsPanel.addChild(descText);
+    yPos += 50;
+
+    // Bonus if exists
+    if (selected.bonus) {
+      const bonusBg = new Graphics();
+      bonusBg.beginFill(ColorTheme.get('semantic.success'), 0.3);
+      bonusBg.drawRoundedRect(0, 0, 156, 28, 3);
+      bonusBg.endFill();
+      bonusBg.position.set(12, yPos);
+      this.detailsPanel.addChild(bonusBg);
+
+      const bonusText = new Text(`✨ ${selected.bonus}`, {
+        fontSize: 10,
+        fontWeight: 'bold',
+        fontFamily: 'Oxanium, Arial',
+        fill: ColorTheme.get('semantic.success'),
+      });
+      bonusText.position.set(14, yPos + 6);
+      this.detailsPanel.addChild(bonusText);
+
+      yPos += 40;
+    }
+
+    // For planes: show stats
+    if (selected.category === 'planes') {
+      const plane = selected as any as PlaneItem;
+      if (plane.stats) {
+        yPos += 8;
+
+        const stats = [
+          { label: 'POWER', value: plane.stats.power },
+          { label: 'ATTACK', value: plane.stats.attack },
+          { label: 'DEFENSE', value: plane.stats.defense },
+          { label: 'SPEED', value: plane.stats.speed },
+        ];
+
+        stats.forEach((stat) => {
+          const label = new Text(stat.label, {
+            fontSize: 9,
+            fontWeight: 'bold',
+            fontFamily: 'Oxanium, Arial',
+            fill: ColorTheme.get('text.tertiary'),
+          });
+          label.position.set(12, yPos);
+          this.detailsPanel.addChild(label);
+
+          const bar = new StatsBar({
+            width: 156,
+            height: 8,
+            showValue: false,
+            showLabel: false,
+            showPercentage: false,
+          });
+          bar.position.set(12, yPos + 12);
+          bar.setValue(stat.value, 100);
+          this.detailsPanel.addChild(bar);
+
+          yPos += 28;
+        });
+      }
+    }
+
+    // BUY button
+    yPos += 20;
+    const buyButton = new UIButton({
+      text: 'BUY NOW',
+      width: 156,
+      height: 36,
+      variant: 'success',
+      onClick: () => {
+        console.log('Purchasing:', selected.name);
+      },
+    });
+    buyButton.position.set(12, yPos);
+    this.detailsPanel.addChild(buyButton);
   }
 
   /**
@@ -230,7 +473,6 @@ export class ShopScreen extends Container {
 
     const navButtons = [
       { label: 'HANGAR', variant: 'primary' as const, action: 'hangar' },
-      { label: 'STORE', variant: 'primary' as const, action: 'plane-store' },
       { label: 'PLAY', variant: 'success' as const, action: 'play' },
       { label: 'EXIT', variant: 'danger' as const, action: 'exit' },
     ];
@@ -238,13 +480,13 @@ export class ShopScreen extends Container {
     navButtons.forEach((btnConfig, index) => {
       const button = new UIButton({
         text: btnConfig.label,
-        width: 85,
+        width: 120,
         height: 40,
         variant: btnConfig.variant,
         onClick: () => this.handleNavigation(btnConfig.action),
       });
 
-      button.position.set(index * 92, 0);
+      button.position.set(index * 128, 0);
       nav.addChild(button);
     });
 
@@ -259,7 +501,7 @@ export class ShopScreen extends Container {
   }
 
   /**
-   * Screen lifecycle - fadeIn animation
+   * Screen lifecycle - fadeIn
    */
   async fadeIn(duration: number = 300): Promise<void> {
     this.alpha = 0;
@@ -269,7 +511,6 @@ export class ShopScreen extends Container {
       const animate = () => {
         const elapsed = Date.now() - startTime;
         const progress = Math.min(elapsed / duration, 1);
-
         this.alpha = progress;
 
         if (progress < 1) {
@@ -285,7 +526,7 @@ export class ShopScreen extends Container {
   }
 
   /**
-   * Screen lifecycle - fadeOut animation
+   * Screen lifecycle - fadeOut
    */
   async fadeOut(duration: number = 300): Promise<void> {
     const startTime = Date.now();
@@ -294,7 +535,6 @@ export class ShopScreen extends Container {
       const animate = () => {
         const elapsed = Date.now() - startTime;
         const progress = Math.min(elapsed / duration, 1);
-
         this.alpha = 1 - progress;
 
         if (progress < 1) {
