@@ -42,7 +42,6 @@ export type HeroLayoutHelpers = {
 
 const GRID = 8;
 const TITLE_H = 34;
-const SUB_H = 15;
 const TAG_H = 14;
 const GAP_STACK = 5;
 const RIGHT_EMBLEM = 68;
@@ -84,8 +83,8 @@ export function mountHeroCommandLayout(
     let barY = rowY - gapBarToRail - barH;
     let progLblY = barY - progLblH;
 
-    const subY = TITLE_H + GAP_STACK;
-    const tagY = subY + SUB_H + GAP_STACK;
+    // No hero subtitle line — avoids overlap with route-bonus block; tag sits under title.
+    const tagY = TITLE_H + GAP_STACK + GAP_STACK;
     const minProgTop = tagY + TAG_H + GAP_STACK;
     if (progLblY < minProgTop) {
         progLblY = minProgTop;
@@ -152,13 +151,6 @@ export function mountHeroCommandLayout(
     title.position.set(ox, 0);
     content.addChild(title);
 
-    const sub = new Text({
-        text: 'VOICE-POWERED FLIGHT',
-        style: helpers.textStyle(11, '600', colors.muted, 1.5),
-    });
-    sub.position.set(ox, subY);
-    content.addChild(sub);
-
     if (showTag) {
         const tag = new Text({
             text: 'Precision · Pitch · Signal',
@@ -169,7 +161,7 @@ export function mountHeroCommandLayout(
     }
 
     const emblemCx = ox + contentW - RIGHT_EMBLEM / 2;
-    const emblemCy = Math.min(36, TITLE_H + SUB_H / 2 + 4);
+    const emblemCy = Math.min(36, TITLE_H + 8);
     const emblemR = 26;
     const rg = new Graphics();
     if (helpers.drawHeroEmblem) {
@@ -195,7 +187,7 @@ export function mountHeroCommandLayout(
 
     const motifRight = ox + contentW - RIGHT_EMBLEM - 6;
 
-    const contentFloor = (showTag ? tagY + TAG_H : subY + SUB_H) + 4;
+    const contentFloor = (showTag ? tagY + TAG_H : TITLE_H + GAP_STACK) + 4;
     const bonusStars = prog.rewardStars;
     let bonusLineY = 0;
     let bonusSecondLineY = 0;
