@@ -313,7 +313,6 @@ function buildFeaturedMissionCard(p: FeaturedProps): {
     // Snap to 8px grid
     flyW = Math.floor(flyW / 8) * 8;
     const rankRoot = new Container();
-    const rankRim = mountClassChipKenneyRim(rankRoot, rankW, chipH, P_COLORS.accentGold);
     const rb = new Graphics();
     rb.roundRect(0, 0, rankW, chipH, P_RADIUS.chip);
     rb.fill({ color: P_COLORS.bgPanel, alpha: 1 });
@@ -345,6 +344,7 @@ function buildFeaturedMissionCard(p: FeaturedProps): {
     });
     rt.position.set(textPad, Math.floor((chipH - 13) / 2));
     rankRoot.addChild(rt);
+    const rankRim = mountClassChipKenneyRim(rankRoot, rankW, chipH, P_COLORS.accentGold);
     rankRoot.position.set(pad, rowY);
     root.addChild(rankRoot);
     const starLbl = new Text({
