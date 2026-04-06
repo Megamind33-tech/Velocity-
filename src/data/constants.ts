@@ -34,22 +34,26 @@ export type ParallaxLayerConfig = { speed: number; depth: number; offset: number
 
 export const RENDERING = {
     LERP_ALPHA: 0.15, // Smoothing factor for visuals
+    /**
+     * Horizontal parallax = `scrollX * speed` (tilePosition.x). Speeds must stay high
+     * enough to read on mobile next to gates (220 px/s scroll); 0.04–0.2 felt “frozen.”
+     */
     PARALLAX_LAYERS: [
-        { speed: 0.05, depth: 5, offset: 0 },
-        { speed: 0.10, depth: 4, offset: 100 },
-        { speed: 0.20, depth: 3, offset: 200 },
-        { speed: 0.40, depth: 2, offset: 300 },
-        { speed: 0.60, depth: 1, offset: 400 }
+        { speed: 0.22, depth: 5, offset: 0 },
+        { speed: 0.42, depth: 4, offset: 100 },
+        { speed: 0.62, depth: 3, offset: 200 },
+        { speed: 0.82, depth: 2, offset: 300 },
+        { speed: 1.0, depth: 1, offset: 400 }
     ] as ParallaxLayerConfig[],
     /**
-     * OGA City parallax (240×135 layers). Back → front; farther = lower speed.
+     * OGA City parallax (240×135 layers). Back → front; foreground ~1× scroll matches gate pass-by.
      * @see public/oga-parallax-city/SOURCES.md
      */
     LEVEL1_CITY_PARALLAX_LAYERS: [
-        { speed: 0.04, depth: 5, offset: 0 },
-        { speed: 0.10, depth: 4, offset: 0 },
-        { speed: 0.24, depth: 3, offset: 0 },
-        { speed: 0.48, depth: 2, offset: 0 },
+        { speed: 0.32, depth: 5, offset: 0 },
+        { speed: 0.52, depth: 4, offset: 0 },
+        { speed: 0.72, depth: 3, offset: 0 },
+        { speed: 0.95, depth: 2, offset: 0 },
     ] as ParallaxLayerConfig[],
     /** Native pixel height of OGA city strips */
     LEVEL1_CITY_TILE_HEIGHT_PX: 135,
