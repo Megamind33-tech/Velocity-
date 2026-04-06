@@ -68,7 +68,8 @@ import {
 import { setSongPitchRangeFromNotes, screenYToAltitude01 } from './game/vocalFlightState';
 import { setRunFlightApp } from './game/runFlightContext';
 import { getTuningCentsFromSungHz } from './game/gateTargetTelemetry';
-import { VOICE_FLIGHT } from './data/constants';
+import { loadCityParallaxTextures } from './game/cityParallaxAssets';
+import { RENDERING, VOICE_FLIGHT } from './data/constants';
 import { preloadWorldMapBackground } from './scenes/WorldMapScene';
 
 /** Log init failure and show a safe, user-visible alert (no innerHTML interpolation). */
@@ -187,6 +188,8 @@ async function init() {
     let runScore = 0;
     let comboStreak = 0;
     let parallaxReady = false;
+    /** Reload parallax when switching level theme (L1 city vs default sky). */
+    let parallaxThemeKey: 'city_l1' | 'default' | null = null;
     let demoZones: Container | null = null;
     let worldMap: WorldMapScene | null = null;
 
@@ -462,6 +465,7 @@ async function init() {
         }
         comboStreak = 0;
         GameState.setRunActive(false);
+        parallaxThemeKey = null;
         resetWorldScroll();
         gatePlayout.clear();
         boundsCheck.clear();
@@ -472,11 +476,31 @@ async function init() {
         uiManager.hideScreen('pause');
     }
 
-    async function ensureParallax(): Promise<void> {
-        if (parallaxReady) return;
+    async function ensureParallax(levelId: number): Promise<void> {
+        const useCity = levelId === 1;
+        const nextKey: 'city_l1' | 'default' = useCity ? 'city_l1' : 'default';
+        if (parallaxReady && parallaxThemeKey === nextKey) return;
+        parallaxThemeKey = nextKey;
+
+        if (useCity) {
+            /**
+             * Level 1 — OGA City Parallax (Gustavo Saraiva, CC0).
+             * Zip `City.zip`: four 240×135 RGBA strips, back→front.
+             * @see public/oga-parallax-city/SOURCES.md
+             */
+            const cityTextures = await loadCityParallaxTextures();
+            await parallaxSystem.init(player, cityTextures, {
+                alphas: [1, 1, 1, 1],
+                layersConfig: [...RENDERING.LEVEL1_CITY_PARALLAX_LAYERS],
+                tilePixelHeight: RENDERING.LEVEL1_CITY_TILE_HEIGHT_PX,
+            });
+            parallaxSystem.resizeToScreen();
+            parallaxReady = true;
+            return;
+        }
 
         /**
-         * Sky background — three parallax layers (tiling textures).
+         * Default sky — three parallax layers (tiling textures).
          * Layer 0: gradient sky + sun + soft haze (fully opaque base).
          * Layer 1: distant wispy clouds (was broken: drew on wrong Graphics).
          * Layer 2: nearer volumetric cloud masses + light atmospheric haze.
@@ -552,11 +576,9 @@ async function init() {
         cloud2Gfx.rect(0, SIZE * 0.72, SIZE, SIZE * 0.28).fill({ color: 0xd4e8f0, alpha: 0.22 });
         const cloudTex2 = app.renderer.generateTexture(cloud2Gfx);
 
-        await parallaxSystem.init(
-            player,
-            [skyTex, cloudTex1, cloudTex2],
-            [1.0, 0.88, 0.72],
-        );
+        await parallaxSystem.init(player, [skyTex, cloudTex1, cloudTex2], {
+            alphas: [1.0, 0.88, 0.72],
+        });
         parallaxSystem.resizeToScreen();
         parallaxReady = true;
     }
@@ -566,7 +588,7 @@ async function init() {
         runScore = 0;
         comboStreak = 0;
         resetWorldScroll();
-        await ensureParallax();
+        await ensureParallax(levelId);
 
         levelSystem.destroyAllGates(world);
 
