@@ -226,6 +226,17 @@ async function init() {
     const cameraFollow = new CameraFollowSystem(app, gameWorldLayer, player);
     world.addSystem(cameraFollow);
 
+    const syncGameplayViewport = (): void => {
+        if (GameState.runActive) {
+            cameraFollow.snapToPlayer(world);
+        }
+        if (parallaxReady) {
+            parallaxSystem.resizeToScreen();
+        }
+    };
+    window.addEventListener('resize', syncGameplayViewport);
+    window.addEventListener('orientationchange', syncGameplayViewport);
+
     registerHudDataSource({
         getScore: () => runScore,
         getLevelId: () => currentLevelId,
@@ -425,58 +436,88 @@ async function init() {
         if (parallaxReady) return;
 
         /**
-         * Sky background — three parallax layers for depth.
-         *
-         * Layer 0 · Sky base (alpha 1.0, slowest)
-         *   Solid sky-blue fill covering the entire tile. This is the ONLY fully opaque
-         *   layer; it masks the dark canvas so the plane is always visible against sky.
-         *
-         * Layer 1 · Distant clouds (alpha 0.8, medium speed)
-         *   Small, wispy puffs scattered across the tile.
-         *
-         * Layer 2 · Near clouds (alpha 0.6, faster)
-         *   Larger, brighter cloud masses closer to the horizon line.
+         * Sky background — three parallax layers (tiling textures).
+         * Layer 0: gradient sky + sun + soft haze (fully opaque base).
+         * Layer 1: distant wispy clouds (was broken: drew on wrong Graphics).
+         * Layer 2: nearer volumetric cloud masses + light atmospheric haze.
          */
         const SIZE = 512;
+        const hash01 = (n: number) => {
+            const x = Math.sin(n * 12.9898) * 43758.5453;
+            return x - Math.floor(x);
+        };
 
-        // --- Layer 0: opaque sky base ---
+        // --- Layer 0: sky gradient, sun disc, subtle high-altitude speckle ---
         const skyGfx = new Graphics();
-        // Upper sky — deeper blue
-        skyGfx.rect(0, 0, SIZE, SIZE * 0.55).fill({ color: 0x2e86c1 });
-        // Lower sky / horizon — lighter, warmer blue
-        skyGfx.rect(0, SIZE * 0.55, SIZE, SIZE * 0.45).fill({ color: 0x6bb8e8 });
+        const steps = 24;
+        for (let s = 0; s < steps; s++) {
+            const t = s / (steps - 1);
+            const y0 = (SIZE * t * 0.62) | 0;
+            const y1 = (SIZE * ((s + 1) / (steps - 1)) * 0.62) | 0;
+            const r = Math.round(18 + t * 28);
+            const g = Math.round(52 + t * 70);
+            const b = Math.round(110 + t * 55);
+            const col = (r << 16) | (g << 8) | b;
+            skyGfx.rect(0, y0, SIZE, Math.max(1, y1 - y0)).fill({ color: col });
+        }
+        skyGfx.rect(0, SIZE * 0.62, SIZE, SIZE * 0.38).fill({ color: 0x87ceeb });
+        // Hazy horizon band
+        skyGfx.rect(0, SIZE * 0.78, SIZE, SIZE * 0.22).fill({ color: 0xb8dce8, alpha: 0.45 });
+        // Sun (soft)
+        skyGfx.circle(SIZE * 0.78, SIZE * 0.2, 48).fill({ color: 0xfff8e7, alpha: 0.35 });
+        skyGfx.circle(SIZE * 0.78, SIZE * 0.2, 28).fill({ color: 0xffefd5, alpha: 0.55 });
+        for (let i = 0; i < 140; i++) {
+            const px = hash01(i * 3.1) * SIZE;
+            const py = hash01(i * 7.7) * SIZE * 0.55;
+            const a = 0.08 + hash01(i * 11) * 0.12;
+            skyGfx.circle(px, py, 0.8 + hash01(i * 13) * 1.2).fill({ color: 0xffffff, alpha: a });
+        }
         const skyTex = app.renderer.generateTexture(skyGfx);
 
-        // --- Layer 1: distant small clouds ---
+        // --- Layer 1: distant clouds (own transparent base — do not reuse skyGfx) ---
         const cloudGfx = new Graphics();
-        skyGfx.rect(0, 0, SIZE, SIZE).fill({ color: 0x6bb8e8, alpha: 0 }); // transparent base
-        const cloudSeeds1 = [
-            [60, 90], [200, 60], [350, 110], [480, 80],
-            [130, 200], [300, 180], [440, 210],
+        cloudGfx.rect(0, 0, SIZE, SIZE).fill({ color: 0x000000, alpha: 0 });
+        const cloudSeeds1: [number, number][] = [
+            [60, 90],
+            [200, 60],
+            [350, 110],
+            [480, 80],
+            [130, 200],
+            [300, 180],
+            [440, 210],
         ];
         for (const [cx, cy] of cloudSeeds1) {
-            cloudGfx.circle(cx, cy, 28).fill({ color: 0xffffff, alpha: 0.75 });
-            cloudGfx.circle(cx + 22, cy + 4, 22).fill({ color: 0xf0f8ff, alpha: 0.65 });
-            cloudGfx.circle(cx - 18, cy + 6, 18).fill({ color: 0xffffff, alpha: 0.6 });
+            cloudGfx.circle(cx, cy, 28).fill({ color: 0xffffff, alpha: 0.72 });
+            cloudGfx.circle(cx + 22, cy + 4, 22).fill({ color: 0xf0f8ff, alpha: 0.62 });
+            cloudGfx.circle(cx - 18, cy + 6, 18).fill({ color: 0xffffff, alpha: 0.55 });
         }
         const cloudTex1 = app.renderer.generateTexture(cloudGfx);
 
-        // --- Layer 2: near, larger clouds ---
+        // --- Layer 2: near clouds + soft lower haze ---
         const cloud2Gfx = new Graphics();
-        const cloudSeeds2 = [[80, 130], [280, 100], [430, 150]];
+        cloud2Gfx.rect(0, 0, SIZE, SIZE).fill({ color: 0x000000, alpha: 0 });
+        const cloudSeeds2: [number, number][] = [
+            [80, 130],
+            [280, 100],
+            [430, 150],
+            [40, 280],
+            [360, 320],
+        ];
         for (const [cx, cy] of cloudSeeds2) {
-            cloud2Gfx.circle(cx, cy, 42).fill({ color: 0xffffff, alpha: 0.85 });
-            cloud2Gfx.circle(cx + 34, cy + 6, 32).fill({ color: 0xf5faff, alpha: 0.8 });
-            cloud2Gfx.circle(cx - 28, cy + 8, 26).fill({ color: 0xffffff, alpha: 0.7 });
-            cloud2Gfx.circle(cx + 10, cy - 20, 24).fill({ color: 0xffffff, alpha: 0.75 });
+            cloud2Gfx.circle(cx, cy, 42).fill({ color: 0xffffff, alpha: 0.82 });
+            cloud2Gfx.circle(cx + 34, cy + 6, 32).fill({ color: 0xf5faff, alpha: 0.75 });
+            cloud2Gfx.circle(cx - 28, cy + 8, 26).fill({ color: 0xffffff, alpha: 0.68 });
+            cloud2Gfx.circle(cx + 10, cy - 20, 24).fill({ color: 0xffffff, alpha: 0.72 });
         }
+        cloud2Gfx.rect(0, SIZE * 0.72, SIZE, SIZE * 0.28).fill({ color: 0xd4e8f0, alpha: 0.22 });
         const cloudTex2 = app.renderer.generateTexture(cloud2Gfx);
 
         await parallaxSystem.init(
             player,
             [skyTex, cloudTex1, cloudTex2],
-            [1.0, 0.85, 0.65],  // layer alphas: base fully opaque, clouds semi-transparent
+            [1.0, 0.88, 0.72],
         );
+        parallaxSystem.resizeToScreen();
         parallaxReady = true;
     }
 

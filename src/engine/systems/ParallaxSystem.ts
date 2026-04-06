@@ -14,8 +14,10 @@ export class ParallaxSystem implements System {
     private layers: TilingSprite[] = [];
     private container: Container;
     private playerEntity: Entity | null = null;
+    private readonly app: Application;
 
     constructor(app: Application) {
+        this.app = app;
         this.container = new Container();
         app.stage.addChildAt(this.container, 0); // Background layer — always behind everything
     }
@@ -33,17 +35,29 @@ export class ParallaxSystem implements System {
 
         this.playerEntity = player;
 
+        const w = this.app.screen.width;
+        const h = this.app.screen.height;
         for (let i = 0; i < textures.length; i++) {
             const tilingSprite = new TilingSprite({
                 texture: textures[i],
-                width: window.innerWidth,
-                height: window.innerHeight,
+                width: w,
+                height: h,
             });
 
             // Use caller-supplied alpha if provided, else full opacity.
             tilingSprite.alpha = alphas ? (alphas[i] ?? 1.0) : 1.0;
             this.container.addChild(tilingSprite);
             this.layers.push(tilingSprite);
+        }
+    }
+
+    /** Match canvas after resize/orientation (tiling area). */
+    public resizeToScreen(): void {
+        const w = this.app.screen.width;
+        const h = this.app.screen.height;
+        for (let i = 0; i < this.layers.length; i++) {
+            this.layers[i]!.width = w;
+            this.layers[i]!.height = h;
         }
     }
 
