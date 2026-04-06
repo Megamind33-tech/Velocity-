@@ -117,7 +117,7 @@ export class LevelSystem implements System {
         const scroll = getWorldScrollX();
         const playerLogical = scroll + getPlayerWorldX();
 
-        this.syncGateScreenPositions(world, scroll);
+        this.syncGateLogicalPositions(world);
 
         while (this.gatesToSpawn.length > 0 && this.gatesToSpawn[0].x < playerLogical + this.spawnRange) {
             const gateData = this.gatesToSpawn.shift()!;
@@ -195,14 +195,15 @@ export class LevelSystem implements System {
         clearGateTargets();
     }
 
-    private syncGateScreenPositions(world: World, scroll: number): void {
+    /** Gate X is logical scroll-space; horizontal motion comes from `worldScrollRoot.x = -scrollX` in main. */
+    private syncGateLogicalPositions(world: World): void {
         const gates = world.getEntities(GateComponent.TYPE_ID);
         for (let i = 0; i < gates.length; i++) {
             const e = gates[i]!;
             const gc = world.getComponent<GateComponent>(e, GateComponent.TYPE_ID);
             const tr = world.getComponent<TransformComponent>(e, TransformComponent.TYPE_ID);
             if (gc && tr) {
-                tr.x = gc.logicalX - scroll;
+                tr.x = gc.logicalX;
             }
         }
     }
@@ -216,7 +217,7 @@ export class LevelSystem implements System {
         sprite.visible = true;
         (this.worldParent ?? this.app.stage).addChild(sprite);
 
-        world.addComponent(entity, new TransformComponent(data.x - getWorldScrollX(), data.y));
+        world.addComponent(entity, new TransformComponent(data.x, data.y));
         world.addComponent(entity, new SpriteComponent(sprite));
         world.addComponent(entity, new GateComponent(data.width, 200, 10, false, data.x));
     }
