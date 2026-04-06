@@ -22,11 +22,18 @@ export class SpriteSystem implements System {
             const transform = world.getComponent<TransformComponent>(entity, TransformComponent.TYPE_ID)!;
             const spriteComp = world.getComponent<SpriteComponent>(entity, SpriteComponent.TYPE_ID)!;
 
-            // Basic sync - in a more advanced loop, we'd use interpolation for sub-frame smoothness
+            // Sync position from physics transform.
             spriteComp.sprite.x = transform.x;
             spriteComp.sprite.y = transform.y;
-            spriteComp.sprite.rotation = transform.rotation;
-            spriteComp.sprite.scale.set(transform.scaleX, transform.scaleY);
+
+            // Physics rotation + any per-sprite visual offset (e.g. nose-right correction).
+            spriteComp.sprite.rotation = transform.rotation + spriteComp.visualRotationOffset;
+
+            // Only override scale when the transform explicitly carries a non-default scale.
+            // This preserves scales set by applyPlayerPlaneVisual / gate setup code.
+            if (transform.scaleX !== 1 || transform.scaleY !== 1) {
+                spriteComp.sprite.scale.set(transform.scaleX, transform.scaleY);
+            }
         }
     }
 }

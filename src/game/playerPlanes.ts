@@ -40,17 +40,24 @@ export function getPlayerPlaneTextureUrl(planeId?: string): string {
 }
 
 /**
- * Apply plane art to the gameplay sprite (side-view, nose right).
+ * Apply plane art to the gameplay sprite.
+ * All OGA player textures are top-down (nose-up); the caller is responsible for
+ * applying a Math.PI/2 visualRotationOffset on the SpriteComponent so the nose
+ * faces right during left-to-right flight.
+ *
+ * Returns the uniform scale that was applied so callers can sync TransformComponent.
  */
-export function applyPlayerPlaneVisual(sprite: Sprite, planeId?: string): void {
+export function applyPlayerPlaneVisual(sprite: Sprite, planeId?: string): number {
     const url = getPlayerPlaneTextureUrl(planeId);
     const tex = Texture.from(url);
-    const th = tex.height || 1;
-    const tw = tex.width || 1;
-    const scale = PLAYER_TARGET_HEIGHT / th;
+    // Use the longer dimension as reference so the sprite fits within PLAYER_TARGET_HEIGHT
+    // regardless of aspect ratio.
+    const longestSide = Math.max(tex.width, tex.height) || 1;
+    const scale = PLAYER_TARGET_HEIGHT / longestSide;
     sprite.texture = tex;
     sprite.anchor.set(0.5);
     sprite.scale.set(scale);
+    return scale;
 }
 
 /**

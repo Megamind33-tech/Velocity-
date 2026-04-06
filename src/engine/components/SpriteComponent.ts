@@ -9,11 +9,17 @@ export class SpriteComponent implements Component {
     public static readonly TYPE_ID = ComponentRegistry.getTypeId('Sprite');
     public readonly _typeId = SpriteComponent.TYPE_ID;
 
+    /**
+     * visualRotationOffset: added on top of transform.rotation every render frame.
+     * Use this to correct a sprite's natural orientation without touching physics.
+     * Example: top-down plane art (nose-up) needs Math.PI/2 to face right.
+     */
     constructor(
         public sprite: Sprite,
         public anchorX: number = 0.5,
         public anchorY: number = 0.5,
-        public tint: number = 0xFFFFFF
+        public tint: number = 0xFFFFFF,
+        public visualRotationOffset: number = 0
     ) {
         this.sprite.anchor.set(anchorX, anchorY);
         this.sprite.tint = tint;
