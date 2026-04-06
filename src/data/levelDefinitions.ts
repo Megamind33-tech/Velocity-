@@ -73,12 +73,12 @@ export const LEVEL_DEFINITIONS: LevelDefinition[] = [
         zone: 'tutorial',
         songId: 'track_01',
         gateWidth: 220,
-        gateCount: 5,
-        scrollSpeed: 180,
+        gateCount: 12,
+        scrollSpeed: 155,
         learningObjectives: [
             { id: 'fly_straight', label: 'Fly Straight', hint: 'Hold a steady pitch to stay level.' },
         ],
-        starThresholds: { one: 2, two: 4, three: 5 },
+        starThresholds: { one: 5, two: 9, three: 12 },
         unlockRequirement: 0,
     },
     {

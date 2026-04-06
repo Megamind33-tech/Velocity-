@@ -49,7 +49,9 @@ export const RENDERING = {
      * OGA City parallax — all layers strongly world-locked so bridge/buildings clearly stream past.
      * @see public/oga-parallax-city/SOURCES.md
      */
+    /** Layer 0 = procedural distant skyline (behind OGA strips). */
     LEVEL1_CITY_PARALLAX_LAYERS: [
+        { worldLock: 0.58, depth: 6, offset: 0 },
         { worldLock: 0.9, depth: 5, offset: 0 },
         { worldLock: 0.93, depth: 4, offset: 0 },
         { worldLock: 0.96, depth: 3, offset: 0 },
