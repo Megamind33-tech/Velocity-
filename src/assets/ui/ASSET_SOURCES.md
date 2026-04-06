@@ -31,6 +31,10 @@ Normalized **128×128** PNGs (cropped + scaled from originals). Dock code uses *
 
 All listed OGA entries are CC0 per their pages.
 
+## Level 1 gameplay parallax — city (`public/oga-parallax-city/`, CC0)
+
+**[City Parallax pixel art](https://opengameart.org/content/city-parallax-pixel-art)** — Gustavo Saraiva. Four **240×135** RGBA layers from `City.zip` (see `public/oga-parallax-city/SOURCES.md`). Used only for **level 1** in-run parallax (`main.ts` + `cityParallaxAssets.ts`).
+
 ## World map background (`public/oga-map/`)
 
 Seamless-style **ocean / islands** art for the level-select map (`WorldMapScene`). Source: [Shootem Up Background](https://opengameart.org/content/shootem-up-background) (CC0, OldAccount29) — flattened from `IslandsMap.xcf` to `world_map_islands.png`. See `public/oga-map/SOURCES.md`.

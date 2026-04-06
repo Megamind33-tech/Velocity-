@@ -30,6 +30,8 @@ export const PHYSICS = {
 /**
  * Rendering and Parallax Configuration.
  */
+export type ParallaxLayerConfig = { speed: number; depth: number; offset: number };
+
 export const RENDERING = {
     LERP_ALPHA: 0.15, // Smoothing factor for visuals
     PARALLAX_LAYERS: [
@@ -38,5 +40,17 @@ export const RENDERING = {
         { speed: 0.20, depth: 3, offset: 200 },
         { speed: 0.40, depth: 2, offset: 300 },
         { speed: 0.60, depth: 1, offset: 400 }
-    ]
+    ] as ParallaxLayerConfig[],
+    /**
+     * OGA City parallax (240×135 layers). Back → front; farther = lower speed.
+     * @see public/oga-parallax-city/SOURCES.md
+     */
+    LEVEL1_CITY_PARALLAX_LAYERS: [
+        { speed: 0.04, depth: 5, offset: 0 },
+        { speed: 0.10, depth: 4, offset: 0 },
+        { speed: 0.24, depth: 3, offset: 0 },
+        { speed: 0.48, depth: 2, offset: 0 },
+    ] as ParallaxLayerConfig[],
+    /** Native pixel height of OGA city strips */
+    LEVEL1_CITY_TILE_HEIGHT_PX: 135,
 };
