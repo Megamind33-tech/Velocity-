@@ -224,7 +224,6 @@ async function init() {
     world.addComponent(player, new SpriteComponent(playerSprite, 0.5, 0.5, 0xFFFFFF, Math.PI / 2));
 
     const cameraFollow = new CameraFollowSystem(app, gameWorldLayer, player);
-    world.addSystem(cameraFollow);
 
     const syncGameplayViewport = (): void => {
         if (GameState.runActive) {
@@ -705,6 +704,8 @@ async function init() {
 
     Ticker.shared.add((ticker) => {
         uiManager.update(ticker.deltaMS / 1000);
+        // After Engine.onTick (same Ticker), scroll world so plane stays at anchor.
+        cameraFollow.apply(world);
     });
 
     console.log('Velocity: Main menu ready.');
