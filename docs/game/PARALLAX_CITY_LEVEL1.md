@@ -44,3 +44,9 @@ Use the **exact** OpenGameArt asset [City Parallax pixel art](https://opengamear
 
 - `npm run lint`, `npm run build`
 - In-game: start **level 1** → city layers scroll at different rates with world `scrollX`; level **≠ 1** → previous sky theme.
+
+## 6) Critical fix — parallax must live under `worldScrollRoot`
+
+Parallax was on `app.stage` at index 0 while gates lived under `gameWorldLayer` → `worldScrollRoot` with `x = -scrollX`. The **background did not receive** that translation, so only **UV tile drift** moved the art — often **invisible** vs full-speed gates.
+
+**Fix:** `ParallaxSystem.reparentToWorldScroll(worldScrollRoot)` adds the stack **inside** `worldScrollRoot` at index 0 (behind gate sprites). Horizontal motion is then **~1:1** with world scroll; `tilePosition.x` uses `scroll * (1 - worldLock)` for depth only (`worldLock` ≈ 0.9–1.0).
