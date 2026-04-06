@@ -77,6 +77,9 @@ export class LevelGenerator {
                 notes.push(src[notes.length % src.length]);
             }
         }
+        /** Stretch timeline so short songs don’t end in a few seconds at high scrollSpeed. */
+        const minGapSec = 2.4;
+        notes = this.expandNoteTimesToMinGap(notes, minGapSec);
 
         const gates: LevelGate[] = [];
         const baseSpeed = def.scrollSpeed;
@@ -118,5 +121,23 @@ export class LevelGenerator {
         }
 
         return gates;
+    }
+
+    /**
+     * Ensures consecutive note times are at least `minGapSec` apart (preserves order).
+     * Fixes “5 gates in 10s” tracks that were ~20s of flight at 180 px/s.
+     */
+    private expandNoteTimesToMinGap(notes: { time: number; pitch: number }[], minGapSec: number): { time: number; pitch: number }[] {
+        if (notes.length === 0) return notes;
+        const out = notes.map((n) => ({ ...n }));
+        let t = out[0]!.time;
+        for (let i = 1; i < out.length; i++) {
+            const nextMin = t + minGapSec;
+            if (out[i]!.time < nextMin) {
+                out[i]!.time = nextMin;
+            }
+            t = out[i]!.time;
+        }
+        return out;
     }
 }

@@ -65,11 +65,13 @@ import {
     getPlayerWorldX,
     getCruiseVx,
     getWorldScrollX,
+    setCruiseVx,
 } from './game/worldScroll';
 import { setSongPitchRangeFromNotes, screenYToAltitude01 } from './game/vocalFlightState';
 import { setRunFlightApp } from './game/runFlightContext';
 import { getTuningCentsFromSungHz } from './game/gateTargetTelemetry';
 import { loadCityParallaxTextures } from './game/cityParallaxAssets';
+import { buildLevel1DistantSkylineTexture } from './game/level1SkylineTexture';
 import { RENDERING, VOICE_FLIGHT } from './data/constants';
 import { preloadWorldMapBackground } from './scenes/WorldMapScene';
 
@@ -474,6 +476,7 @@ async function init() {
         GameState.setRunActive(false);
         parallaxThemeKey = null;
         resetWorldScroll();
+        setCruiseVx(VOICE_FLIGHT.CRUISE_SPEED_X);
         gatePlayout.clear();
         boundsCheck.clear();
         distanceQuest.clear();
@@ -495,9 +498,10 @@ async function init() {
              * Zip `City.zip`: four 240×135 RGBA strips, back→front.
              * @see public/oga-parallax-city/SOURCES.md
              */
+            const skylineTex = buildLevel1DistantSkylineTexture(app.renderer);
             const cityTextures = await loadCityParallaxTextures();
-            await parallaxSystem.init(player, cityTextures, {
-                alphas: [1, 1, 1, 1],
+            await parallaxSystem.init(player, [skylineTex, ...cityTextures], {
+                alphas: [0.88, 1, 1, 1, 1],
                 layersConfig: [...RENDERING.LEVEL1_CITY_PARALLAX_LAYERS],
                 tilePixelHeight: RENDERING.LEVEL1_CITY_TILE_HEIGHT_PX,
             });
@@ -625,6 +629,9 @@ async function init() {
             levelSystem.initLevel(levelId, SONGS[0], player);
         }
         setSongPitchRangeFromNotes(songForRange);
+
+        const cruise = def?.scrollSpeed ?? VOICE_FLIGHT.CRUISE_SPEED_X;
+        setCruiseVx(cruise);
 
         setLastRunSummary({
             score: 0,
