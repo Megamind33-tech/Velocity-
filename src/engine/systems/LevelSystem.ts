@@ -9,7 +9,7 @@ import { Song } from '../../data/songs';
 import { LevelDefinition, getZoneForLevel } from '../../data/levelDefinitions';
 import { EventBus } from '../../events/EventBus';
 import { GameEvents } from '../../events/GameEvents';
-import { Sprite, Graphics, Texture } from 'pixi.js';
+import { Application, Container, Sprite, Graphics, Texture } from 'pixi.js';
 
 /**
  * System that manages the procedural generation and cleanup of level entities.
@@ -33,8 +33,10 @@ export class LevelSystem implements System {
     private totalGates: number = 0;
 
     private spritePool: ObjectPool<Sprite>;
+    /** Gates/pickups parent; defaults to stage if not set (camera layer in main). */
+    private worldParent: Container | null = null;
 
-    constructor(private app: any) {
+    constructor(private app: Application) {
         this.generator = new LevelGenerator();
         this.spritePool = new ObjectPool<Sprite>(
             () => new Sprite(),
@@ -43,6 +45,11 @@ export class LevelSystem implements System {
                 s.parent?.removeChild(s);
             }
         );
+    }
+
+    /** Parent for spawned level sprites (same layer as player for camera follow). */
+    public setWorldParent(container: Container | null): void {
+        this.worldParent = container;
     }
 
     /**
@@ -184,7 +191,7 @@ export class LevelSystem implements System {
         sprite.texture = this.gateTexture!;
         sprite.scale.set(data.width / 100, 1);
         sprite.visible = true;
-        this.app.stage.addChild(sprite);
+        (this.worldParent ?? this.app.stage).addChild(sprite);
 
         world.addComponent(entity, new TransformComponent(data.x, data.y));
         world.addComponent(entity, new SpriteComponent(sprite));
