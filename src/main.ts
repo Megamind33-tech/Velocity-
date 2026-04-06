@@ -205,9 +205,12 @@ async function init() {
     gameWorldLayer.addChild(playerSprite);
 
     const player = world.createEntity();
-    world.addComponent(player, new TransformComponent(app.screen.width / 4, app.screen.height / 2));
-    world.addComponent(player, new VelocityComponent(200, 0));
-    world.addComponent(player, new FlightDynamicsComponent(1.0, 0.05, 3000));
+    // World-space start position: camera anchor is 27% from left, so plane
+    // world-x = anchorX means worldLayer.x = 0 at startup (no initial offset).
+    world.addComponent(player, new TransformComponent(Math.round(app.screen.width * 0.27), app.screen.height / 2));
+    world.addComponent(player, new VelocityComponent(0, 0));
+    // gravityScale kept at 0 — FlightDynamicsSystem trims to level; voice input steers vertically.
+    world.addComponent(player, new FlightDynamicsComponent(1.0, 0.05, 3000, 0.1, 0));
     world.addComponent(player, new SpriteComponent(playerSprite));
 
     const cameraFollow = new CameraFollowSystem(app, gameWorldLayer, player);
@@ -444,10 +447,13 @@ async function init() {
 
         const tr = world.getComponent<TransformComponent>(player, TransformComponent.TYPE_ID)!;
         const vel = world.getComponent<VelocityComponent>(player, VelocityComponent.TYPE_ID)!;
-        tr.x = app.screen.width / 2;
+        // Reset plane to world-space origin that aligns with the camera anchor (27% from left).
+        // The camera formula: worldLayer.x = anchorX - player.x → 0 offset at start.
+        tr.x = Math.round(app.screen.width * 0.27);
         tr.y = app.screen.height / 2;
         tr.rotation = 0;
-        vel.vx = 200;
+        // AutoForwardSystem will set vx = CRUISE_SPEED_X each tick; start clean.
+        vel.vx = 0;
         vel.vy = 0;
         cameraFollow.snapToPlayer(world);
 
