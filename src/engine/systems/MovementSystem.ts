@@ -1,6 +1,7 @@
 import { Entity, World, System } from '../World';
 import { TransformComponent } from '../components/TransformComponent';
 import { VelocityComponent } from '../components/VelocityComponent';
+import { PlayerFlightComponent } from '../components/PlayerFlightComponent';
 import { GameState } from '../GameState';
 
 /**
@@ -26,8 +27,12 @@ export class MovementSystem implements System {
             const transform = world.getComponent<TransformComponent>(entity, TransformComponent.TYPE_ID)!;
             const velocity = world.getComponent<VelocityComponent>(entity, VelocityComponent.TYPE_ID)!;
 
-            transform.x += velocity.vx * delta;
-            transform.y += velocity.vy * delta;
+            if (world.getComponent(entity, PlayerFlightComponent.TYPE_ID)) {
+                transform.y += velocity.vy * delta;
+            } else {
+                transform.x += velocity.vx * delta;
+                transform.y += velocity.vy * delta;
+            }
         }
     }
 }

@@ -27,7 +27,7 @@ import { animateScale } from '../animationHelpers';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
-const STATS_H   = 76;   // taller plate for 2-row layout
+const STATS_H   = 92;   // room for score row + details + telemetry line
 const PAUSE_W   = 44;   // square, minimum touch target
 const PAUSE_H   = 44;
 const VOCAL_H   = 20;   // tall enough to register at a glance
@@ -109,6 +109,8 @@ export class InGameHUDScreen extends BaseGameScreen {
     // Detail row — Alt / Speed
     private altText!: Text;
     private spdText!: Text;
+    /** Fixed-player telemetry: altimeter 0–1, tuning cents, combo mult */
+    private telemetryText!: Text;
 
     // Pause button — square Kenney chrome with play/pause icon
     private pauseBtn!: Container;
@@ -275,8 +277,20 @@ export class InGameHUDScreen extends BaseGameScreen {
         // Detail row — row 2
         this.altText = new Text({ text: 'ALT 0m',  style: detailStyle(GAME_COLORS.hud_alt) });
         this.spdText = new Text({ text: 'SPD 0',   style: detailStyle(GAME_COLORS.hud_spd) });
+        this.telemetryText = new Text({
+            text: 'ALT —  COMBO x1',
+            style: detailStyle(GAME_COLORS.text_muted),
+        });
 
-        this.container.addChild(this.scoreLbl, this.scoreVal, this.levelLbl, this.levelVal, this.altText, this.spdText);
+        this.container.addChild(
+            this.scoreLbl,
+            this.scoreVal,
+            this.levelLbl,
+            this.levelVal,
+            this.altText,
+            this.spdText,
+            this.telemetryText,
+        );
 
         // Vertical separator between SCORE group and LV group
         this._metricSep = new Graphics();
@@ -365,6 +379,7 @@ export class InGameHUDScreen extends BaseGameScreen {
         const detailY = topY + 16 + SZ_MAJOR + 4;
         this.altText.position.set(pad + inset, detailY);
         this.spdText.position.set(pad + inset + this.altText.width + 10, detailY);
+        this.telemetryText.position.set(pad + inset, detailY + SZ_DETAIL + 3);
 
         // ── Pause button — top-right ────────────────────────────────────────
         this.pauseBtn.position.set(width - pad - PAUSE_W, topY + (statsH - PAUSE_H) / 2);
@@ -461,8 +476,14 @@ export class InGameHUDScreen extends BaseGameScreen {
             this.altText.y,
         );
 
-        this.altText.text = `ALT ${h.getAltitudeDisplay()}m`;
+        this.altText.text = `ALT ${h.getAltitudeDisplay()}%`;
         this.spdText.text = `SPD ${Math.round(h.getForwardSpeed())}`;
+
+        const a01 = Math.round(h.getAltitude01() * 100);
+        const cents = h.getTuningCents();
+        const tune =
+            cents === null ? '—' : `${cents > 0 ? '+' : ''}${cents}¢`;
+        this.telemetryText.text = `SKY ${a01}%  ·  TUNE ${tune}  ·  COMBO x${h.getComboMultiplier()}`;
 
         this.vocalBar.setProgress(Math.round(h.getVocal01() * 100) / 100);
     }

@@ -1,6 +1,6 @@
 import { Entity, World, System } from '../World';
-import { TransformComponent } from '../components/TransformComponent';
 import { GameState } from '../GameState';
+import { getWorldScrollX } from '../../game/worldScroll';
 import { EventBus } from '../../events/EventBus';
 import { GameEvents } from '../../events/GameEvents';
 
@@ -10,32 +10,29 @@ import { GameEvents } from '../../events/GameEvents';
 export class DistanceQuestSystem implements System {
     public readonly priority: number = 27;
     private playerEntity: Entity | null = null;
-    private lastX = 0;
+    private lastScroll = 0;
 
     public configure(player: Entity): void {
         this.playerEntity = player;
-        this.lastX = 0;
+        this.lastScroll = 0;
     }
 
     public syncBaseline(world: World): void {
         if (!this.playerEntity) return;
-        const t = world.getComponent<TransformComponent>(this.playerEntity, TransformComponent.TYPE_ID);
-        this.lastX = t?.x ?? 0;
+        this.lastScroll = getWorldScrollX();
     }
 
     public clear(): void {
         this.playerEntity = null;
-        this.lastX = 0;
+        this.lastScroll = 0;
     }
 
     public update(_entities: Entity[], world: World, _delta: number): void {
         if (!GameState.runActive || GameState.paused || !this.playerEntity) return;
 
-        const t = world.getComponent<TransformComponent>(this.playerEntity, TransformComponent.TYPE_ID);
-        if (!t) return;
-
-        const dx = t.x - this.lastX;
-        this.lastX = t.x;
+        const scroll = getWorldScrollX();
+        const dx = scroll - this.lastScroll;
+        this.lastScroll = scroll;
         if (dx > 0) {
             const units = Math.floor(dx / 8);
             if (units > 0) {

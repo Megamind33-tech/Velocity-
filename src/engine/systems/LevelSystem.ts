@@ -10,6 +10,8 @@ import { LevelDefinition, getZoneForLevel } from '../../data/levelDefinitions';
 import { EventBus } from '../../events/EventBus';
 import { GameEvents } from '../../events/GameEvents';
 import { Application, Container, Sprite, Graphics, Texture } from 'pixi.js';
+import { getPlayerWorldX, getWorldScrollX } from '../../game/worldScroll';
+import { setLevelGateTargets, clearGateTargets } from '../../game/gateTargetTelemetry';
 
 /**
  * System that manages the procedural generation and cleanup of level entities.
@@ -65,6 +67,7 @@ export class LevelSystem implements System {
         this.totalGates = plan.length;
         this.lastInitializedGateCount = plan.length;
         this.gatesToSpawn = plan;
+        setLevelGateTargets(plan.map((g) => ({ logicalX: g.x, targetMidi: g.targetMidi })));
 
         if (!this.gateTexture) {
             const gfx = new Graphics();
@@ -85,6 +88,7 @@ export class LevelSystem implements System {
         this.totalGates = plan.length;
         this.lastInitializedGateCount = plan.length;
         this.gatesToSpawn = plan;
+        setLevelGateTargets(plan.map((g) => ({ logicalX: g.x, targetMidi: g.targetMidi })));
 
         const zone = getZoneForLevel(def.id);
         const color = zone?.color ?? 0x00ffcc;
@@ -110,7 +114,12 @@ export class LevelSystem implements System {
         const playerTransform = world.getComponent<TransformComponent>(this.playerEntity, TransformComponent.TYPE_ID);
         if (!playerTransform) return;
 
-        while (this.gatesToSpawn.length > 0 && this.gatesToSpawn[0].x < playerTransform.x + this.spawnRange) {
+        const scroll = getWorldScrollX();
+        const playerLogical = scroll + getPlayerWorldX();
+
+        this.syncGateScreenPositions(world, scroll);
+
+        while (this.gatesToSpawn.length > 0 && this.gatesToSpawn[0].x < playerLogical + this.spawnRange) {
             const gateData = this.gatesToSpawn.shift()!;
             this.spawnGate(world, gateData);
         }
@@ -120,8 +129,9 @@ export class LevelSystem implements System {
         for (let i = 0; i < existingGates.length; i++) {
             const gate = existingGates[i];
             const transform = world.getComponent<TransformComponent>(gate, TransformComponent.TYPE_ID);
-            if (transform && transform.x < playerTransform.x - this.cleanupRange) {
-                const gateComp = world.getComponent<GateComponent>(gate, GateComponent.TYPE_ID);
+            const gc = world.getComponent<GateComponent>(gate, GateComponent.TYPE_ID);
+            if (transform && gc && gc.logicalX < playerLogical - this.cleanupRange) {
+                const gateComp = gc;
                 const spriteComp = world.getComponent<SpriteComponent>(gate, SpriteComponent.TYPE_ID);
 
                 if (gateComp && !gateComp.passed) {
@@ -182,6 +192,19 @@ export class LevelSystem implements System {
         this.lastInitializedGateCount = 0;
         this.gatesPassed = 0;
         this.totalGates = 0;
+        clearGateTargets();
+    }
+
+    private syncGateScreenPositions(world: World, scroll: number): void {
+        const gates = world.getEntities(GateComponent.TYPE_ID);
+        for (let i = 0; i < gates.length; i++) {
+            const e = gates[i]!;
+            const gc = world.getComponent<GateComponent>(e, GateComponent.TYPE_ID);
+            const tr = world.getComponent<TransformComponent>(e, TransformComponent.TYPE_ID);
+            if (gc && tr) {
+                tr.x = gc.logicalX - scroll;
+            }
+        }
     }
 
     private spawnGate(world: World, data: LevelGate): void {
@@ -193,8 +216,8 @@ export class LevelSystem implements System {
         sprite.visible = true;
         (this.worldParent ?? this.app.stage).addChild(sprite);
 
-        world.addComponent(entity, new TransformComponent(data.x, data.y));
+        world.addComponent(entity, new TransformComponent(data.x - getWorldScrollX(), data.y));
         world.addComponent(entity, new SpriteComponent(sprite));
-        world.addComponent(entity, new GateComponent(data.width));
+        world.addComponent(entity, new GateComponent(data.width, 200, 10, false, data.x));
     }
 }

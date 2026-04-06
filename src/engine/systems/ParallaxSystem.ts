@@ -2,6 +2,7 @@ import { Application, Container, TilingSprite, Texture } from 'pixi.js';
 import { Entity, World, System } from '../World';
 import { TransformComponent } from '../components/TransformComponent';
 import { RENDERING } from '../../data/constants';
+import { getWorldScrollX } from '../../game/worldScroll';
 import { GameState } from '../GameState';
 
 /**
@@ -68,12 +69,14 @@ export class ParallaxSystem implements System {
         const transform = world.getComponent<TransformComponent>(this.playerEntity, TransformComponent.TYPE_ID);
         if (!transform) return;
 
+        const scroll = getWorldScrollX();
+
         for (let i = 0; i < this.layers.length; i++) {
             const layer = this.layers[i];
             const config = RENDERING.PARALLAX_LAYERS[i] || { speed: 0.1, offset: 0 };
 
-            // Scroll horizontally with the player; layers farther back scroll slower.
-            layer.tilePosition.x = -transform.x * config.speed;
+            // Fixed-player: parallax scrolls with world scrollX; vertical follows plane Y.
+            layer.tilePosition.x = -scroll * config.speed;
             layer.tilePosition.y = -transform.y * config.speed * 0.3 + (config.offset ?? 0);
         }
     }

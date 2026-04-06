@@ -11,6 +11,8 @@ export class GateComponent implements Component {
         public width: number = 100,
         public height: number = 200,
         public points: number = 10,
-        public passed: boolean = false
+        public passed: boolean = false,
+        /** Fixed-player mode: gate X in scroll/world space (before subtracting scrollX). */
+        public logicalX: number = 0,
     ) {}
 }
