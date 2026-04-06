@@ -21,6 +21,7 @@ import { QuestSystem } from './engine/systems/QuestSystem';
 import { GatePlayoutSystem } from './engine/systems/GatePlayoutSystem';
 import { BoundsCheckSystem } from './engine/systems/BoundsCheckSystem';
 import { DistanceQuestSystem } from './engine/systems/DistanceQuestSystem';
+import { CameraFollowSystem } from './engine/systems/CameraFollowSystem';
 import { TransformComponent } from './engine/components/TransformComponent';
 import { VelocityComponent } from './engine/components/VelocityComponent';
 import { SpriteComponent } from './engine/components/SpriteComponent';
@@ -174,6 +175,12 @@ async function init() {
     let demoZones: Container | null = null;
     let worldMap: WorldMapScene | null = null;
 
+    /** All gameplay sprites (player, gates) — offset each frame so the plane stays screen-centered. */
+    const gameWorldLayer = new Container();
+    gameWorldLayer.name = 'game-world-layer';
+    app.stage.addChildAt(gameWorldLayer, 1);
+    levelSystem.setWorldParent(gameWorldLayer);
+
     const parallaxSystem = new ParallaxSystem(app);
     const gatePlayout = new GatePlayoutSystem();
     const boundsCheck = new BoundsCheckSystem();
@@ -195,13 +202,16 @@ async function init() {
     const playerSprite = new Sprite(Texture.WHITE);
     playerSprite.visible = false;
     applyPlayerPlaneVisual(playerSprite);
-    app.stage.addChild(playerSprite);
+    gameWorldLayer.addChild(playerSprite);
 
     const player = world.createEntity();
     world.addComponent(player, new TransformComponent(app.screen.width / 4, app.screen.height / 2));
     world.addComponent(player, new VelocityComponent(200, 0));
     world.addComponent(player, new FlightDynamicsComponent(1.0, 0.05, 3000));
     world.addComponent(player, new SpriteComponent(playerSprite));
+
+    const cameraFollow = new CameraFollowSystem(app, gameWorldLayer, player);
+    world.addSystem(cameraFollow);
 
     registerHudDataSource({
         getScore: () => runScore,
@@ -392,6 +402,7 @@ async function init() {
         gatePlayout.clear();
         boundsCheck.clear();
         distanceQuest.clear();
+        cameraFollow.reset();
         VoiceInputManager.getInstance().pauseMic();
         uiManager.hideScreen('in-game-hud');
         uiManager.hideScreen('pause');
@@ -433,11 +444,12 @@ async function init() {
 
         const tr = world.getComponent<TransformComponent>(player, TransformComponent.TYPE_ID)!;
         const vel = world.getComponent<VelocityComponent>(player, VelocityComponent.TYPE_ID)!;
-        tr.x = app.screen.width / 4;
+        tr.x = app.screen.width / 2;
         tr.y = app.screen.height / 2;
         tr.rotation = 0;
         vel.vx = 200;
         vel.vy = 0;
+        cameraFollow.snapToPlayer(world);
 
         const def = getLevelDefinition(levelId);
         if (def) {
