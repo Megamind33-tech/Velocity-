@@ -4,8 +4,9 @@ import { TransformComponent } from '../components/TransformComponent';
 import { GameState } from '../GameState';
 
 /**
- * Scrolls the gameplay world container so the player stays near the screen center.
- * World entities use absolute/world coordinates; this layer's position is the negative camera offset.
+ * Scrolls the gameplay world container so the player stays at the screen center.
+ * Global position = worldLayer.position + local (transform). We want player at (cx,cy), so:
+ *   worldLayer.position = (cx - player.x, cy - player.y)
  */
 export class CameraFollowSystem implements System {
     public readonly priority: number = 105;
@@ -31,7 +32,7 @@ export class CameraFollowSystem implements System {
         if (!t) return;
         const cx = this.app.screen.width / 2;
         const cy = this.app.screen.height / 2;
-        this.worldLayer.position.set(t.x - cx, t.y - cy);
+        this.worldLayer.position.set(cx - t.x, cy - t.y);
     }
 
     /** When not in a run, leave the world layer untransformed so nothing else shifts. */
@@ -47,6 +48,6 @@ export class CameraFollowSystem implements System {
 
         const cx = this.app.screen.width / 2;
         const cy = this.app.screen.height / 2;
-        this.worldLayer.position.set(t.x - cx, t.y - cy);
+        this.worldLayer.position.set(cx - t.x, cy - t.y);
     }
 }
