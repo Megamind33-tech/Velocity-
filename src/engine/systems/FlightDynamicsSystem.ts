@@ -49,13 +49,9 @@ export class FlightDynamicsSystem implements System {
                 velocity.vy += (dragY / flight.mass) * delta;
             }
 
-            // 3. Apply "Angle of Attack" Rotation
-            // Tilt the sprite based on its trajectory
-            if (Math.abs(velocity.vx) > 10) {
-                const targetRotation = Math.atan2(velocity.vy, velocity.vx);
-                // Smoothly interpolate rotation (Lerp)
-                transform.rotation += (targetRotation - transform.rotation) * 0.1;
-            }
+            // Side-view craft: keep sprite level (horizontal). Trajectory still uses vy for flight;
+            // tilting from atan2 looked misaligned next to the side-on art.
+            transform.rotation = 0;
         }
     }
 }
