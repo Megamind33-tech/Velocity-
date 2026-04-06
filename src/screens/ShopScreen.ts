@@ -267,7 +267,7 @@ export class ShopScreen extends Container {
       fontWeight: 'bold',
       fontFamily: 'Orbitron, Arial',
       fill: C.cyan,
-      dropShadow: { color: C.cyan, alpha: 0.7, blur: 10, distance: 0 },
+      dropShadow: { color: C.cyan, alpha: 0.7, blur: 10, distance: 0, angle: Math.PI / 4 },
     });
     title.position.set(16, 12);
     this.addChild(title);
