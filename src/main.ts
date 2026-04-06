@@ -64,6 +64,7 @@ import {
     setPlayerWorldX,
     getPlayerWorldX,
     getCruiseVx,
+    getWorldScrollX,
 } from './game/worldScroll';
 import { setSongPitchRangeFromNotes, screenYToAltitude01 } from './game/vocalFlightState';
 import { setRunFlightApp } from './game/runFlightContext';
@@ -193,11 +194,15 @@ async function init() {
     let demoZones: Container | null = null;
     let worldMap: WorldMapScene | null = null;
 
-    /** All gameplay sprites (player, gates) — offset each frame so the plane stays screen-centered. */
+    /** Camera layer: follows player so ship stays fixed on screen. */
     const gameWorldLayer = new Container();
     gameWorldLayer.name = 'game-world-layer';
     app.stage.addChildAt(gameWorldLayer, 1);
-    levelSystem.setWorldParent(gameWorldLayer);
+    /** Gates/obstacles: X = logical scroll position; this container shifts by `-scrollX` for visible L→R flow. */
+    const worldScrollRoot = new Container();
+    worldScrollRoot.name = 'world-scroll-root';
+    gameWorldLayer.addChild(worldScrollRoot);
+    levelSystem.setWorldParent(worldScrollRoot);
 
     const parallaxSystem = new ParallaxSystem(app);
     const gatePlayout = new GatePlayoutSystem();
@@ -223,6 +228,7 @@ async function init() {
     // Apply texture + compute scale. All OGA textures are top-down (nose-up);
     // we correct orientation via SpriteComponent.visualRotationOffset (Math.PI/2 = nose right).
     const initPlaneScale = applyPlayerPlaneVisual(playerSprite);
+    // Player above scroll content so rings render behind the craft.
     gameWorldLayer.addChild(playerSprite);
 
     const player = world.createEntity();
@@ -771,7 +777,9 @@ async function init() {
 
     Ticker.shared.add((ticker) => {
         uiManager.update(ticker.deltaMS / 1000);
-        // After Engine.onTick (same Ticker), scroll world so plane stays at anchor.
+        // Physical L→R: scroll root moves with accumulated world distance (gates use logical X only).
+        worldScrollRoot.position.x = -getWorldScrollX();
+        // After Engine.onTick (same Ticker), camera layer follows player.
         cameraFollow.apply(world);
     });
 

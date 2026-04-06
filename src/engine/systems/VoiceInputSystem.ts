@@ -40,12 +40,12 @@ export class VoiceInputSystem implements System {
     public update(_entities: Entity[], world: World, delta: number): void {
         if (GameState.paused || !GameState.runActive) return;
 
-        if (!this.voiceManager.isInitialized) return;
+        if (this.voiceManager.isInitialized) {
+            this.voiceManager.update();
+        }
 
-        this.voiceManager.update();
-
-        const vol = this.voiceManager.volume;
-        const hz = this.voiceManager.pitchHz;
+        const vol = this.voiceManager.isInitialized ? this.voiceManager.volume : 0;
+        const hz = this.voiceManager.isInitialized ? this.voiceManager.pitchHz : 0;
 
         const matchingEntities = world.getEntities(this.queryMask);
 
