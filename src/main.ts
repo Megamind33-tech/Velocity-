@@ -91,7 +91,7 @@ async function init() {
 
     const app = new Application();
     await app.init({
-        background: '#0a0a1a',
+        background: '#2e86c1',  // mid sky-blue — matches Layer 0 so no dark flash on load
         // Match CSS layout box: safe-area padding lives on #game-root, not body.
         resizeTo: gameRoot,
         resolution: window.devicePixelRatio || 1,
@@ -423,28 +423,60 @@ async function init() {
 
     async function ensureParallax(): Promise<void> {
         if (parallaxReady) return;
-        const slide = getVelocityUiTexture('slide_track');
-        const fill = getVelocityUiTexture('panel_fill');
-        let textures: Texture[];
-        if (slide && fill) {
-            const t1 = slide;
-            const t2 = fill;
-            const g = new Graphics().rect(0, 0, 512, 512).fill({ color: 0x0a0a18 });
-            for (let i = 0; i < 80; i++) {
-                g.circle(Math.random() * 512, Math.random() * 512, 1).fill({ color: 0xffffff, alpha: 0.35 });
-            }
-            const t3 = app.renderer.generateTexture(g);
-            textures = [t1, t2, t3];
-        } else {
-            textures = [0x111122, 0x1a1a3a, 0x24244a].map((color) => {
-                const gr = new Graphics().rect(0, 0, 512, 512).fill({ color });
-                for (let i = 0; i < 50; i++) {
-                    gr.circle(Math.random() * 512, Math.random() * 512, 1).fill({ color: 0xffffff, alpha: 0.5 });
-                }
-                return app.renderer.generateTexture(gr);
-            });
+
+        /**
+         * Sky background — three parallax layers for depth.
+         *
+         * Layer 0 · Sky base (alpha 1.0, slowest)
+         *   Solid sky-blue fill covering the entire tile. This is the ONLY fully opaque
+         *   layer; it masks the dark canvas so the plane is always visible against sky.
+         *
+         * Layer 1 · Distant clouds (alpha 0.8, medium speed)
+         *   Small, wispy puffs scattered across the tile.
+         *
+         * Layer 2 · Near clouds (alpha 0.6, faster)
+         *   Larger, brighter cloud masses closer to the horizon line.
+         */
+        const SIZE = 512;
+
+        // --- Layer 0: opaque sky base ---
+        const skyGfx = new Graphics();
+        // Upper sky — deeper blue
+        skyGfx.rect(0, 0, SIZE, SIZE * 0.55).fill({ color: 0x2e86c1 });
+        // Lower sky / horizon — lighter, warmer blue
+        skyGfx.rect(0, SIZE * 0.55, SIZE, SIZE * 0.45).fill({ color: 0x6bb8e8 });
+        const skyTex = app.renderer.generateTexture(skyGfx);
+
+        // --- Layer 1: distant small clouds ---
+        const cloudGfx = new Graphics();
+        skyGfx.rect(0, 0, SIZE, SIZE).fill({ color: 0x6bb8e8, alpha: 0 }); // transparent base
+        const cloudSeeds1 = [
+            [60, 90], [200, 60], [350, 110], [480, 80],
+            [130, 200], [300, 180], [440, 210],
+        ];
+        for (const [cx, cy] of cloudSeeds1) {
+            cloudGfx.circle(cx, cy, 28).fill({ color: 0xffffff, alpha: 0.75 });
+            cloudGfx.circle(cx + 22, cy + 4, 22).fill({ color: 0xf0f8ff, alpha: 0.65 });
+            cloudGfx.circle(cx - 18, cy + 6, 18).fill({ color: 0xffffff, alpha: 0.6 });
         }
-        await parallaxSystem.init(player, textures);
+        const cloudTex1 = app.renderer.generateTexture(cloudGfx);
+
+        // --- Layer 2: near, larger clouds ---
+        const cloud2Gfx = new Graphics();
+        const cloudSeeds2 = [[80, 130], [280, 100], [430, 150]];
+        for (const [cx, cy] of cloudSeeds2) {
+            cloud2Gfx.circle(cx, cy, 42).fill({ color: 0xffffff, alpha: 0.85 });
+            cloud2Gfx.circle(cx + 34, cy + 6, 32).fill({ color: 0xf5faff, alpha: 0.8 });
+            cloud2Gfx.circle(cx - 28, cy + 8, 26).fill({ color: 0xffffff, alpha: 0.7 });
+            cloud2Gfx.circle(cx + 10, cy - 20, 24).fill({ color: 0xffffff, alpha: 0.75 });
+        }
+        const cloudTex2 = app.renderer.generateTexture(cloud2Gfx);
+
+        await parallaxSystem.init(
+            player,
+            [skyTex, cloudTex1, cloudTex2],
+            [1.0, 0.85, 0.65],  // layer alphas: base fully opaque, clouds semi-transparent
+        );
         parallaxReady = true;
     }
 
