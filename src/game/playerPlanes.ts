@@ -9,7 +9,7 @@ import { getSelectedPlaneId } from '../data/localProgress';
 const BASE = `${import.meta.env.BASE_URL}oga-players`;
 
 /** Bump when regenerating `public/oga-players` so cached textures reload. */
-const PLANE_TEX_QUERY = '?v=single-blob-2';
+const PLANE_TEX_QUERY = '?v=inrun-1p2-sky';
 
 /** Hangar plane id → static texture URL */
 export const PLAYER_PLANE_TEXTURE_URL: Record<string, string> = {
@@ -22,8 +22,10 @@ export const PLAYER_PLANE_TEXTURE_URL: Record<string, string> = {
 
 const DEFAULT_ID = 'cadet';
 
-/** Target on-screen height (px) for the player sprite at scale 1 before width scaling. */
+/** Target on-screen height (px) for the player sprite (longest side), before width scaling. */
 const PLAYER_TARGET_HEIGHT = 56;
+/** Gameplay scale vs hangar preview — 1.2 = 20% larger in-run. */
+export const PLAYER_IN_GAME_SCALE = 1.2;
 
 let preloadDone = false;
 
@@ -53,7 +55,7 @@ export function applyPlayerPlaneVisual(sprite: Sprite, planeId?: string): number
     // Use the longer dimension as reference so the sprite fits within PLAYER_TARGET_HEIGHT
     // regardless of aspect ratio.
     const longestSide = Math.max(tex.width, tex.height) || 1;
-    const scale = PLAYER_TARGET_HEIGHT / longestSide;
+    const scale = (PLAYER_TARGET_HEIGHT / longestSide) * PLAYER_IN_GAME_SCALE;
     sprite.texture = tex;
     sprite.anchor.set(0.5);
     sprite.scale.set(scale);

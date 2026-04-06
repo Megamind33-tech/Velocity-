@@ -19,7 +19,8 @@ import { GameState } from '../GameState';
  * scrolls behind it.
  */
 export class CameraFollowSystem implements System {
-    public readonly priority: number = 105;
+    /** After SpriteSystem (100) so worldLayer tracks the final sprite transform each frame. */
+    public readonly priority: number = 110;
 
     // Plane sits 27% from the left so the player can see plenty of runway ahead.
     private static readonly ANCHOR_X_RATIO = 0.27;
