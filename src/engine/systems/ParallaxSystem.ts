@@ -30,7 +30,15 @@ export class ParallaxSystem implements System {
     constructor(app: Application) {
         this.app = app;
         this.container = new Container();
-        app.stage.addChildAt(this.container, 0); // Background layer — always behind everything
+        this.container.name = 'parallax-stack';
+        /** Caller must `reparentToWorldScroll()` so layers get `-scrollX` with gates. */
+    }
+
+    /** Mount behind scrolling content (gates). Call once after `worldScrollRoot` exists. */
+    public reparentToWorldScroll(worldScrollRoot: Container): void {
+        if (this.container.parent === worldScrollRoot) return;
+        this.container.parent?.removeChild(this.container);
+        worldScrollRoot.addChildAt(this.container, 0);
     }
 
     /**
@@ -98,11 +106,12 @@ export class ParallaxSystem implements System {
 
         for (let i = 0; i < this.layers.length; i++) {
             const layer = this.layers[i];
-            const config = this.layerConfigs[i] || { speed: 0.1, offset: 0, depth: 0 };
-
-            // Fixed-player: parallax scrolls with world scrollX; vertical follows plane Y.
-            layer.tilePosition.x = -scroll * config.speed;
-            layer.tilePosition.y = -transform.y * config.speed * 0.3 + (config.offset ?? 0);
+            const config = this.layerConfigs[i] || { worldLock: 1, offset: 0, depth: 0 };
+            const w = Math.max(0, Math.min(1, config.worldLock));
+            // Parent `worldScrollRoot` already applies -scrollX → full lateral motion.
+            // UV shift adds only depth separation: (1 - worldLock) * scroll.
+            layer.tilePosition.x = scroll * (1 - w);
+            layer.tilePosition.y = -transform.y * w * 0.3 + (config.offset ?? 0);
         }
     }
 }

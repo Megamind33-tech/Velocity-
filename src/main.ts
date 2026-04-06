@@ -205,6 +205,7 @@ async function init() {
     levelSystem.setWorldParent(worldScrollRoot);
 
     const parallaxSystem = new ParallaxSystem(app);
+    parallaxSystem.reparentToWorldScroll(worldScrollRoot);
     const gatePlayout = new GatePlayoutSystem();
     const boundsCheck = new BoundsCheckSystem();
     const distanceQuest = new DistanceQuestSystem();
