@@ -1,6 +1,6 @@
 import { Entity, World, System } from '../World';
-import { TransformComponent } from '../components/TransformComponent';
 import { GateComponent } from '../components/GateComponent';
+import { getPlayerWorldX, getWorldScrollX } from '../../game/worldScroll';
 import { GameState } from '../GameState';
 import { EventBus } from '../../events/EventBus';
 import { GameEvents } from '../../events/GameEvents';
@@ -16,7 +16,7 @@ export class GatePlayoutSystem implements System {
     private completeEmitted = false;
 
     constructor() {
-        this.queryMask = TransformComponent.TYPE_ID | GateComponent.TYPE_ID;
+        this.queryMask = GateComponent.TYPE_ID;
     }
 
     public configure(player: Entity, totalGates: number): void {
@@ -34,19 +34,17 @@ export class GatePlayoutSystem implements System {
     public update(_entities: Entity[], world: World, _delta: number): void {
         if (!GameState.runActive || GameState.paused || !this.playerEntity) return;
 
-        const playerT = world.getComponent<TransformComponent>(this.playerEntity, TransformComponent.TYPE_ID);
-        if (!playerT) return;
+        const playerLogical = getWorldScrollX() + getPlayerWorldX();
 
         const gates = world.getEntities(this.queryMask);
         let passedCount = 0;
 
         for (let i = 0; i < gates.length; i++) {
             const gate = gates[i];
-            const gt = world.getComponent<TransformComponent>(gate, TransformComponent.TYPE_ID);
             const gc = world.getComponent<GateComponent>(gate, GateComponent.TYPE_ID);
-            if (!gt || !gc) continue;
+            if (!gc) continue;
 
-            if (!gc.passed && playerT.x > gt.x) {
+            if (!gc.passed && playerLogical > gc.logicalX) {
                 gc.passed = true;
                 EventBus.getInstance().emit(GameEvents.GATE_PASSED);
             }

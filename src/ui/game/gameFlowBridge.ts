@@ -31,6 +31,12 @@ export type HudDataSource = {
     getVocal01: () => number;
     getAltitudeDisplay: () => number;
     getForwardSpeed: () => number;
+    /** 0–1 vertical position in playable band (fixed-player flight). */
+    getAltitude01: () => number;
+    /** Signed cents vs nearest gate target, or null if N/A. */
+    getTuningCents: () => number | null;
+    /** Combo multiplier 1–4 for HUD. */
+    getComboMultiplier: () => number;
 };
 
 const defaultHud: HudDataSource = {
@@ -39,6 +45,9 @@ const defaultHud: HudDataSource = {
     getVocal01: () => 0,
     getAltitudeDisplay: () => 0,
     getForwardSpeed: () => 0,
+    getAltitude01: () => 0.5,
+    getTuningCents: () => null,
+    getComboMultiplier: () => 1,
 };
 
 let hudSource: HudDataSource = defaultHud;

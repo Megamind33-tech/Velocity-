@@ -2,6 +2,7 @@ import { Entity, World, System } from '../World';
 import { TransformComponent } from '../components/TransformComponent';
 import { VelocityComponent } from '../components/VelocityComponent';
 import { FlightDynamicsComponent } from '../components/FlightDynamicsComponent';
+import { PlayerFlightComponent } from '../components/PlayerFlightComponent';
 import { GameState } from '../GameState';
 
 /**
@@ -31,6 +32,8 @@ export class FlightDynamicsSystem implements System {
 
         for (let i = 0; i < matchingEntities.length; i++) {
             const entity = matchingEntities[i];
+            if (world.getComponent(entity, PlayerFlightComponent.TYPE_ID)) continue;
+
             const velocity = world.getComponent<VelocityComponent>(entity, VelocityComponent.TYPE_ID)!;
             const flight = world.getComponent<FlightDynamicsComponent>(entity, FlightDynamicsComponent.TYPE_ID)!;
             const transform = world.getComponent<TransformComponent>(entity, TransformComponent.TYPE_ID)!;

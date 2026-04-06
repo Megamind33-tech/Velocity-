@@ -6,6 +6,8 @@ export interface LevelGate {
     x: number;
     y: number;
     width: number;
+    /** Target MIDI note for pitch gates / HUD tuning meter. */
+    targetMidi: number;
 }
 
 /**
@@ -22,18 +24,23 @@ export class LevelGenerator {
         const baseSpeed = 300; // px per second
         const diff = DifficultyScaler.getMultiplier(levelId);
 
+        const midiBase = 58;
+        const midiSpan = 24;
+
         for (let i = 0; i < notesToUse.length; i++) {
             const note = notesToUse[i];
             const x = note.time * baseSpeed;
 
             const padding = 100;
             const y = padding + (note.pitch * (worldHeight - padding * 2));
-            
+            const targetMidi = midiBase + note.pitch * midiSpan;
+
             const baseW = 150 - levelId * 2;
             const gate: LevelGate = {
                 x,
                 y,
-                width: Math.max(48, baseW / diff)
+                width: Math.max(48, baseW / diff),
+                targetMidi,
             };
 
             if (i > 0) {
@@ -75,18 +82,23 @@ export class LevelGenerator {
         const baseSpeed = def.scrollSpeed;
         const diff = DifficultyScaler.getMultiplier(def.id);
 
+        const midiBase = 58;
+        const midiSpan = 24;
+
         for (let i = 0; i < notes.length; i++) {
             const note = notes[i];
             const x = note.time * baseSpeed;
 
             const padding = 100;
             const y = padding + note.pitch * (worldHeight - padding * 2);
+            const targetMidi = midiBase + note.pitch * midiSpan;
 
             const baseW = def.gateWidth;
             const gate: LevelGate = {
                 x,
                 y,
                 width: Math.max(48, baseW / diff),
+                targetMidi,
             };
 
             if (i > 0) {

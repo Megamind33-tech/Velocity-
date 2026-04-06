@@ -1,5 +1,6 @@
 import { Entity, World, System } from '../World';
 import { VelocityComponent } from '../components/VelocityComponent';
+import { PlayerFlightComponent } from '../components/PlayerFlightComponent';
 import { GameState } from '../GameState';
 import { VOICE_FLIGHT } from '../../data/constants';
 
@@ -19,7 +20,9 @@ export class AutoForwardSystem implements System {
 
         const list = world.getEntities(this.queryMask);
         for (let i = 0; i < list.length; i++) {
-            const velocity = world.getComponent<VelocityComponent>(list[i], VelocityComponent.TYPE_ID)!;
+            const e = list[i];
+            if (world.getComponent(e, PlayerFlightComponent.TYPE_ID)) continue;
+            const velocity = world.getComponent<VelocityComponent>(e, VelocityComponent.TYPE_ID)!;
             velocity.vx = VOICE_FLIGHT.CRUISE_SPEED_X;
         }
     }

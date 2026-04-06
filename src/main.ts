@@ -21,11 +21,13 @@ import { QuestSystem } from './engine/systems/QuestSystem';
 import { GatePlayoutSystem } from './engine/systems/GatePlayoutSystem';
 import { BoundsCheckSystem } from './engine/systems/BoundsCheckSystem';
 import { DistanceQuestSystem } from './engine/systems/DistanceQuestSystem';
+import { WorldScrollSystem } from './engine/systems/WorldScrollSystem';
 import { CameraFollowSystem } from './engine/systems/CameraFollowSystem';
 import { TransformComponent } from './engine/components/TransformComponent';
 import { VelocityComponent } from './engine/components/VelocityComponent';
 import { SpriteComponent } from './engine/components/SpriteComponent';
 import { FlightDynamicsComponent } from './engine/components/FlightDynamicsComponent';
+import { PlayerFlightComponent } from './engine/components/PlayerFlightComponent';
 import { createDemoTouchZones } from './debug/DemoTouchZones';
 import { SONGS } from './data/songs';
 import { GameState } from './engine/GameState';
@@ -57,6 +59,16 @@ import {
 } from './ui/game/gameFlowBridge';
 import { getVelocityUiTexture, preloadVelocityUiTextures } from './ui/game/velocityUiArt';
 import { applyPlayerPlaneVisual, preloadPlayerPlaneTextures } from './game/playerPlanes';
+import {
+    resetWorldScroll,
+    setPlayerWorldX,
+    getPlayerWorldX,
+    getCruiseVx,
+} from './game/worldScroll';
+import { setSongPitchRangeFromNotes, screenYToAltitude01 } from './game/vocalFlightState';
+import { setRunFlightApp } from './game/runFlightContext';
+import { getTuningCentsFromSungHz } from './game/gateTargetTelemetry';
+import { VOICE_FLIGHT } from './data/constants';
 import { preloadWorldMapBackground } from './scenes/WorldMapScene';
 
 /** Log init failure and show a safe, user-visible alert (no innerHTML interpolation). */
@@ -168,9 +180,12 @@ async function init() {
     const world = new World();
     const velocityEngine = new Engine(app, world);
 
+    setRunFlightApp(app);
+
     const levelSystem = new LevelSystem(app);
     let currentLevelId = 1;
     let runScore = 0;
+    let comboStreak = 0;
     let parallaxReady = false;
     let demoZones: Container | null = null;
     let worldMap: WorldMapScene | null = null;
@@ -188,6 +203,7 @@ async function init() {
 
     world.addSystem(new VoiceInputSystem());
     world.addSystem(new AutoForwardSystem());
+    world.addSystem(new WorldScrollSystem());
     world.addSystem(new FlightDynamicsSystem());
     world.addSystem(new MovementSystem());
     world.addSystem(gatePlayout);
@@ -209,14 +225,17 @@ async function init() {
     const player = world.createEntity();
     // World-space start position: camera anchor is 27% from left, so plane
     // world-x = anchorX means worldLayer.x = 0 at startup (no initial offset).
+    const anchorPx = Math.round(app.screen.width * 0.27);
+    setPlayerWorldX(anchorPx);
     const playerTransformInit = new TransformComponent(
-        Math.round(app.screen.width * 0.27),
+        anchorPx,
         app.screen.height / 2,
         0,
         initPlaneScale,  // scaleX — synced so SpriteSystem doesn't clobber it
         initPlaneScale   // scaleY
     );
     world.addComponent(player, playerTransformInit);
+    world.addComponent(player, new PlayerFlightComponent());
     world.addComponent(player, new VelocityComponent(0, 0));
     // gravityScale kept at 0 — FlightDynamicsSystem trims to level; voice input steers vertically.
     world.addComponent(player, new FlightDynamicsComponent(1.0, 0.05, 3000, 0.1, 0));
@@ -226,6 +245,9 @@ async function init() {
     const cameraFollow = new CameraFollowSystem(app, gameWorldLayer, player);
 
     const syncGameplayViewport = (): void => {
+        setPlayerWorldX(Math.round(app.screen.width * 0.27));
+        const ptr = world.getComponent<TransformComponent>(player, TransformComponent.TYPE_ID);
+        if (ptr) ptr.x = getPlayerWorldX();
         if (GameState.runActive) {
             cameraFollow.snapToPlayer(world);
         }
@@ -247,11 +269,25 @@ async function init() {
         getAltitudeDisplay: () => {
             const tr = world.getComponent<TransformComponent>(player, TransformComponent.TYPE_ID);
             if (!tr) return 0;
-            return Math.floor(Math.max(0, (app.screen.height / 2 - tr.y) / 2));
+            return Math.round(screenYToAltitude01(tr.y, app.screen.height, 56) * 100);
         },
         getForwardSpeed: () => {
-            const vel = world.getComponent<VelocityComponent>(player, VelocityComponent.TYPE_ID);
-            return vel ? Math.round(vel.vx) : 0;
+            if (!GameState.runActive) return 0;
+            return Math.round(getCruiseVx());
+        },
+        getAltitude01: () => {
+            const tr = world.getComponent<TransformComponent>(player, TransformComponent.TYPE_ID);
+            if (!tr) return 0.5;
+            return screenYToAltitude01(tr.y, app.screen.height, 56);
+        },
+        getTuningCents: () => {
+            if (!GameState.runActive || GameState.paused) return null;
+            const v = VoiceInputManager.getInstance();
+            return getTuningCentsFromSungHz(v.pitchHz, v.volume, VOICE_FLIGHT.VOLUME_GATE);
+        },
+        getComboMultiplier: () => {
+            if (!GameState.runActive) return 1;
+            return Math.min(4, 1 + Math.floor(comboStreak / 3));
         },
     });
 
@@ -366,7 +402,9 @@ async function init() {
     });
 
     bus.on(GameEvents.GATE_PASSED, (payload?: { gatesPassed?: number; totalGates?: number }) => {
-        runScore += 100;
+        comboStreak += 1;
+        const mult = Math.min(4, 1 + Math.floor(comboStreak / 3));
+        runScore += 100 * mult;
         if (payload && typeof payload.gatesPassed === 'number') {
             setLastRunSummary({
                 score: runScore,
@@ -406,6 +444,7 @@ async function init() {
     );
 
     bus.on(GameEvents.CRASH, () => {
+        comboStreak = 0;
         endRun();
         setLastRunSummary({
             score: runScore,
@@ -421,7 +460,9 @@ async function init() {
         if (runScore > 0) {
             recordMenuHighScore(runScore);
         }
+        comboStreak = 0;
         GameState.setRunActive(false);
+        resetWorldScroll();
         gatePlayout.clear();
         boundsCheck.clear();
         distanceQuest.clear();
@@ -523,26 +564,29 @@ async function init() {
     async function beginRun(levelId: number): Promise<void> {
         currentLevelId = levelId;
         runScore = 0;
+        comboStreak = 0;
+        resetWorldScroll();
         await ensureParallax();
 
         levelSystem.destroyAllGates(world);
 
         const tr = world.getComponent<TransformComponent>(player, TransformComponent.TYPE_ID)!;
         const vel = world.getComponent<VelocityComponent>(player, VelocityComponent.TYPE_ID)!;
-        // Reset plane to world-space origin that aligns with the camera anchor (27% from left).
-        // The camera formula: worldLayer.x = anchorX - player.x → 0 offset at start.
-        tr.x = Math.round(app.screen.width * 0.27);
+        const anchorPx = Math.round(app.screen.width * 0.27);
+        setPlayerWorldX(anchorPx);
+        tr.x = anchorPx;
         tr.y = app.screen.height / 2;
         tr.rotation = 0;
-        // AutoForwardSystem will set vx = CRUISE_SPEED_X each tick; start clean.
         vel.vx = 0;
         vel.vy = 0;
         cameraFollow.snapToPlayer(world);
 
         const def = getLevelDefinition(levelId);
+        let songForRange = SONGS[0];
         if (def) {
             const song = getSongForLevel(def);
             if (song) {
+                songForRange = song;
                 levelSystem.initLevelFromDefinition(def, song, player);
                 console.log(`Velocity: Started level ${def.id} — "${def.name}" (${def.zone})`);
             } else {
@@ -551,6 +595,7 @@ async function init() {
         } else {
             levelSystem.initLevel(levelId, SONGS[0], player);
         }
+        setSongPitchRangeFromNotes(songForRange);
 
         setLastRunSummary({
             score: 0,
