@@ -17,9 +17,11 @@ import { GameState } from '../GameState';
  * All world children (plane sprite, gates) are in local worldLayer space, so
  * this single translation keeps the plane locked at the anchor while the world
  * scrolls behind it.
+ *
+ * **Not** registered as a World `render` system — call `apply()` from Pixi `Ticker`
+ * after the engine tick so the layer offset always wins over SpriteSystem.
  */
 export class CameraFollowSystem implements System {
-    /** After SpriteSystem (100) so worldLayer tracks the final sprite transform each frame. */
     public readonly priority: number = 110;
 
     // Plane sits 27% from the left so the player can see plenty of runway ahead.
@@ -62,7 +64,11 @@ export class CameraFollowSystem implements System {
         this.worldLayer.position.set(0, 0);
     }
 
-    public render(_entities: Entity[], world: World, _interpolation: number): void {
+    /**
+     * Call once per frame from Ticker (after Engine tick) while a run is active.
+     * Keeps `gameWorldLayer` pinned to the player transform so the world scrolls left→right.
+     */
+    public apply(world: World): void {
         if (!GameState.runActive || GameState.paused || !this.playerEntity) return;
 
         const t = world.getComponent<TransformComponent>(this.playerEntity, TransformComponent.TYPE_ID);
@@ -70,4 +76,5 @@ export class CameraFollowSystem implements System {
 
         this.worldLayer.position.set(this.anchorX() - t.x, this.anchorY() - t.y);
     }
+
 }
