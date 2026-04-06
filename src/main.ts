@@ -201,17 +201,27 @@ async function init() {
 
     const playerSprite = new Sprite(Texture.WHITE);
     playerSprite.visible = false;
-    applyPlayerPlaneVisual(playerSprite);
+    // Apply texture + compute scale. All OGA textures are top-down (nose-up);
+    // we correct orientation via SpriteComponent.visualRotationOffset (Math.PI/2 = nose right).
+    const initPlaneScale = applyPlayerPlaneVisual(playerSprite);
     gameWorldLayer.addChild(playerSprite);
 
     const player = world.createEntity();
     // World-space start position: camera anchor is 27% from left, so plane
     // world-x = anchorX means worldLayer.x = 0 at startup (no initial offset).
-    world.addComponent(player, new TransformComponent(Math.round(app.screen.width * 0.27), app.screen.height / 2));
+    const playerTransformInit = new TransformComponent(
+        Math.round(app.screen.width * 0.27),
+        app.screen.height / 2,
+        0,
+        initPlaneScale,  // scaleX — synced so SpriteSystem doesn't clobber it
+        initPlaneScale   // scaleY
+    );
+    world.addComponent(player, playerTransformInit);
     world.addComponent(player, new VelocityComponent(0, 0));
     // gravityScale kept at 0 — FlightDynamicsSystem trims to level; voice input steers vertically.
     world.addComponent(player, new FlightDynamicsComponent(1.0, 0.05, 3000, 0.1, 0));
-    world.addComponent(player, new SpriteComponent(playerSprite));
+    // visualRotationOffset = Math.PI/2 rotates the top-down (nose-up) sprite so the nose faces right.
+    world.addComponent(player, new SpriteComponent(playerSprite, 0.5, 0.5, 0xFFFFFF, Math.PI / 2));
 
     const cameraFollow = new CameraFollowSystem(app, gameWorldLayer, player);
     world.addSystem(cameraFollow);
@@ -482,7 +492,12 @@ async function init() {
         distanceQuest.configure(player);
         distanceQuest.syncBaseline(world);
 
-        applyPlayerPlaneVisual(playerSprite);
+        // Re-apply plane visual and sync scale back into TransformComponent so
+        // SpriteSystem uses the texture-derived scale, not the default (1,1).
+        const newPlaneScale = applyPlayerPlaneVisual(playerSprite);
+        const playerTr = world.getComponent<TransformComponent>(player, TransformComponent.TYPE_ID)!;
+        playerTr.scaleX = newPlaneScale;
+        playerTr.scaleY = newPlaneScale;
         playerSprite.visible = true;
 
         GameState.setPaused(false);
