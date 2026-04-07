@@ -17,9 +17,33 @@ export interface Song {
      * lands near this time — aligns world length with the song. Optional for mock charts.
      */
     durationSec?: number;
+    /**
+     * Optional backing track (e.g. `/music/jingle-bells.mp3`). When set, run length follows
+     * `HTMLAudioElement.duration` after load, cruise speed is derived from last gate distance,
+     * and level complete fires when the track ends.
+     */
+    audioUrl?: string;
 }
 
 export const SONGS: Song[] = [
+    /**
+     * Example: add `public/music/jingle-bells.mp3` (licensed file). Run length and cruise speed
+     * follow the file’s real duration; session ends when the track ends.
+     */
+    {
+        id: 'track_jingle',
+        name: 'Jingle Bells',
+        bpm: 120,
+        notes: [
+            { time: 2.0, pitch: 0.5 },
+            { time: 4.0, pitch: 0.55 },
+            { time: 6.0, pitch: 0.45 },
+            { time: 8.0, pitch: 0.6 },
+            { time: 10.0, pitch: 0.4 },
+            { time: 12.0, pitch: 0.5 },
+        ],
+        audioUrl: 'music/jingle-bells.mp3',
+    },
     // === ZONE 1: TUTORIAL (Levels 1-5) ===
     {
         id: 'track_01',

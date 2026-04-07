@@ -1,6 +1,10 @@
 import { Entity, World, System } from '../World';
 import { GateComponent } from '../components/GateComponent';
 import { getPlayerWorldX, getWorldScrollX } from '../../game/worldScroll';
+import {
+    markAwaitingTrackEndAfterAllGates,
+    shouldDeferLevelCompleteUntilTrackEnd,
+} from '../../game/runSessionMode';
 import { GameState } from '../GameState';
 import { EventBus } from '../../events/EventBus';
 import { GameEvents } from '../../events/GameEvents';
@@ -14,6 +18,7 @@ export class GatePlayoutSystem implements System {
     private playerEntity: Entity | null = null;
     private totalGatesInRun = 0;
     private completeEmitted = false;
+    private deferredForTrackEnd = false;
 
     constructor() {
         this.queryMask = GateComponent.TYPE_ID;
@@ -23,12 +28,14 @@ export class GatePlayoutSystem implements System {
         this.playerEntity = player;
         this.totalGatesInRun = totalGates;
         this.completeEmitted = false;
+        this.deferredForTrackEnd = false;
     }
 
     public clear(): void {
         this.playerEntity = null;
         this.totalGatesInRun = 0;
         this.completeEmitted = false;
+        this.deferredForTrackEnd = false;
     }
 
     public update(_entities: Entity[], world: World, _delta: number): void {
@@ -56,6 +63,13 @@ export class GatePlayoutSystem implements System {
             this.totalGatesInRun > 0 &&
             passedCount >= this.totalGatesInRun
         ) {
+            if (shouldDeferLevelCompleteUntilTrackEnd()) {
+                if (!this.deferredForTrackEnd) {
+                    this.deferredForTrackEnd = true;
+                    markAwaitingTrackEndAfterAllGates();
+                }
+                return;
+            }
             this.completeEmitted = true;
             EventBus.getInstance().emit(GameEvents.LEVEL_COMPLETE);
         }

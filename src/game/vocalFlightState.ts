@@ -44,6 +44,15 @@ export function setSongPitchRangeFromNotes(song: Song): void {
     songMaxMidi = hi;
 }
 
+/**
+ * Map sung pitch to altitude using a **musical** range (~2 octaves): higher Hz → higher on screen.
+ * Does not compress range to only the chart’s notes (that made “middle” sung notes feel wrong).
+ */
+export function setSongPitchRangeForVocalFlight(): void {
+    songMinMidi = 55;
+    songMaxMidi = 79;
+}
+
 export function getSongMidiRange(): { min: number; max: number } {
     return { min: songMinMidi, max: songMaxMidi };
 }
