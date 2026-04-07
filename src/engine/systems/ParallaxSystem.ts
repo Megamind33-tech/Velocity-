@@ -2,6 +2,11 @@ import { Application, Container, TilingSprite, Texture } from 'pixi.js';
 import { Entity, World, System } from '../World';
 import { TransformComponent } from '../components/TransformComponent';
 import { RENDERING, type ParallaxLayerConfig } from '../../data/constants';
+import {
+    VISOR_LAYER_FOG_ALPHA,
+    VISOR_LAYER_SCALES,
+    VISOR_LAYER_WORLD_LOCK,
+} from '../../game/vocalFlightRules';
 import { getWorldScrollX } from '../../game/worldScroll';
 import { GameState } from '../GameState';
 
@@ -10,6 +15,8 @@ export type ParallaxInitOptions = {
     layersConfig?: ParallaxLayerConfig[];
     /** Source art height in px; sets uniform tileScale = screenH / this. */
     tilePixelHeight?: number;
+    /** 3-layer visor: per-layer scale, fog, slow drift, altitude-linked Y shift. */
+    visorMode?: boolean;
 };
 
 /**
@@ -26,6 +33,7 @@ export class ParallaxSystem implements System {
     private layerConfigs: ParallaxLayerConfig[] = RENDERING.PARALLAX_LAYERS;
     /** If set, `tileScale` = screenHeight / this (OGA 135px-tall strips). */
     private tilePixelHeight: number | null = null;
+    private visorMode = false;
 
     constructor(app: Application) {
         this.app = app;
@@ -54,6 +62,7 @@ export class ParallaxSystem implements System {
         this.playerEntity = player;
         this.layerConfigs = options?.layersConfig ?? RENDERING.PARALLAX_LAYERS;
         this.tilePixelHeight = options?.tilePixelHeight ?? null;
+        this.visorMode = Boolean(options?.visorMode);
 
         const w = this.app.screen.width;
         const h = this.app.screen.height;
@@ -61,14 +70,23 @@ export class ParallaxSystem implements System {
         const tileScaleUniform = this.computeTileScale(h);
 
         for (let i = 0; i < textures.length; i++) {
+            const ts = { ...tileScaleUniform };
+            if (this.visorMode && i < VISOR_LAYER_SCALES.length) {
+                ts.x *= VISOR_LAYER_SCALES[i]!;
+                ts.y *= VISOR_LAYER_SCALES[i]!;
+            }
             const tilingSprite = new TilingSprite({
                 texture: textures[i],
                 width: w,
                 height: h,
-                tileScale: tileScaleUniform,
+                tileScale: ts,
             });
 
-            tilingSprite.alpha = alphas ? (alphas[i] ?? 1.0) : 1.0;
+            let a = alphas ? (alphas[i] ?? 1.0) : 1.0;
+            if (this.visorMode && i < VISOR_LAYER_FOG_ALPHA.length) {
+                a *= 1 - VISOR_LAYER_FOG_ALPHA[i]!;
+            }
+            tilingSprite.alpha = a;
             this.container.addChild(tilingSprite);
             this.layers.push(tilingSprite);
         }
@@ -86,11 +104,16 @@ export class ParallaxSystem implements System {
     public resizeToScreen(): void {
         const w = this.app.screen.width;
         const h = this.app.screen.height;
-        const ts = this.computeTileScale(h);
+        const tsBase = this.computeTileScale(h);
         for (let i = 0; i < this.layers.length; i++) {
             const layer = this.layers[i]!;
             layer.width = w;
             layer.height = h;
+            const ts = { ...tsBase };
+            if (this.visorMode && i < VISOR_LAYER_SCALES.length) {
+                ts.x *= VISOR_LAYER_SCALES[i]!;
+                ts.y *= VISOR_LAYER_SCALES[i]!;
+            }
             layer.tileScale.set(ts.x, ts.y);
         }
     }
@@ -103,15 +126,25 @@ export class ParallaxSystem implements System {
         if (!transform) return;
 
         const scroll = getWorldScrollX();
+        const centerY = this.app.screen.height * 0.5;
+        const altShift = transform.y - centerY;
 
         for (let i = 0; i < this.layers.length; i++) {
             const layer = this.layers[i];
-            const config = this.layerConfigs[i] || { worldLock: 1, offset: 0, depth: 0 };
-            const w = Math.max(0, Math.min(1, config.worldLock));
-            // Parent `worldScrollRoot` already applies -scrollX → full lateral motion.
-            // UV shift adds only depth separation: (1 - worldLock) * scroll.
-            layer.tilePosition.x = scroll * (1 - w);
-            layer.tilePosition.y = -transform.y * w * 0.3 + (config.offset ?? 0);
+            let wLock: number;
+            if (this.visorMode && i < VISOR_LAYER_WORLD_LOCK.length) {
+                wLock = VISOR_LAYER_WORLD_LOCK[i]!;
+            } else {
+                const config = this.layerConfigs[i] || { worldLock: 1, offset: 0, depth: 0 };
+                wLock = Math.max(0, Math.min(1, config.worldLock));
+            }
+            const config = this.layerConfigs[i] || { worldLock: wLock, offset: 0, depth: 0 };
+            layer.tilePosition.x = scroll * (1 - wLock);
+            if (this.visorMode) {
+                layer.tilePosition.y = altShift * (0.1 + i * 0.1) + (config.offset ?? 0);
+            } else {
+                layer.tilePosition.y = -transform.y * wLock * 0.3 + (config.offset ?? 0);
+            }
         }
     }
 }

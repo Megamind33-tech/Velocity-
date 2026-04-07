@@ -1,4 +1,5 @@
 import { SONGS, Song } from './songs';
+import type { FlightDifficulty } from '../game/vocalFlightRules';
 
 export type ZoneId = 'tutorial' | 'rhythm_basics' | 'advanced_flight' | 'expert';
 
@@ -19,6 +20,8 @@ export interface LevelDefinition {
     learningObjectives: LearningObjective[];
     starThresholds: { one: number; two: number; three: number };
     unlockRequirement: number;
+    /** Vocal Flight difficulty preset (gap size, BPM spacing, score mult, hard breath rule). */
+    difficulty?: FlightDifficulty;
 }
 
 export interface ZoneDefinition {

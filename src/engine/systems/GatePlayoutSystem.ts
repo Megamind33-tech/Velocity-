@@ -1,5 +1,6 @@
 import { Entity, World, System } from '../World';
 import { GateComponent } from '../components/GateComponent';
+import { TransformComponent } from '../components/TransformComponent';
 import { getPlayerWorldX, getWorldScrollX } from '../../game/worldScroll';
 import {
     markAwaitingTrackEndAfterAllGates,
@@ -8,6 +9,11 @@ import {
 import { GameState } from '../GameState';
 import { EventBus } from '../../events/EventBus';
 import { GameEvents } from '../../events/GameEvents';
+import { VoiceInputManager } from '../input/VoiceInputManager';
+import { hzToMidi } from '../../game/vocalFlightState';
+import { VOICE_FLIGHT } from '../../data/constants';
+import { PERFECT_CENTS, PERFECT_DISTANCE_PX } from '../../game/vocalFlightRules';
+import type { LevelSystem } from './LevelSystem';
 
 /**
  * Detects when the player passes gate centers and drives level-complete when all gates are cleared.
@@ -17,16 +23,18 @@ export class GatePlayoutSystem implements System {
     private readonly queryMask: number;
     private playerEntity: Entity | null = null;
     private totalGatesInRun = 0;
+    private gatesClearedCount = 0;
     private completeEmitted = false;
     private deferredForTrackEnd = false;
 
-    constructor() {
+    constructor(private readonly levelSystem: LevelSystem) {
         this.queryMask = GateComponent.TYPE_ID;
     }
 
     public configure(player: Entity, totalGates: number): void {
         this.playerEntity = player;
         this.totalGatesInRun = totalGates;
+        this.gatesClearedCount = 0;
         this.completeEmitted = false;
         this.deferredForTrackEnd = false;
     }
@@ -34,6 +42,7 @@ export class GatePlayoutSystem implements System {
     public clear(): void {
         this.playerEntity = null;
         this.totalGatesInRun = 0;
+        this.gatesClearedCount = 0;
         this.completeEmitted = false;
         this.deferredForTrackEnd = false;
     }
@@ -44,7 +53,6 @@ export class GatePlayoutSystem implements System {
         const playerLogical = getWorldScrollX() + getPlayerWorldX();
 
         const gates = world.getEntities(this.queryMask);
-        let passedCount = 0;
 
         for (let i = 0; i < gates.length; i++) {
             const gate = gates[i];
@@ -53,15 +61,34 @@ export class GatePlayoutSystem implements System {
 
             if (!gc.passed && playerLogical > gc.logicalX) {
                 gc.passed = true;
-                EventBus.getInstance().emit(GameEvents.GATE_PASSED);
+                this.levelSystem.incrementGatesPassed();
+                this.gatesClearedCount++;
+
+                let perfect = false;
+                const pt = world.getComponent<TransformComponent>(this.playerEntity, TransformComponent.TYPE_ID);
+                if (pt) {
+                    const distOk = Math.abs(pt.y - gc.gapCenterY) <= PERFECT_DISTANCE_PX;
+                    const v = VoiceInputManager.getInstance();
+                    let centsOk = false;
+                    if (v.isInitialized && v.volume > VOICE_FLIGHT.VOLUME_GATE && v.pitchHz > 0) {
+                        const sung = hzToMidi(v.pitchHz);
+                        centsOk = Math.abs(sung - gc.targetMidi) * 100 <= PERFECT_CENTS;
+                    }
+                    perfect = distOk && centsOk;
+                }
+
+                EventBus.getInstance().emit(GameEvents.GATE_PASSED, {
+                    perfect,
+                    gatesPassed: this.levelSystem.getGatesPassed(),
+                    totalGates: this.levelSystem.getTotalGates(),
+                });
             }
-            if (gc.passed) passedCount++;
         }
 
         if (
             !this.completeEmitted &&
             this.totalGatesInRun > 0 &&
-            passedCount >= this.totalGatesInRun
+            this.gatesClearedCount >= this.totalGatesInRun
         ) {
             if (shouldDeferLevelCompleteUntilTrackEnd()) {
                 if (!this.deferredForTrackEnd) {

@@ -2,6 +2,9 @@ import { Song } from '../data/songs';
 import { getSongTimelineTargetSec } from '../data/songTimeline';
 import { LevelDefinition } from '../data/levelDefinitions';
 import { DifficultyScaler } from './DifficultyScaler';
+import { getDifficultyPreset, type FlightDifficulty } from '../game/vocalFlightRules';
+
+export type LevelGateKind = 'pitch' | 'volume';
 
 export interface LevelGate {
     x: number;
@@ -9,6 +12,8 @@ export interface LevelGate {
     width: number;
     /** Target MIDI note for pitch gates / HUD tuning meter. */
     targetMidi: number;
+    kind: LevelGateKind;
+    gapMaxPx: number;
 }
 
 /**
@@ -21,10 +26,11 @@ export class LevelGenerator {
      */
     public generate(levelId: number, song: Song, worldHeight: number): LevelGate[] {
         let notesToUse = song.notes.map((n) => ({ ...n }));
-        notesToUse = this.prepareNoteTimeline(song, notesToUse, 1.6);
+        notesToUse = this.prepareNoteTimeline(song, notesToUse, 1.6, song.bpm, 'medium');
         const gates: LevelGate[] = [];
         const baseSpeed = 300; // px per second
         const diff = DifficultyScaler.getMultiplier(levelId);
+        const preset = getDifficultyPreset('medium');
 
         const midiBase = 58;
         const midiSpan = 24;
@@ -38,11 +44,14 @@ export class LevelGenerator {
             const targetMidi = midiBase + note.pitch * midiSpan;
 
             const baseW = 150 - levelId * 2;
+            const kind: LevelGateKind = i % 4 === 3 ? 'volume' : 'pitch';
             const gate: LevelGate = {
                 x,
                 y,
                 width: Math.max(48, baseW / diff),
                 targetMidi,
+                kind,
+                gapMaxPx: preset.gapMaxPx,
             };
 
             if (i > 0) {
@@ -79,11 +88,12 @@ export class LevelGenerator {
                 notes.push({ ...src[notes.length % src.length] });
             }
         }
-        notes = this.prepareNoteTimeline(song, notes, 2.4);
+        notes = this.prepareNoteTimeline(song, notes, 2.4, song.bpm, def.difficulty);
 
         const gates: LevelGate[] = [];
         const baseSpeed = def.scrollSpeed;
         const diff = DifficultyScaler.getMultiplier(def.id);
+        const preset = getDifficultyPreset(def.difficulty);
 
         const midiBase = 58;
         const midiSpan = 24;
@@ -97,11 +107,14 @@ export class LevelGenerator {
             const targetMidi = midiBase + note.pitch * midiSpan;
 
             const baseW = def.gateWidth;
+            const kind: LevelGateKind = i % 4 === 3 ? 'volume' : 'pitch';
             const gate: LevelGate = {
                 x,
                 y,
                 width: Math.max(48, baseW / diff),
                 targetMidi,
+                kind,
+                gapMaxPx: Math.min(preset.gapMaxPx, def.gateWidth > 0 ? def.gateWidth * 0.55 : preset.gapMaxPx),
             };
 
             if (i > 0) {
@@ -148,10 +161,17 @@ export class LevelGenerator {
     private prepareNoteTimeline(
         song: Song,
         notes: { time: number; pitch: number }[],
-        minGapSec: number
+        minGapSec: number,
+        bpm?: number,
+        difficulty?: FlightDifficulty
     ): { time: number; pitch: number }[] {
         if (notes.length === 0) return notes;
-        let out = this.expandNoteTimesToMinGap(notes, minGapSec);
+        let gap = minGapSec;
+        if (bpm && bpm > 0) {
+            const beats = getDifficultyPreset(difficulty).beatsToCross;
+            gap = Math.max(gap, beats * (60 / bpm));
+        }
+        let out = this.expandNoteTimesToMinGap(notes, gap);
         const targetEnd = getSongTimelineTargetSec(song, out.length);
         out = this.scaleNoteTimesToEnd(out, targetEnd, 0.5);
         return out;

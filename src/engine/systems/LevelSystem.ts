@@ -2,6 +2,8 @@ import { Entity, World, System } from '../World';
 import { TransformComponent } from '../components/TransformComponent';
 import { SpriteComponent } from '../components/SpriteComponent';
 import { GateComponent } from '../components/GateComponent';
+import { GateDrawComponent } from '../components/GateDrawComponent';
+import { CollectibleComponent } from '../components/CollectibleComponent';
 import { GameState } from '../GameState';
 import { LevelGenerator, LevelGate } from '../../levels/LevelGenerator';
 import { ObjectPool } from '../utils/ObjectPool';
@@ -35,6 +37,7 @@ export class LevelSystem implements System {
     private hintEmitted: boolean = false;
     private gatesPassed: number = 0;
     private totalGates: number = 0;
+    private spawnedGateCount = 0;
     /** When true, do not finish the level when all gates despawn; wait for session audio to end. */
     private waitForSessionAudioEnd = false;
 
@@ -58,6 +61,11 @@ export class LevelSystem implements System {
         this.worldParent = container;
     }
 
+    /** Return pooled sprite used by gates/collectibles (pickup consumption). */
+    public releasePooledSprite(sprite: Sprite): void {
+        this.spritePool.release(sprite);
+    }
+
     /**
      * Legacy init path — generates from levelId + song only.
      */
@@ -68,6 +76,7 @@ export class LevelSystem implements System {
         this.levelComplete = false;
         this.hintEmitted = false;
         this.gatesPassed = 0;
+        this.spawnedGateCount = 0;
         const plan = this.generator.generate(levelId, song, this.app.screen.height);
         this.totalGates = plan.length;
         this.lastInitializedGateCount = plan.length;
@@ -91,6 +100,7 @@ export class LevelSystem implements System {
         this.levelComplete = false;
         this.hintEmitted = false;
         this.gatesPassed = 0;
+        this.spawnedGateCount = 0;
         const plan = this.generator.generateForDefinition(def, song, this.app.screen.height);
         this.totalGates = plan.length;
         this.lastInitializedGateCount = plan.length;
@@ -105,6 +115,11 @@ export class LevelSystem implements System {
 
     public getGatesPassed(): number { return this.gatesPassed; }
     public getTotalGates(): number { return this.totalGates; }
+
+    /** Called when player clears a gate centerline (authoritative pass count). */
+    public incrementGatesPassed(): void {
+        this.gatesPassed++;
+    }
     public isLevelComplete(): boolean { return this.levelComplete; }
     public getCurrentLevelDef(): LevelDefinition | null { return this.currentLevelDef; }
 
@@ -143,29 +158,32 @@ export class LevelSystem implements System {
             this.spawnGate(world, gateData);
         }
 
-        // 2. Cleanup & Recycling
+        // 2. Cleanup & Recycling (missed gates = no score; collision should have crashed)
         const existingGates = [...world.getEntities(GateComponent.TYPE_ID)];
         for (let i = 0; i < existingGates.length; i++) {
             const gate = existingGates[i];
             const transform = world.getComponent<TransformComponent>(gate, TransformComponent.TYPE_ID);
             const gc = world.getComponent<GateComponent>(gate, GateComponent.TYPE_ID);
             if (transform && gc && gc.logicalX < playerLogical - this.cleanupRange) {
-                const gateComp = gc;
                 const spriteComp = world.getComponent<SpriteComponent>(gate, SpriteComponent.TYPE_ID);
-
-                if (gateComp && !gateComp.passed) {
-                    this.gatesPassed++;
-                    gateComp.passed = true;
-                    EventBus.getInstance().emit(GameEvents.GATE_PASSED, {
-                        gatesPassed: this.gatesPassed,
-                        totalGates: this.totalGates,
-                    });
-                }
-
-                if (spriteComp) {
-                    this.spritePool.release(spriteComp.sprite);
+                const draw = world.getComponent<GateDrawComponent>(gate, GateDrawComponent.TYPE_ID);
+                if (spriteComp) this.spritePool.release(spriteComp.sprite);
+                if (draw) {
+                    draw.graphics.destroy();
                 }
                 world.destroyEntity(gate);
+            }
+        }
+
+        const pickups = [...world.getEntities(CollectibleComponent.TYPE_ID)];
+        for (let i = 0; i < pickups.length; i++) {
+            const p = pickups[i];
+            const tr = world.getComponent<TransformComponent>(p, TransformComponent.TYPE_ID);
+            const cc = world.getComponent<CollectibleComponent>(p, CollectibleComponent.TYPE_ID);
+            if (tr && cc && tr.x < playerLogical - this.cleanupRange) {
+                const sp = world.getComponent<SpriteComponent>(p, SpriteComponent.TYPE_ID);
+                if (sp) this.spritePool.release(sp.sprite);
+                world.destroyEntity(p);
             }
         }
 
@@ -204,13 +222,22 @@ export class LevelSystem implements System {
     /** Removes every gate entity and returns sprites to the pool. Call before a new run. */
     public destroyAllGates(world: World): void {
         const gates = [...world.getEntities(GateComponent.TYPE_ID)];
+        const pickupsAll = [...world.getEntities(CollectibleComponent.TYPE_ID)];
+        for (let i = 0; i < pickupsAll.length; i++) {
+            const p = pickupsAll[i];
+            const sp = world.getComponent<SpriteComponent>(p, SpriteComponent.TYPE_ID);
+            if (sp) this.spritePool.release(sp.sprite);
+            world.destroyEntity(p);
+        }
         for (let i = 0; i < gates.length; i++) {
             const gate = gates[i];
             const spriteComp = world.getComponent<SpriteComponent>(gate, SpriteComponent.TYPE_ID);
+            const draw = world.getComponent<GateDrawComponent>(gate, GateDrawComponent.TYPE_ID);
             if (spriteComp) {
                 spriteComp.sprite.scale.set(1, 1);
                 this.spritePool.release(spriteComp.sprite);
             }
+            if (draw) draw.graphics.destroy();
             world.destroyEntity(gate);
         }
         this.gatesToSpawn = [];
@@ -236,15 +263,52 @@ export class LevelSystem implements System {
 
     private spawnGate(world: World, data: LevelGate): void {
         const entity = world.createEntity();
+        const parent = this.worldParent ?? this.app.stage;
 
+        const gapMax = data.gapMaxPx;
+        const gapStart = data.kind === 'volume' ? Math.max(28, gapMax * 0.15) : gapMax;
+
+        const gateGfx = new Graphics();
+        gateGfx.eventMode = 'none';
+        parent.addChild(gateGfx);
+
+        world.addComponent(entity, new TransformComponent(data.x, 0));
+        world.addComponent(
+            entity,
+            new GateComponent(
+                data.width,
+                200,
+                10,
+                false,
+                data.x,
+                data.kind,
+                gapMax,
+                gapStart,
+                data.y,
+                data.targetMidi,
+            ),
+        );
+        world.addComponent(entity, new GateDrawComponent(gateGfx));
+
+        this.spawnedGateCount++;
+        if (this.spawnedGateCount % 6 === 2) {
+            this.spawnCollectible(world, data.x + 140, data.y, 'gold');
+        } else if (this.spawnedGateCount % 7 === 0) {
+            this.spawnCollectible(world, data.x + 100, data.y + 40, 'mult');
+        }
+    }
+
+    private spawnCollectible(world: World, x: number, y: number, kind: 'gold' | 'mult'): void {
+        const entity = world.createEntity();
         const sprite = this.spritePool.acquire();
         sprite.texture = this.gateTexture!;
-        sprite.scale.set(data.width / 100, 1);
+        sprite.tint = kind === 'gold' ? 0xffcc33 : 0xc94cff;
+        sprite.scale.set(0.35, 0.35);
+        sprite.alpha = 0.95;
         sprite.visible = true;
         (this.worldParent ?? this.app.stage).addChild(sprite);
-
-        world.addComponent(entity, new TransformComponent(data.x, data.y));
-        world.addComponent(entity, new SpriteComponent(sprite));
-        world.addComponent(entity, new GateComponent(data.width, 200, 10, false, data.x));
+        world.addComponent(entity, new TransformComponent(x, y));
+        world.addComponent(entity, new SpriteComponent(sprite, 0.5, 0.5, 0xffffff, 0));
+        world.addComponent(entity, new CollectibleComponent(kind));
     }
 }

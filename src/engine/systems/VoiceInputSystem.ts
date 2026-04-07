@@ -6,6 +6,8 @@ import { PlayerFlightComponent } from '../components/PlayerFlightComponent';
 import { VoiceInputManager } from '../input/VoiceInputManager';
 import { GameState } from '../GameState';
 import { VOICE_FLIGHT } from '../../data/constants';
+import { PITCH_Y_LERP, SILENCE_SINK_PX_PER_SEC } from '../../game/vocalFlightRules';
+import { registerSilentFrame } from '../../game/vocalSilenceState';
 import { DemoTouchFlight } from '../../debug/DemoTouchFlight';
 import {
     hzToMidi,
@@ -15,12 +17,12 @@ import {
 import { getPlayfieldHeight } from '../../game/runFlightContext';
 
 const PLAYFIELD_PAD = 56;
-const PITCH_LERP = 0.15;
+const PITCH_LERP = PITCH_Y_LERP;
 const TILT_LERP = 0.12;
 const TILT_PER_PX = 0.0025;
 const MAX_TILT = 0.4;
-/** Downward glide when silent (px/s toward bottom of playfield). */
-const SILENT_SINK_SPEED = 95;
+/** Downward glide when silent — spec: 2 px/frame @ 60fps */
+const SILENT_SINK_SPEED = SILENCE_SINK_PX_PER_SEC;
 
 /**
  * Fixed-player vocal flight: maps Pitchy Hz → MIDI → normalized pitch → target screen Y,
@@ -46,6 +48,7 @@ export class VoiceInputSystem implements System {
 
         const vol = this.voiceManager.isInitialized ? this.voiceManager.volume : 0;
         const hz = this.voiceManager.isInitialized ? this.voiceManager.pitchHz : 0;
+        registerSilentFrame(vol <= VOICE_FLIGHT.VOLUME_GATE);
 
         const matchingEntities = world.getEntities(this.queryMask);
 

@@ -3,6 +3,9 @@ import { TransformComponent } from '../components/TransformComponent';
 import { GameState } from '../GameState';
 import { EventBus } from '../../events/EventBus';
 import { GameEvents } from '../../events/GameEvents';
+import { getRunDifficulty } from '../../game/runDifficultyContext';
+import { getDifficultyPreset } from '../../game/vocalFlightRules';
+import { getSilentFrames } from '../../game/vocalSilenceState';
 
 const MARGIN = 48;
 
@@ -32,7 +35,17 @@ export class BoundsCheckSystem implements System {
         const t = world.getComponent<TransformComponent>(this.playerEntity, TransformComponent.TYPE_ID);
         if (!t) return;
 
-        if (t.y < MARGIN || t.y > this.screenHeight - MARGIN) {
+        const atBounds = t.y < MARGIN || t.y > this.screenHeight - MARGIN;
+        if (!atBounds) return;
+
+        const preset = getDifficultyPreset(getRunDifficulty());
+        if (preset.breathPenaltyFrames > 0 && getSilentFrames() >= preset.breathPenaltyFrames) {
+            this.latched = true;
+            EventBus.getInstance().emit(GameEvents.CRASH);
+            return;
+        }
+
+        if (getRunDifficulty() !== 'hard') {
             this.latched = true;
             EventBus.getInstance().emit(GameEvents.CRASH);
         }

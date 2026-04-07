@@ -19,6 +19,10 @@ import { VoiceInputManager } from './engine/input/VoiceInputManager';
 import { LeaderboardSystem } from './engine/systems/LeaderboardSystem';
 import { QuestSystem } from './engine/systems/QuestSystem';
 import { GatePlayoutSystem } from './engine/systems/GatePlayoutSystem';
+import { VolumeGateSystem } from './engine/systems/VolumeGateSystem';
+import { GateCollisionSystem } from './engine/systems/GateCollisionSystem';
+import { CollectiblePickupSystem } from './engine/systems/CollectiblePickupSystem';
+import { GateDrawSyncSystem } from './engine/systems/GateDrawSyncSystem';
 import { BoundsCheckSystem } from './engine/systems/BoundsCheckSystem';
 import { DistanceQuestSystem } from './engine/systems/DistanceQuestSystem';
 import { WorldScrollSystem } from './engine/systems/WorldScrollSystem';
@@ -32,7 +36,7 @@ import { createDemoTouchZones } from './debug/DemoTouchZones';
 import { SONGS } from './data/songs';
 import { GameState } from './engine/GameState';
 import { recordMenuHighScore, unlockAfterComplete } from './data/localProgress';
-import { getLevelDefinition, getSongForLevel } from './data/levelDefinitions';
+import { getLevelDefinition, getSongForLevel, getZoneForLevel } from './data/levelDefinitions';
 import { GameUIManager } from './ui/game/GameUIManager';
 import { MainMenuScreen } from './ui/game/screens/MainMenuScreen';
 import { InGameHUDScreen } from './ui/game/screens/InGameHUDScreen';
@@ -84,6 +88,20 @@ import { getTuningCentsFromSungHz } from './game/gateTargetTelemetry';
 import { loadCityParallaxTextures } from './game/cityParallaxAssets';
 import { buildLevel1DistantSkylineTexture } from './game/level1SkylineTexture';
 import { RENDERING, VOICE_FLIGHT } from './data/constants';
+import {
+    BASE_GATE_POINTS,
+    COLLECTIBLE_GOLD_POINTS,
+    COMBO_MULT_CAP,
+    COMBO_TIER_EVERY,
+    getDifficultyPreset,
+    perfectStreakBonusMultiplier,
+    type FlightDifficulty,
+} from './game/vocalFlightRules';
+import { getSilentFrames, resetSilentFrames } from './game/vocalSilenceState';
+import { setRunDifficulty } from './game/runDifficultyContext';
+import { computeDynamicCruiseMult } from './game/runDynamics';
+import { runSessionHooks } from './game/runSessionHooks';
+import { spawnCrashBurst } from './game/crashBurst';
 import { preloadWorldMapBackground } from './scenes/WorldMapScene';
 
 /** Log init failure and show a safe, user-visible alert (no innerHTML interpolation). */
@@ -201,6 +219,20 @@ async function init() {
     let currentLevelId = 1;
     let runScore = 0;
     let comboStreak = 0;
+    let perfectPassStreak = 0;
+    let comboTierBonus = 0;
+
+    runSessionHooks.getScore = () => runScore;
+    runSessionHooks.getComboStreak = () => comboStreak;
+    runSessionHooks.getPerfectStreak = () => perfectPassStreak;
+
+    function resolveFlightDifficulty(def: ReturnType<typeof getLevelDefinition>): FlightDifficulty {
+        if (def?.difficulty) return def.difficulty;
+        const z = def ? getZoneForLevel(def.id) : null;
+        if (z?.id === 'tutorial') return 'easy';
+        if (z?.id === 'expert') return 'hard';
+        return 'medium';
+    }
     let parallaxReady = false;
     /** Reload parallax when switching level theme (L1 city vs default sky). */
     let parallaxThemeKey: 'city_l1' | 'default' | null = null;
@@ -221,19 +253,25 @@ async function init() {
 
     const parallaxSystem = new ParallaxSystem(app);
     parallaxSystem.reparentToWorldScroll(worldScrollRoot);
-    const gatePlayout = new GatePlayoutSystem();
+    const gatePlayout = new GatePlayoutSystem(levelSystem);
+    const gateCollision = new GateCollisionSystem();
+    const collectiblePickup = new CollectiblePickupSystem(levelSystem);
     const boundsCheck = new BoundsCheckSystem();
     const distanceQuest = new DistanceQuestSystem();
 
     world.addSystem(new VoiceInputSystem());
     world.addSystem(new AutoForwardSystem());
+    world.addSystem(new VolumeGateSystem());
     world.addSystem(new WorldScrollSystem());
     world.addSystem(new FlightDynamicsSystem());
     world.addSystem(new MovementSystem());
+    world.addSystem(gateCollision);
+    world.addSystem(collectiblePickup);
     world.addSystem(gatePlayout);
     world.addSystem(boundsCheck);
     world.addSystem(distanceQuest);
     world.addSystem(new SpriteSystem());
+    world.addSystem(new GateDrawSyncSystem());
     world.addSystem(levelSystem);
     world.addSystem(parallaxSystem);
     world.addSystem(new LeaderboardSystem());
@@ -428,17 +466,44 @@ async function init() {
         },
     });
 
-    bus.on(GameEvents.GATE_PASSED, (payload?: { gatesPassed?: number; totalGates?: number }) => {
-        comboStreak += 1;
-        const mult = Math.min(4, 1 + Math.floor(comboStreak / 3));
-        runScore += 100 * mult;
-        if (payload && typeof payload.gatesPassed === 'number') {
-            setLastRunSummary({
-                score: runScore,
-                gatesPassed: payload.gatesPassed,
-                totalGates: payload.totalGates ?? levelSystem.lastInitializedGateCount,
-            });
+    bus.on(
+        GameEvents.GATE_PASSED,
+        (payload?: { gatesPassed?: number; totalGates?: number; perfect?: boolean }) => {
+            comboStreak += 1;
+            const def = getLevelDefinition(currentLevelId);
+            const diffM = getDifficultyPreset(def?.difficulty).scoreMultiplier;
+            const comboMult = Math.min(
+                COMBO_MULT_CAP,
+                1 + Math.floor(comboStreak / COMBO_TIER_EVERY) + comboTierBonus,
+            );
+            if (payload?.perfect) {
+                perfectPassStreak += 1;
+            } else {
+                perfectPassStreak = 0;
+            }
+            const perfM = payload?.perfect ? perfectStreakBonusMultiplier(perfectPassStreak) : 1;
+            runScore += Math.round(BASE_GATE_POINTS * diffM * comboMult * perfM);
+            if (payload && typeof payload.gatesPassed === 'number') {
+                setLastRunSummary({
+                    score: runScore,
+                    gatesPassed: payload.gatesPassed,
+                    totalGates: payload.totalGates ?? levelSystem.lastInitializedGateCount,
+                });
+            }
+        },
+    );
+
+    bus.on(GameEvents.COLLECTIBLE_PICKUP, (payload?: { kind?: string }) => {
+        if (payload?.kind === 'gold') {
+            runScore += COLLECTIBLE_GOLD_POINTS;
+        } else if (payload?.kind === 'mult') {
+            comboTierBonus = Math.min(3, comboTierBonus + 1);
         }
+        setLastRunSummary({
+            score: runScore,
+            gatesPassed: levelSystem.getGatesPassed(),
+            totalGates: levelSystem.getTotalGates(),
+        });
     });
 
     bus.on(GameEvents.LEVEL_START, async (levelId: number) => {
@@ -471,7 +536,27 @@ async function init() {
     );
 
     bus.on(GameEvents.CRASH, () => {
+        spawnCrashBurst(gameWorldLayer, app.screen.width, app.screen.height);
+        const shakeUntil = performance.now() + 320;
+        const baseSX = app.stage.x;
+        const baseSY = app.stage.y;
+        const onShake = (): void => {
+            if (performance.now() >= shakeUntil) {
+                app.stage.position.set(baseSX, baseSY);
+                Ticker.shared.remove(onShake);
+                return;
+            }
+            const t = (shakeUntil - performance.now()) / 320;
+            const m = 8 * t;
+            app.stage.position.set(
+                baseSX + (Math.random() - 0.5) * m * 2,
+                baseSY + (Math.random() - 0.5) * m * 2,
+            );
+        };
+        Ticker.shared.add(onShake);
         comboStreak = 0;
+        perfectPassStreak = 0;
+        comboTierBonus = 0;
         endRun();
         setLastRunSummary({
             score: runScore,
@@ -488,6 +573,9 @@ async function init() {
             recordMenuHighScore(runScore);
         }
         comboStreak = 0;
+        perfectPassStreak = 0;
+        comboTierBonus = 0;
+        resetSilentFrames();
         clearAwaitingTrackEndAfterAllGates();
         setRunSessionWaitForTrackEnd(false);
         levelSystem.setWaitForSessionAudioEnd(false);
@@ -504,6 +592,8 @@ async function init() {
         resetWorldScroll();
         setCruiseVx(VOICE_FLIGHT.CRUISE_SPEED_X);
         gatePlayout.clear();
+        gateCollision.clear();
+        collectiblePickup.clear();
         boundsCheck.clear();
         distanceQuest.clear();
         cameraFollow.reset();
@@ -615,6 +705,7 @@ async function init() {
 
         await parallaxSystem.init(player, [skyTex, cloudTex1, cloudTex2], {
             alphas: [1.0, 0.88, 0.72],
+            visorMode: true,
         });
         parallaxSystem.resizeToScreen();
         parallaxReady = true;
@@ -624,6 +715,10 @@ async function init() {
         currentLevelId = levelId;
         runScore = 0;
         comboStreak = 0;
+        perfectPassStreak = 0;
+        comboTierBonus = 0;
+        resetSilentFrames();
+        setRunDifficulty('medium');
         setRunSessionWaitForTrackEnd(false);
         levelSystem.setWaitForSessionAudioEnd(false);
         if (sessionAudio && sessionAudioEndedHandler) {
@@ -688,6 +783,13 @@ async function init() {
             setRunSessionWaitForTrackEnd(true);
         } else {
             setCruiseVx(cruise);
+            if (!audioHandle && def && songForGen.bpm > 0 && levelSystem.lastInitializedGateCount > 0) {
+                const n = levelSystem.lastInitializedGateCount;
+                const beats = getDifficultyPreset(resolveFlightDifficulty(def)).beatsToCross;
+                const dur = Math.max(4, n * beats * (60 / songForGen.bpm));
+                const dist = Math.max(400, levelSystem.lastPlanMaxGateX - anchorPx);
+                setCruiseVx(dist / dur);
+            }
         }
 
         setLastRunSummary({
@@ -698,8 +800,11 @@ async function init() {
         });
 
         gatePlayout.configure(player, levelSystem.lastInitializedGateCount);
+        gateCollision.configure(player);
+        collectiblePickup.configure(player);
         boundsCheck.configure(player, app.screen.height);
         distanceQuest.configure(player);
+        setRunDifficulty(resolveFlightDifficulty(def));
         distanceQuest.syncBaseline(world);
 
         // Re-apply plane visual and sync scale back into TransformComponent so
