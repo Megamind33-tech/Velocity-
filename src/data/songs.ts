@@ -12,6 +12,11 @@ export interface Song {
     name: string;
     bpm: number;
     notes: SongNote[];
+    /**
+     * Real audio length in seconds (when known). Gate spawn times scale so the last gate
+     * lands near this time — aligns world length with the song. Optional for mock charts.
+     */
+    durationSec?: number;
 }
 
 export const SONGS: Song[] = [
