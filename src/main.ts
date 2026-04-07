@@ -67,8 +67,19 @@ import {
     getWorldScrollX,
     setCruiseVx,
 } from './game/worldScroll';
-import { setSongPitchRangeFromNotes, screenYToAltitude01 } from './game/vocalFlightState';
+import { setSongPitchRangeForVocalFlight, screenYToAltitude01 } from './game/vocalFlightState';
 import { setRunFlightApp } from './game/runFlightContext';
+import {
+    pauseRunSessionAudio,
+    playRunSessionAudio,
+    prepareRunSessionAudio,
+    type RunSessionAudioHandle,
+} from './game/runSessionAudio';
+import {
+    clearAwaitingTrackEndAfterAllGates,
+    isAwaitingTrackEndAfterAllGates,
+    setRunSessionWaitForTrackEnd,
+} from './game/runSessionMode';
 import { getTuningCentsFromSungHz } from './game/gateTargetTelemetry';
 import { loadCityParallaxTextures } from './game/cityParallaxAssets';
 import { buildLevel1DistantSkylineTexture } from './game/level1SkylineTexture';
@@ -195,6 +206,8 @@ async function init() {
     let parallaxThemeKey: 'city_l1' | 'default' | null = null;
     let demoZones: Container | null = null;
     let worldMap: WorldMapScene | null = null;
+    let sessionAudio: RunSessionAudioHandle | null = null;
+    let sessionAudioEndedHandler: (() => void) | null = null;
 
     /** Camera layer: follows player so ship stays fixed on screen. */
     const gameWorldLayer = new Container();
@@ -395,6 +408,7 @@ async function init() {
         if (!GameState.runActive) return;
         GameState.setPaused(true);
         VoiceInputManager.getInstance().pauseMic();
+        if (sessionAudio) pauseRunSessionAudio(sessionAudio.element);
         uiManager.showScreen('pause', true);
         uiManager.bringToFront();
     });
@@ -402,6 +416,7 @@ async function init() {
     registerPauseResume(() => {
         GameState.setPaused(false);
         VoiceInputManager.getInstance().resumeMic();
+        if (sessionAudio && GameState.runActive) playRunSessionAudio(sessionAudio.element);
     });
 
     registerRunEndCallbacks({
@@ -473,6 +488,17 @@ async function init() {
             recordMenuHighScore(runScore);
         }
         comboStreak = 0;
+        clearAwaitingTrackEndAfterAllGates();
+        setRunSessionWaitForTrackEnd(false);
+        levelSystem.setWaitForSessionAudioEnd(false);
+        if (sessionAudio && sessionAudioEndedHandler) {
+            sessionAudio.element.removeEventListener('ended', sessionAudioEndedHandler);
+            sessionAudioEndedHandler = null;
+        }
+        if (sessionAudio) {
+            sessionAudio.dispose();
+            sessionAudio = null;
+        }
         GameState.setRunActive(false);
         parallaxThemeKey = null;
         resetWorldScroll();
@@ -598,6 +624,16 @@ async function init() {
         currentLevelId = levelId;
         runScore = 0;
         comboStreak = 0;
+        setRunSessionWaitForTrackEnd(false);
+        levelSystem.setWaitForSessionAudioEnd(false);
+        if (sessionAudio && sessionAudioEndedHandler) {
+            sessionAudio.element.removeEventListener('ended', sessionAudioEndedHandler);
+            sessionAudioEndedHandler = null;
+        }
+        if (sessionAudio) {
+            sessionAudio.dispose();
+            sessionAudio = null;
+        }
         resetWorldScroll();
         await ensureParallax(levelId);
 
@@ -615,23 +651,44 @@ async function init() {
         cameraFollow.snapToPlayer(world);
 
         const def = getLevelDefinition(levelId);
-        let songForRange = SONGS[0];
+        let songForRun = SONGS[0];
         if (def) {
             const song = getSongForLevel(def);
-            if (song) {
-                songForRange = song;
-                levelSystem.initLevelFromDefinition(def, song, player);
+            if (song) songForRun = song;
+        }
+
+        const audioHandle = songForRun.audioUrl ? await prepareRunSessionAudio(songForRun.audioUrl) : null;
+        const songForGen =
+            audioHandle && Number.isFinite(audioHandle.element.duration) && audioHandle.element.duration > 0.5
+                ? { ...songForRun, durationSec: audioHandle.element.duration }
+                : songForRun;
+
+        if (def) {
+            if (getSongForLevel(def)) {
+                levelSystem.initLevelFromDefinition(def, songForGen, player);
                 console.log(`Velocity: Started level ${def.id} — "${def.name}" (${def.zone})`);
             } else {
-                levelSystem.initLevel(levelId, SONGS[0], player);
+                levelSystem.initLevel(levelId, songForGen, player);
             }
         } else {
-            levelSystem.initLevel(levelId, SONGS[0], player);
+            levelSystem.initLevel(levelId, songForGen, player);
         }
-        setSongPitchRangeFromNotes(songForRange);
 
-        const cruise = def?.scrollSpeed ?? VOICE_FLIGHT.CRUISE_SPEED_X;
-        setCruiseVx(cruise);
+        /** Higher sung pitch → higher on screen (absolute ~2 octaves), not squeezed to chart span. */
+        setSongPitchRangeForVocalFlight();
+
+        let cruise = def?.scrollSpeed ?? VOICE_FLIGHT.CRUISE_SPEED_X;
+        if (audioHandle) {
+            sessionAudio = audioHandle;
+            const trackSec = audioHandle.element.duration;
+            const dist = Math.max(400, levelSystem.lastPlanMaxGateX - anchorPx);
+            cruise = dist / Math.max(4, trackSec);
+            setCruiseVx(cruise);
+            levelSystem.setWaitForSessionAudioEnd(true);
+            setRunSessionWaitForTrackEnd(true);
+        } else {
+            setCruiseVx(cruise);
+        }
 
         setLastRunSummary({
             score: 0,
@@ -657,10 +714,42 @@ async function init() {
         GameState.setRunActive(true);
         VoiceInputManager.getInstance().resumeMic();
 
+        if (sessionAudio) {
+            const el = sessionAudio.element;
+            sessionAudioEndedHandler = () => {
+                if (!GameState.runActive || GameState.paused) return;
+                clearAwaitingTrackEndAfterAllGates();
+                setRunSessionWaitForTrackEnd(false);
+                levelSystem.setWaitForSessionAudioEnd(false);
+                if (!levelSystem.isLevelComplete()) {
+                    levelSystem.completeFromSessionAudioEnd();
+                }
+            };
+            el.addEventListener('ended', sessionAudioEndedHandler);
+            playRunSessionAudio(el);
+        }
+
         uiManager.showScreen('in-game-hud');
         uiManager.bringToFront();
 
         bus.emit(GameEvents.LEVEL_START, levelId);
+    }
+
+    function tryCompleteSessionWhenTrackCaughtUp(): void {
+        if (!sessionAudio || !GameState.runActive || GameState.paused) return;
+        if (!isAwaitingTrackEndAfterAllGates()) return;
+        const el = sessionAudio.element;
+        if (el.currentTime + 0.12 < el.duration) return;
+        clearAwaitingTrackEndAfterAllGates();
+        setRunSessionWaitForTrackEnd(false);
+        levelSystem.setWaitForSessionAudioEnd(false);
+        if (sessionAudioEndedHandler) {
+            el.removeEventListener('ended', sessionAudioEndedHandler);
+            sessionAudioEndedHandler = null;
+        }
+        if (!levelSystem.isLevelComplete()) {
+            levelSystem.completeFromSessionAudioEnd();
+        }
     }
 
     function ensurePlayUi(): void {
@@ -789,6 +878,7 @@ async function init() {
         worldScrollRoot.position.x = -getWorldScrollX();
         // After Engine.onTick (same Ticker), camera layer follows player.
         cameraFollow.apply(world);
+        tryCompleteSessionWhenTrackCaughtUp();
     });
 
     console.log('Velocity: Main menu ready.');

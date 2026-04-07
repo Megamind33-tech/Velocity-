@@ -1,4 +1,5 @@
 import { Song } from '../data/songs';
+import { getSongTimelineTargetSec } from '../data/songTimeline';
 import { LevelDefinition } from '../data/levelDefinitions';
 import { DifficultyScaler } from './DifficultyScaler';
 
@@ -19,7 +20,8 @@ export class LevelGenerator {
      * Generates a deterministic level from a seed and song data.
      */
     public generate(levelId: number, song: Song, worldHeight: number): LevelGate[] {
-        const notesToUse = song.notes;
+        let notesToUse = song.notes.map((n) => ({ ...n }));
+        notesToUse = this.prepareNoteTimeline(song, notesToUse, 1.6);
         const gates: LevelGate[] = [];
         const baseSpeed = 300; // px per second
         const diff = DifficultyScaler.getMultiplier(levelId);
@@ -70,16 +72,14 @@ export class LevelGenerator {
         if (song.notes.length === 0) {
             return this.generate(def.id, song, worldHeight);
         }
-        let notes = song.notes.slice(0, def.gateCount);
+        let notes = song.notes.slice(0, def.gateCount).map((n) => ({ ...n }));
         if (notes.length < def.gateCount) {
             const src = song.notes;
             while (notes.length < def.gateCount) {
-                notes.push(src[notes.length % src.length]);
+                notes.push({ ...src[notes.length % src.length] });
             }
         }
-        /** Stretch timeline so short songs don’t end in a few seconds at high scrollSpeed. */
-        const minGapSec = 2.4;
-        notes = this.expandNoteTimesToMinGap(notes, minGapSec);
+        notes = this.prepareNoteTimeline(song, notes, 2.4);
 
         const gates: LevelGate[] = [];
         const baseSpeed = def.scrollSpeed;
@@ -137,6 +137,53 @@ export class LevelGenerator {
                 out[i]!.time = nextMin;
             }
             t = out[i]!.time;
+        }
+        return out;
+    }
+
+    /**
+     * Min-gap expansion then linear scale so the last gate time matches song target length
+     * (real `durationSec` or a default from gate count). Keeps relative rhythm, fills the run.
+     */
+    private prepareNoteTimeline(
+        song: Song,
+        notes: { time: number; pitch: number }[],
+        minGapSec: number
+    ): { time: number; pitch: number }[] {
+        if (notes.length === 0) return notes;
+        let out = this.expandNoteTimesToMinGap(notes, minGapSec);
+        const targetEnd = getSongTimelineTargetSec(song, out.length);
+        out = this.scaleNoteTimesToEnd(out, targetEnd, 0.5);
+        return out;
+    }
+
+    /** Map first → startPad, last → endTime (seconds), linearly. */
+    private scaleNoteTimesToEnd(
+        notes: { time: number; pitch: number }[],
+        endTime: number,
+        startPad: number
+    ): { time: number; pitch: number }[] {
+        if (notes.length === 0) return notes;
+        const t0 = notes[0]!.time;
+        const tL = notes[notes.length - 1]!.time;
+        const span = tL - t0;
+        const out = notes.map((n) => ({ ...n }));
+        const targetEnd = Math.max(startPad + 2, endTime);
+        if (span < 1e-4) {
+            if (out.length === 1) {
+                out[0]!.time = targetEnd;
+                return out;
+            }
+            const spread = Math.max(4, targetEnd - startPad);
+            const denom = Math.max(1, out.length - 1);
+            for (let i = 0; i < out.length; i++) {
+                out[i]!.time = startPad + (spread * i) / denom;
+            }
+            return out;
+        }
+        for (let i = 0; i < out.length; i++) {
+            const u = (out[i]!.time - t0) / span;
+            out[i]!.time = startPad + u * (targetEnd - startPad);
         }
         return out;
     }

@@ -128,8 +128,8 @@ function filterLevels(tab: number): LevelDefinition[] {
     if (tab === 0) return all;
     if (tab === 1) return all.filter((l) => l.id % 2 === 1);
     if (tab === 2) return all.filter((l) => l.id <= 5);
-    if (tab === 3) return all.filter((l) => l.id >= 11);
-    return all.filter((l) => l.id >= 16);
+    if (tab === 3) return all.filter((l) => l.id >= 11 && l.id <= 20);
+    return all.filter((l) => l.id >= 16 && l.id <= 20);
 }
 
 type FeaturedProps = {

@@ -24,6 +24,8 @@ export class LevelSystem implements System {
     private gatesToSpawn: LevelGate[] = [];
     /** Gates planned for the current run (before spawning). */
     public lastInitializedGateCount = 0;
+    /** Max `LevelGate.x` for the current plan (world scroll distance to last gate). */
+    public lastPlanMaxGateX = 0;
     private playerEntity: Entity | null = null;
     private spawnRange: number = 2000;
     private cleanupRange: number = 800;
@@ -33,6 +35,8 @@ export class LevelSystem implements System {
     private hintEmitted: boolean = false;
     private gatesPassed: number = 0;
     private totalGates: number = 0;
+    /** When true, do not finish the level when all gates despawn; wait for session audio to end. */
+    private waitForSessionAudioEnd = false;
 
     private spritePool: ObjectPool<Sprite>;
     /** Gates/pickups parent; defaults to stage if not set (camera layer in main). */
@@ -60,12 +64,14 @@ export class LevelSystem implements System {
     public initLevel(levelId: number, song: Song, player: Entity): void {
         this.playerEntity = player;
         this.currentLevelDef = null;
+        this.waitForSessionAudioEnd = false;
         this.levelComplete = false;
         this.hintEmitted = false;
         this.gatesPassed = 0;
         const plan = this.generator.generate(levelId, song, this.app.screen.height);
         this.totalGates = plan.length;
         this.lastInitializedGateCount = plan.length;
+        this.lastPlanMaxGateX = plan.length ? Math.max(...plan.map((g) => g.x)) : 0;
         this.gatesToSpawn = plan;
         setLevelGateTargets(plan.map((g) => ({ logicalX: g.x, targetMidi: g.targetMidi })));
 
@@ -81,12 +87,14 @@ export class LevelSystem implements System {
     public initLevelFromDefinition(def: LevelDefinition, song: Song, player: Entity): void {
         this.playerEntity = player;
         this.currentLevelDef = def;
+        this.waitForSessionAudioEnd = false;
         this.levelComplete = false;
         this.hintEmitted = false;
         this.gatesPassed = 0;
         const plan = this.generator.generateForDefinition(def, song, this.app.screen.height);
         this.totalGates = plan.length;
         this.lastInitializedGateCount = plan.length;
+        this.lastPlanMaxGateX = plan.length ? Math.max(...plan.map((g) => g.x)) : 0;
         this.gatesToSpawn = plan;
         setLevelGateTargets(plan.map((g) => ({ logicalX: g.x, targetMidi: g.targetMidi })));
 
@@ -99,6 +107,17 @@ export class LevelSystem implements System {
     public getTotalGates(): number { return this.totalGates; }
     public isLevelComplete(): boolean { return this.levelComplete; }
     public getCurrentLevelDef(): LevelDefinition | null { return this.currentLevelDef; }
+
+    /** Backing track drives run end; gates may all pass before the song finishes. */
+    public setWaitForSessionAudioEnd(wait: boolean): void {
+        this.waitForSessionAudioEnd = wait;
+    }
+
+    public completeFromSessionAudioEnd(): void {
+        if (this.levelComplete) return;
+        this.levelComplete = true;
+        this.emitCompletion();
+    }
 
     private ensureGateTexture(color: number): void {
         const gfx = new Graphics();
@@ -150,7 +169,13 @@ export class LevelSystem implements System {
             }
         }
 
-        if (!this.levelComplete && this.gatesToSpawn.length === 0 && existingGates.length === 0 && this.totalGates > 0) {
+        if (
+            !this.waitForSessionAudioEnd &&
+            !this.levelComplete &&
+            this.gatesToSpawn.length === 0 &&
+            existingGates.length === 0 &&
+            this.totalGates > 0
+        ) {
             this.levelComplete = true;
             this.emitCompletion();
         }
@@ -190,6 +215,7 @@ export class LevelSystem implements System {
         }
         this.gatesToSpawn = [];
         this.lastInitializedGateCount = 0;
+        this.lastPlanMaxGateX = 0;
         this.gatesPassed = 0;
         this.totalGates = 0;
         clearGateTargets();

@@ -353,6 +353,20 @@ export const LEVEL_DEFINITIONS: LevelDefinition[] = [
         starThresholds: { one: 7, two: 12, three: 15 },
         unlockRequirement: 19,
     },
+    {
+        id: 101,
+        name: 'Jingle Bells',
+        zone: 'tutorial',
+        songId: 'track_jingle',
+        gateWidth: 200,
+        gateCount: 24,
+        scrollSpeed: 160,
+        learningObjectives: [
+            { id: 'sing_along', label: 'Sing Along', hint: 'Higher notes pull you up; lower notes pull you down.' },
+        ],
+        starThresholds: { one: 8, two: 16, three: 24 },
+        unlockRequirement: 0,
+    },
 ];
 
 export function getLevelDefinition(levelId: number): LevelDefinition | undefined {
